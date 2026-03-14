@@ -1,8 +1,9 @@
 ﻿from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import os
-import secrets
 import time
 from http import cookies
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -20,7 +21,7 @@ APP_PASSWORD = os.environ.get('APP_PASSWORD', '1')
 OTISTX_API_KEY = os.environ.get('OTISTX_API_KEY', '')
 SESSION_COOKIE_NAME = 'ts_auth'
 SESSION_TTL = 60 * 60 * 24 * 7
-SESSIONS: dict[str, float] = {}
+SESSION_SECRET = os.environ.get('SESSION_SECRET', APP_USERNAME + ':' + APP_PASSWORD)
 
 
 class ProxyHandler(SimpleHTTPRequestHandler):
@@ -136,14 +137,7 @@ class ProxyHandler(SimpleHTTPRequestHandler):
 
     def _is_authenticated(self) -> bool:
         token = self._get_session_token()
-        if not token:
-            return False
-        expires_at = SESSIONS.get(token)
-        if not expires_at or expires_at < time.time():
-            SESSIONS.pop(token, None)
-            return False
-        SESSIONS[token] = time.time() + SESSION_TTL
-        return True
+        return self._verify_session_token(token)
 
     def _get_session_token(self) -> str:
         raw = self.headers.get('Cookie', '')
@@ -157,6 +151,27 @@ class ProxyHandler(SimpleHTTPRequestHandler):
         morsel = jar.get(SESSION_COOKIE_NAME)
         return morsel.value if morsel else ''
 
+    def _sign_session_value(self, expires_at: int) -> str:
+        payload = str(expires_at).encode('utf-8')
+        return hmac.new(SESSION_SECRET.encode('utf-8'), payload, hashlib.sha256).hexdigest()
+
+    def _make_session_token(self) -> str:
+        expires_at = int(time.time() + SESSION_TTL)
+        signature = self._sign_session_value(expires_at)
+        return f'{expires_at}.{signature}'
+
+    def _verify_session_token(self, token: str) -> bool:
+        if not token or '.' not in token:
+            return False
+        expires_raw, signature = token.split('.', 1)
+        if not expires_raw.isdigit():
+            return False
+        expires_at = int(expires_raw)
+        if expires_at < time.time():
+            return False
+        expected = self._sign_session_value(expires_at)
+        return hmac.compare_digest(signature, expected)
+
     def _handle_login(self) -> None:
         body = self._read_json_body()
         username = str(body.get('username', '')).strip()
@@ -165,8 +180,7 @@ class ProxyHandler(SimpleHTTPRequestHandler):
             self._send_json(401, {'error': 'Sai tai khoan hoac mat khau.'})
             return
 
-        token = secrets.token_urlsafe(24)
-        SESSIONS[token] = time.time() + SESSION_TTL
+        token = self._make_session_token()
         self.send_response(200)
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -175,9 +189,6 @@ class ProxyHandler(SimpleHTTPRequestHandler):
         self.wfile.write(json.dumps({'ok': True, 'username': APP_USERNAME}).encode('utf-8'))
 
     def _handle_logout(self) -> None:
-        token = self._get_session_token()
-        if token:
-            SESSIONS.pop(token, None)
         next_url = '/login.html'
         self.send_response(302)
         self.send_header('Location', next_url)

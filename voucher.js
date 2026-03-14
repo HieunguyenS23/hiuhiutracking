@@ -62,6 +62,11 @@ function writeJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+function redirectToLogin() {
+  const next = encodeURIComponent(window.location.pathname + window.location.search);
+  window.location.href = '/login.html?next=' + next;
+}
+
 function clearToast(force = false) {
   if (!state.activeToast) return;
   if (state.activeToastTimer) {
@@ -164,7 +169,11 @@ async function apiRequest(path, options = {}) {
   if (!response.ok || data.error) {
     let fallback = 'HTTP ' + response.status;
     if (response.status === 400) fallback = 'Thong tin dang nhap khong hop le hoac thieu SPC_F.';
-    if (response.status === 401) fallback = 'Thong tin xac thuc khong hop le.';
+    if (response.status === 401) {
+      showError('Phien dang nhap da het han. Dang quay lai trang dang nhap...');
+      window.setTimeout(redirectToLogin, 800);
+      fallback = 'Phien dang nhap da het han.';
+    }
     throw new Error(data.error || fallback);
   }
 
@@ -199,6 +208,10 @@ async function autopeeRequest(path, options = {}) {
   }
 
   if (!result.response.ok) {
+    if (result.response.status === 401) {
+      showError('Phien dang nhap da het han. Dang quay lai trang dang nhap...');
+      window.setTimeout(redirectToLogin, 800);
+    }
     const message = result.data?.error?.message || result.data?.error || result.data?.message || ('HTTP ' + result.response.status);
     throw new Error(message);
   }

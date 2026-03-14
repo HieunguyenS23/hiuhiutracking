@@ -167,6 +167,11 @@ function setButtonLoading(button, loadingText, idleText, isLoading) {
   button.textContent = isLoading ? loadingText : idleText;
 }
 
+function redirectToLogin() {
+  const next = encodeURIComponent(window.location.pathname + window.location.search);
+  window.location.href = '/login.html?next=' + next;
+}
+
 async function apiRequest(path, options = {}) {
   const response = await fetch(API_BASE + path, {
     method: options.method || 'GET',
@@ -186,6 +191,10 @@ async function apiRequest(path, options = {}) {
   }
 
   if (!response.ok || data.error) {
+    if (response.status === 401) {
+      showErr('Phien dang nhap da het han. Dang quay lai trang dang nhap...');
+      window.setTimeout(redirectToLogin, 800);
+    }
     throw new Error(data.error || ('HTTP ' + response.status));
   }
 

@@ -57,6 +57,11 @@ function showInfo(message) { showToast(message, 'info', 2400); }
 function showSuccess(message) { showToast(message, 'success', 2400); }
 function showProgress(message) { showToast(message, 'progress', 2200); }
 
+function redirectToLogin() {
+  const next = encodeURIComponent(window.location.pathname + window.location.search);
+  window.location.href = '/login.html?next=' + next;
+}
+
 function setBusy(isBusy) {
   els.processButton.disabled = isBusy;
   els.openAllButton.disabled = isBusy;
@@ -237,6 +242,10 @@ async function getMessages(email, refreshToken, clientId, apiType) {
   }
 
   if (!response.ok || data.success === false) {
+    if (response.status === 401) {
+      window.setTimeout(redirectToLogin, 500);
+      throw { message: 'Phiên đăng nhập đã hết hạn.', rawResponse: responseText };
+    }
     throw {
       message: (data && data.message) ? data.message : ('Lỗi API (mã ' + response.status + ')'),
       rawResponse: responseText,
