@@ -1,6 +1,8 @@
 ﻿const API_BASE = '';
 const VOUCHER_KEY = 'ts_saved_vouchers';
 const AUTOPEE_100K_CODE = 'CRMNUICL80T3';
+const AUTOPEE_BEARER_KEY = 'ts_autopee_bearer';
+const AUTOPEE_HOT_KEYWORDS = ['hỏa tốc', 'hoa toc', 'freeship'];
 const BULK_EMAIL_INPUT_KEY = 'ts_bulk_email_input';
 const VOUCHER_LIST_COLLAPSED_KEY = 'ts_voucher_list_collapsed';
 
@@ -8,6 +10,8 @@ const state = {
   qrSessionId: '',
   qrPollTimer: null,
   currentSpcSt: '',
+  currentCookieRaw: '',
+  autopeeBearer: localStorage.getItem(AUTOPEE_BEARER_KEY) || '',
   vouchers: readJson(VOUCHER_KEY, []),
   activeToast: null,
   activeToastTimer: null,
@@ -21,6 +25,7 @@ const els = {
   loginButton: document.getElementById('voucher-login-btn'),
   save100kButton: document.getElementById('voucher-save-100k-btn'),
   saveHotButton: document.getElementById('voucher-save-hot-btn'),
+  autopeeBearerInput: document.getElementById('voucher-autopee-bearer-input'),
   qrButton: document.getElementById('voucher-qr-btn'),
   qrDisplay: document.getElementById('voucher-qr-display'),
   qrImage: document.getElementById('voucher-qr-img'),
@@ -65,6 +70,21 @@ function writeJson(key, value) {
 function redirectToLogin() {
   const next = encodeURIComponent(window.location.pathname + window.location.search);
   window.location.href = '/login.html?next=' + next;
+}
+
+function normalizeAutopeeBearer(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  return raw.startsWith('Bearer ') ? raw : ('Bearer ' + raw);
+}
+
+function persistAutopeeBearer() {
+  state.autopeeBearer = normalizeAutopeeBearer(els.autopeeBearerInput ? els.autopeeBearerInput.value : '');
+  if (state.autopeeBearer) {
+    localStorage.setItem(AUTOPEE_BEARER_KEY, state.autopeeBearer);
+  } else {
+    localStorage.removeItem(AUTOPEE_BEARER_KEY);
+  }
 }
 
 function clearToast(force = false) {
@@ -186,6 +206,7 @@ async function autopeeRequest(path, options = {}) {
       method: options.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...(state.autopeeBearer ? { Authorization: state.autopeeBearer } : {}),
         ...(options.headers || {})
       },
       body: options.body ? JSON.stringify(options.body) : undefined
@@ -267,6 +288,13 @@ function buildCookieFromCurrentSpcSt() {
   return 'SPC_ST=' + state.currentSpcSt;
 }
 
+function buildCookieForAutopee() {
+  const latest = state.vouchers[0];
+  const raw = state.currentCookieRaw || (latest ? (latest.rawCookie || latest.sourceText || '') : '');
+  if (raw && /=/.test(raw)) return raw.trim();
+  return buildCookieFromCurrentSpcSt();
+}
+
 function extractSpcF(source) {
   const match = String(source || '').match(/SPC_F=[^;|\s"]+/);
   return match ? match[0] : '';
@@ -290,6 +318,7 @@ function buildReplacementValue(source) {
 function setCurrentSpcSt(rawCookie, fallbackSpcSt) {
   const spcSt = extractSpcSt(rawCookie, fallbackSpcSt);
   state.currentSpcSt = spcSt;
+  state.currentCookieRaw = rawCookie || (spcSt ? ('SPC_ST=' + spcSt) : '');
   els.cookieValue.textContent = spcSt || 'Chưa có cookie nào được lưu.';
 }
 
@@ -570,11 +599,27 @@ function deleteVoucher(id) {
 }
 
 async function findAutopeeVoucherByCode(voucherCode) {
-  const data = await autopeeRequest('/shopee/vouchers?limit=200');
-  const items = Array.isArray(data?.data) ? data.data : [];
+  const data = await autopeeRequest('/api/shopee/vouchers?limit=200');
+  const items = Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.data) ? data.data : []);
   const found = items.find((item) => String(item.voucherCode || '').trim().toUpperCase() === voucherCode.toUpperCase());
   if (!found) {
-    throw new Error('Không tìm thấy mã ' + voucherCode + ' trong danh sách voucher Autopee.');
+    throw new Error('Không tìm thấy mã ' + voucherCode + ' trong danh sách voucher Autopee mới.');
+  }
+  return found;
+}
+
+async function findAutopeeHotVoucher() {
+  const data = await autopeeRequest('/api/shopee/freeships?limit=200');
+  const items = Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.data) ? data.data : []);
+  const found = items.find((item) => {
+    const hay = [item.voucherName, item.voucherCode, item.description, ...(item.customisedLabels || [])]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return AUTOPEE_HOT_KEYWORDS.some((keyword) => hay.includes(keyword));
+  }) || items[0];
+  if (!found) {
+    throw new Error('Không tìm thấy mã Hỏa tốc trong danh sách freeship mới.');
   }
   return found;
 }
@@ -589,29 +634,36 @@ function buildAutopeeSavePayload(voucher, cookie) {
 }
 
 function getAutopeeSaveResultMessage(result, voucherCode) {
-  const payload = result?.data || result;
-  if (payload?.error === 0) return 'Đã lưu voucher ' + voucherCode + ' thành công.';
-  if (payload?.error === 5) return 'Voucher ' + voucherCode + ' đã được lưu trước đó.';
-  if (payload?.error === 19) throw new Error('SPC_ST hiện tại không hợp lệ hoặc đã hết hạn.');
+  const payload = result?.data?.data || result?.data || result;
+  const voucherInfo = payload?.data?.voucher || payload?.voucher;
+  const errorCode = payload?.error;
+
+  if (errorCode === 0) return 'Đã lưu voucher ' + voucherCode + ' thành công.';
+  if (errorCode === 5 || voucherInfo?.is_claimed_before === true) return 'Voucher ' + voucherCode + ' đã được lưu trước đó.';
   if (payload?.error_msg) throw new Error(payload.error_msg);
-  if (result?.message) return result.message;
-  return 'Đã gửi yêu cầu lưu voucher ' + voucherCode + '.';
+  if (result?.error) throw new Error(result.error);
+  if (result?.ok === false) throw new Error(result.error || 'Không thể lưu voucher.');
+  return result?.message || ('Đã gửi yêu cầu lưu voucher ' + voucherCode + '.');
 }
 
-async function saveAutopeeVoucherByCode(voucherCode, triggerButton) {
+async function saveAutopeeItem(loader, triggerButton, buttonLabel) {
   const previousText = triggerButton.textContent;
   triggerButton.disabled = true;
   triggerButton.textContent = 'Đang lưu...';
-  showProgress('Đang gửi yêu cầu lưu voucher ' + voucherCode + '...');
+  showProgress('Đang gửi yêu cầu lưu ' + buttonLabel + '...');
 
   try {
-    const cookie = buildCookieFromCurrentSpcSt();
-    const voucher = await findAutopeeVoucherByCode(voucherCode);
-    const result = await autopeeRequest('/shopee/save-voucher', {
+    persistAutopeeBearer();
+    if (!state.autopeeBearer) {
+      throw new Error('Bạn chưa nhập Bearer token Autopee mới.');
+    }
+    const cookie = buildCookieForAutopee();
+    const voucher = await loader();
+    const result = await autopeeRequest('/api/shopee/save-voucher', {
       method: 'POST',
       body: buildAutopeeSavePayload(voucher, cookie)
     });
-    showSuccess(getAutopeeSaveResultMessage(result, voucherCode));
+    showSuccess(getAutopeeSaveResultMessage(result, voucher.voucherCode || buttonLabel));
   } catch (error) {
     showError(error.message || 'Có lỗi xảy ra khi lưu voucher.');
   } finally {
@@ -621,11 +673,11 @@ async function saveAutopeeVoucherByCode(voucherCode, triggerButton) {
 }
 
 function save100kVoucher() {
-  return saveAutopeeVoucherByCode(AUTOPEE_100K_CODE, els.save100kButton);
+  return saveAutopeeItem(() => findAutopeeVoucherByCode(AUTOPEE_100K_CODE), els.save100kButton, 'voucher 100K');
 }
 
 function saveHotVoucher() {
-  showError('Nút Hỏa tốc đã thêm vào giao diện nhưng chưa có mã voucher tương ứng để gọi Autopee.');
+  return saveAutopeeItem(findAutopeeHotVoucher, els.saveHotButton, 'voucher Hỏa tốc');
 }
 
 function reloadVoucherList() {
@@ -734,11 +786,13 @@ function bindEvents() {
   els.bulkFileInput.addEventListener('change', handleBulkFileUpload);
   els.bulkClearButton.addEventListener('click', clearBulkInput);
   els.bulkSubmitButton.addEventListener('click', submitBulkEmailAdd);
+  if (els.autopeeBearerInput) els.autopeeBearerInput.addEventListener('input', persistAutopeeBearer);
   if (els.toggleButton) els.toggleButton.addEventListener('click', toggleVoucherList);
 }
 
 function hydrateInputs() {
   els.bulkInput.value = state.bulkInput;
+  if (els.autopeeBearerInput) els.autopeeBearerInput.value = state.autopeeBearer.replace(/^Bearer\s+/, '');
   syncBulkEntryCount();
 }
 
