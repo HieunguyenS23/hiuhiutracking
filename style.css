@@ -2316,3 +2316,21 @@ body {
   color: #d8c2ff;
   font-size: 12px;
 }
+
+
+.voucher-accordion-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.voucher-item-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text1);
+}
+
+.voucher-list-wrap.hidden {
+  display: none;
+}

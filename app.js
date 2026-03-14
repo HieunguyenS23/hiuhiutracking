@@ -235,7 +235,6 @@ function formatOrder(order, fallbackCookie) {
   return {
     orderId: order.orderId || order.id || '',
     username: order.username || '',
-    email: order.email || order.userEmail || order.accountEmail || '',
     tenKH: order.tenKH || order.recipient || '',
     tinhTrang: order.tinhTrang || 'chua',
     cookie: order.cookie || fallbackCookie || '',
@@ -265,7 +264,7 @@ function persistSheet() {
   writeJson(STORAGE_KEYS.sheet, state.sheetData);
 }
 
-function mergeOrdersIntoSheet(orders, cookie, username, email) {
+function mergeOrdersIntoSheet(orders, cookie, username) {
   const incoming = (orders || []).map((order) => formatOrder(order, cookie));
   const indexById = new Map(state.sheetData.map((row, index) => [String(row.orderId), index]));
   let added = 0;
@@ -275,7 +274,6 @@ function mergeOrdersIntoSheet(orders, cookie, username, email) {
     const existingIndex = indexById.get(key);
     if (existingIndex == null) {
       order.username = order.username || username || '';
-      order.email = order.email || email || '';
       state.sheetData.push(order);
       indexById.set(key, state.sheetData.length - 1);
       added += 1;
@@ -288,8 +286,7 @@ function mergeOrdersIntoSheet(orders, cookie, username, email) {
       ...order,
       tinhTrang: current.tinhTrang || order.tinhTrang || 'chua',
       cookie: order.cookie || current.cookie,
-      username: current.username || username || order.username || '',
-      email: current.email || email || order.email || ''
+      username: current.username || username || order.username || ''
     };
   });
 
@@ -381,7 +378,7 @@ function renderSheet() {
   const rows = state.sheetData.filter((row) => filterValue === 'all' || row.tinhTrang === filterValue);
 
   if (!rows.length) {
-    els.sheetBody.innerHTML = '<tr><td colspan="16" style="text-align:center;color:var(--text3);padding:18px">Chua co du lieu</td></tr>';
+    els.sheetBody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:var(--text3);padding:18px">Chua co du lieu</td></tr>';
     updateSelectedCount();
     return;
   }
@@ -480,8 +477,7 @@ async function fetchOrdersByCookie(cookie, options = {}) {
   const data = await apiRequest('/api/check', { method: 'POST', body: payload });
   const finalCookie = data.cookie || payload.cookie;
   setCurrentCookie(finalCookie);
-  const fallbackEmail = options.loginEmail || data.email || data.userEmail || data.accountEmail || '';
-  const added = mergeOrdersIntoSheet(data.orders || [], finalCookie, data.username || '', fallbackEmail);
+  const added = mergeOrdersIntoSheet(data.orders || [], finalCookie, data.username || '');
   renderOrders(data.orders || []);
   if (!options.silent) {
     if ((data.orders || []).length) {
@@ -522,7 +518,6 @@ async function loginAndCheck() {
   setButtonLoading(els.loginButton, 'Dang nhap...', 'Dang nhap', true);
   try {
     const loginParts = input.split('|');
-    const loginEmail = /@/.test(loginParts[0] || '') ? loginParts[0] : '';
     const loginData = await apiRequest('/api/login', { method: 'POST', body: { input } });
     const cookie = loginData.cookie || loginData.spcST || '';
     if (!cookie) throw new Error('API khong tra ve cookie sau dang nhap');
@@ -530,7 +525,6 @@ async function loginAndCheck() {
     showProgress('Dang nhap thanh cong, dang lay don...');
     await fetchOrdersByCookie(cookie, {
       silent: true,
-      loginEmail: loginData.email || loginData.userEmail || loginData.accountEmail || loginEmail
     });
   } catch (error) {
     showErr('Loi: ' + error.message);

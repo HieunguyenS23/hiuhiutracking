@@ -2,6 +2,7 @@
 const VOUCHER_KEY = 'ts_saved_vouchers';
 const AUTOPEE_100K_CODE = 'CRMNUICL80T3';
 const BULK_EMAIL_INPUT_KEY = 'ts_bulk_email_input';
+const VOUCHER_LIST_COLLAPSED_KEY = 'ts_voucher_list_collapsed';
 
 const state = {
   qrSessionId: '',
@@ -11,7 +12,8 @@ const state = {
   activeToast: null,
   activeToastTimer: null,
   bulkInput: localStorage.getItem(BULK_EMAIL_INPUT_KEY) || '',
-  bulkResults: []
+  bulkResults: [],
+  voucherListCollapsed: localStorage.getItem(VOUCHER_LIST_COLLAPSED_KEY) !== '0'
 };
 
 const els = {
@@ -32,6 +34,8 @@ const els = {
   cancelButton: document.getElementById('voucher-cancel-btn'),
   clearCurrentButton: document.getElementById('voucher-clear-current-btn'),
   reloadButton: document.getElementById('voucher-reload-btn'),
+  toggleButton: document.getElementById('voucher-toggle-btn'),
+  listWrap: document.getElementById('voucher-list-wrap'),
   list: document.getElementById('voucher-list'),
   bulkInput: document.getElementById('bulk-email-input'),
   bulkUploadButton: document.getElementById('bulk-upload-btn'),
@@ -116,6 +120,29 @@ function escapeHtml(value) {
   return div.innerHTML;
 }
 
+function extractVoucherTitle(sourceText) {
+  const source = String(sourceText || '').trim();
+  if (!source) return 'QR Login';
+
+  const parts = source.split('|').map((item) => item.trim()).filter(Boolean);
+  if (parts.length >= 2 && !/^SPC_/i.test(parts[0])) {
+    return parts[0];
+  }
+  return 'QR Login';
+}
+
+function syncVoucherListVisibility() {
+  if (!els.listWrap || !els.toggleButton) return;
+  els.listWrap.classList.toggle('hidden', state.voucherListCollapsed);
+  els.toggleButton.textContent = state.voucherListCollapsed ? 'Hiện danh mục' : 'Ẩn danh mục';
+}
+
+function toggleVoucherList() {
+  state.voucherListCollapsed = !state.voucherListCollapsed;
+  localStorage.setItem(VOUCHER_LIST_COLLAPSED_KEY, state.voucherListCollapsed ? '1' : '0');
+  syncVoucherListVisibility();
+}
+
 async function apiRequest(path, options = {}) {
   const response = await fetch(API_BASE + path, {
     method: options.method || 'GET',
@@ -145,34 +172,43 @@ async function apiRequest(path, options = {}) {
 }
 
 async function autopeeRequest(path, options = {}) {
-  const response = await fetch(API_BASE + '/autopee-api' + path, {
-    method: options.method || 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined
-  });
+  const requestOnce = async (actualPath) => {
+    const response = await fetch(API_BASE + '/autopee-api' + actualPath, {
+      method: options.method || 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined
+    });
 
-  const text = await response.text();
-  let data = {};
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch {
-    data = {};
+    const text = await response.text();
+    let data = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = {};
+    }
+
+    return { response, data };
+  };
+
+  let result = await requestOnce(path);
+  if (result.response.status === 404 && !String(path).startsWith('/api/')) {
+    result = await requestOnce('/api' + path);
   }
 
-  if (!response.ok) {
-    const message = data?.error?.message || data?.error || data?.message || ('HTTP ' + response.status);
+  if (!result.response.ok) {
+    const message = result.data?.error?.message || result.data?.error || result.data?.message || ('HTTP ' + result.response.status);
     throw new Error(message);
   }
 
-  if (data && data.success === false) {
-    const message = data?.error?.message || data?.error || data?.message || 'Yeu cau Autopee that bai.';
+  if (result.data && result.data.success === false) {
+    const message = result.data?.error?.message || result.data?.error || result.data?.message || 'Yeu cau Autopee that bai.';
     throw new Error(message);
   }
 
-  return data;
+  return result.data;
 }
 
 async function otistxRequest(path, options = {}) {
@@ -246,12 +282,14 @@ function setCurrentSpcSt(rawCookie, fallbackSpcSt) {
 
 function saveVoucherEntry(spcSt, rawCookie, sourceText = '') {
   if (!spcSt) return;
+  const normalizedSource = sourceText || rawCookie || ('SPC_ST=' + spcSt);
   const next = {
     id: Date.now(),
     createdAt: new Date().toISOString(),
     spcSt,
     rawCookie: rawCookie || ('SPC_ST=' + spcSt),
-    sourceText: sourceText || rawCookie || ('SPC_ST=' + spcSt)
+    sourceText: normalizedSource,
+    title: extractVoucherTitle(normalizedSource)
   };
   state.vouchers.unshift(next);
   state.vouchers = state.vouchers.slice(0, 30);
@@ -263,14 +301,19 @@ function formatTime(isoString) {
 }
 
 function renderVoucherList() {
+  syncVoucherListVisibility();
+
   if (!state.vouchers.length) {
     els.list.innerHTML = '<div class="voucher-empty">Chưa có voucher nào được lưu.</div>';
     return;
   }
 
-  els.list.innerHTML = state.vouchers.map((item) => `
+  els.list.innerHTML = state.vouchers.map((item) => {
+    const title = item.title || extractVoucherTitle(item.sourceText || item.rawCookie || '');
+    return `
     <div class="voucher-item">
       <div class="voucher-item-top">
+        <span class="voucher-item-name">${escapeHtml(title)}</span>
         <span class="voucher-item-time">${escapeHtml(formatTime(item.createdAt))}</span>
       </div>
       <div class="voucher-code-box" style="margin-bottom:10px">
@@ -280,7 +323,8 @@ function renderVoucherList() {
         <button class="nav-btn" type="button" onclick="deleteVoucher(${item.id})">Xóa</button>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function syncBulkEntryCount() {
@@ -677,6 +721,7 @@ function bindEvents() {
   els.bulkFileInput.addEventListener('change', handleBulkFileUpload);
   els.bulkClearButton.addEventListener('click', clearBulkInput);
   els.bulkSubmitButton.addEventListener('click', submitBulkEmailAdd);
+  if (els.toggleButton) els.toggleButton.addEventListener('click', toggleVoucherList);
 }
 
 function hydrateInputs() {

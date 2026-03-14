@@ -255,6 +255,9 @@ class ProxyHandler(SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
         except HTTPError as exc:
+            if exc.code == 404 and base_url == AUTOPEE_BASE and not path.startswith('/api/'):
+                self._proxy_request(method, base_url, '/api' + path)
+                return
             data = exc.read()
             self.send_response(exc.code)
             self.send_header('Content-Type', exc.headers.get('Content-Type', 'application/json; charset=utf-8'))

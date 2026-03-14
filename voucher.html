@@ -7,7 +7,7 @@
   <meta name="description" content="Lưu Voucher Shopee bằng QR và lấy cookie SPC_ST">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260314e">
+  <link rel="stylesheet" href="style.css?v=20260314f">
 </head>
 <body>
   <div class="aurora"></div>
@@ -114,10 +114,13 @@
         </section>
 
         <section class="glass voucher-panel">
-          <div class="panel-title" style="margin-bottom:14px">
+          <div class="panel-title voucher-accordion-head" style="margin-bottom:14px">
             <h3>Danh mục voucher đã lưu</h3>
+            <button id="voucher-toggle-btn" class="nav-btn" type="button">Hiện danh mục</button>
           </div>
-          <div id="voucher-list" class="voucher-list"></div>
+          <div id="voucher-list-wrap" class="voucher-list-wrap hidden">
+            <div id="voucher-list" class="voucher-list"></div>
+          </div>
         </section>
 
         <section class="glass voucher-panel">
@@ -146,6 +149,6 @@
     <footer class="footer">TrackShopee &copy; 2026</footer>
   </div>
 
-  <script src="voucher.js?v=20260314e"></script>
+  <script src="voucher.js?v=20260314f"></script>
 </body>
 </html>
