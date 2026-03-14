@@ -1,0 +1,109 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrackShopee - Đọc mail</title>
+  <meta name="description" content="Đọc mail Hotmail bằng OAuth2 API hoặc Graph API">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20260314e">
+</head>
+<body>
+  <div class="aurora"></div>
+  <div class="aurora aurora-2"></div>
+  <div class="aurora aurora-3"></div>
+  <div class="app">
+    <nav class="nav">
+      <div class="nav-brand">
+        <div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="1" y="3" width="15" height="13" />
+            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+            <circle cx="5.5" cy="18.5" r="2.5" />
+            <circle cx="18.5" cy="18.5" r="2.5" />
+          </svg></div>
+        <span>TrackShopee Admin</span>
+      </div>
+      <div class="nav-right">
+        <a class="nav-btn" href="/index.html">Đơn hàng</a>
+        <a class="nav-btn" href="/voucher.html">Lưu Voucher</a>
+        <a class="nav-btn nav-btn-active" href="/mail.html">Đọc mail</a>
+      <a class="nav-btn" href="/auth/logout">Dang xuat</a></div>
+    </nav>
+
+    <main class="main">
+      <div class="hero">
+        <h1>Đọc <span class="gradient-text">Mail Hotmail</span></h1>
+        <p>Đọc hộp thư bằng OAuth2 API hoặc Graph API, tìm link nhanh và mở hàng loạt.</p>
+      </div>
+
+      <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+      <div class="voucher-shell">
+        <section class="glass voucher-panel">
+          <div class="mail-grid">
+            <div class="mail-main-panel">
+              <div class="panel-title" style="margin-bottom:12px">
+                <h3>Danh sách tài khoản</h3>
+              </div>
+              <p class="mail-muted">Định dạng mỗi dòng: <code>email|pass|refresh_token|client_id</code></p>
+              <textarea id="mail-list" class="mail-textarea" placeholder="example@hotmail.com|password|refresh_token_value|client_id_value"></textarea>
+
+              <div class="mail-options-row">
+                <div class="mail-option-group">
+                  <span class="mail-option-label">API đọc mail</span>
+                  <label class="mail-radio"><input type="radio" name="mail-api-type" value="oauth2" checked> OAuth2 API</label>
+                  <label class="mail-radio"><input type="radio" name="mail-api-type" value="graph"> Graph API</label>
+                </div>
+                <div class="mail-option-group mail-regex-group">
+                  <label class="mail-option-label" for="mail-regex">Regex tìm kiếm</label>
+                  <input type="text" id="mail-regex" class="s-input" placeholder="Để trống sẽ tìm link Shopee mặc định">
+                </div>
+              </div>
+
+              <div class="mail-actions-row">
+                <button id="mail-process-btn" class="s-btn" type="button">Xử lý</button>
+                <button id="mail-open-all-btn" class="nav-btn" type="button">Mở link mới</button>
+                <span id="mail-status" class="info-text"></span>
+              </div>
+            </div>
+
+            <aside class="glass voucher-panel mail-side-panel">
+              <div class="panel-title" style="margin-bottom:12px">
+                <h3>Liên kết tìm thấy</h3>
+              </div>
+              <div class="mail-summary-list">
+                <div class="mail-summary-item">
+                  <span class="mail-summary-label">Tài khoản</span>
+                  <strong id="mail-total-accounts">0</strong>
+                </div>
+                <div class="mail-summary-item">
+                  <span class="mail-summary-label">Liên kết tìm thấy</span>
+                  <strong id="mail-total-links">0</strong>
+                </div>
+                <div class="mail-summary-item">
+                  <span class="mail-summary-label">Link mới chưa mở</span>
+                  <strong id="mail-total-fresh-links">0</strong>
+                </div>
+              </div>
+              <div id="mail-links-empty" class="mail-empty">Chưa có liên kết nào.</div>
+              <div id="mail-links-list" class="mail-links-list"></div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="glass voucher-panel">
+          <div class="panel-title" style="margin-bottom:14px">
+            <h3>Kết quả xử lý</h3>
+          </div>
+          <div id="mail-results" class="mail-results"></div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer">TrackShopee &copy; 2026</footer>
+  </div>
+
+  <script src="mail.js?v=20260314e"></script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dang nhap - TrackShopee</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20260314e">
+</head>
+<body>
+  <div class="aurora"></div>
+  <div class="aurora aurora-2"></div>
+  <div class="aurora aurora-3"></div>
+  <div class="login-page">
+    <div class="glass login-card">
+      <div class="login-brand">
+        <div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <rect x="1" y="3" width="15" height="13" />
+          <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
+          <circle cx="5.5" cy="18.5" r="2.5" />
+          <circle cx="18.5" cy="18.5" r="2.5" />
+        </svg></div>
+        <div>
+          <h1>TrackShopee Admin</h1>
+          <p>Dang nhap de tiep tuc vao he thong.</p>
+        </div>
+      </div>
+      <div id="login-error" class="login-error hidden"></div>
+      <div class="login-form">
+        <label class="mail-option-label" for="username">Tai khoan</label>
+        <input id="username" class="s-input login-input" type="text" autocomplete="username" value="hieunguyen01">
+        <label class="mail-option-label" for="password">Mat khau</label>
+        <input id="password" class="s-input login-input" type="password" autocomplete="current-password" value="1">
+        <button id="login-submit" class="s-btn login-submit" type="button">Dang nhap</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const nextUrl = params.get('next') || '/index.html';
+    const els = {
+      username: document.getElementById('username'),
+      password: document.getElementById('password'),
+      submit: document.getElementById('login-submit'),
+      error: document.getElementById('login-error')
+    };
+
+    async function login() {
+      els.error.classList.add('hidden');
+      els.submit.disabled = true;
+      els.submit.textContent = 'Dang dang nhap...';
+      try {
+        const response = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: els.username.value.trim(),
+            password: els.password.value.trim()
+          })
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || 'Dang nhap that bai.');
+        }
+        window.location.href = nextUrl;
+      } catch (error) {
+        els.error.textContent = error.message;
+        els.error.classList.remove('hidden');
+      } finally {
+        els.submit.disabled = false;
+        els.submit.textContent = 'Dang nhap';
+      }
+    }
+
+    els.submit.addEventListener('click', login);
+    els.password.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') login();
+    });
+    els.username.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') login();
+    });
+  </script>
+</body>
+</html>
