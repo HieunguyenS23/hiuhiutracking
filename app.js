@@ -211,12 +211,41 @@ function copyText(text, successMessage = 'Da copy du lieu.') {
     .catch(() => showErr('Khong copy duoc du lieu.'));
 }
 
+function normalizeStatusText(status) {
+  return String(status || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function displayStatusText(status) {
+  const raw = String(status || '').trim();
+  const value = normalizeStatusText(raw);
+  if (!raw) return 'Chưa rõ';
+  if (/(^|[^a-z])label_delivered([^a-z]|$)|order delivered|delivered|giao hang thanh cong/.test(value)) return 'Giao hàng thành công';
+  if (/(^|[^a-z])label_to_receive([^a-z]|$)|to receive|cho nhan hang/.test(value)) return 'Chờ nhận hàng';
+  if (/(^|[^a-z])label_completed([^a-z]|$)|(^|[^a-z])label_order_completed([^a-z]|$)|completed|hoan thanh/.test(value)) return 'Hoàn thành';
+  if (/(^|[^a-z])label_to_rate([^a-z]|$)|to rate|cho danh gia/.test(value)) return 'Chờ đánh giá';
+  if (/(^|[^a-z])label_rated([^a-z]|$)|rated|da danh gia/.test(value)) return 'Đã đánh giá';
+  if (/(^|[^a-z])label_preparing_order([^a-z]|$)|preparing order|chuan bi giao/.test(value)) return 'Chuẩn bị giao';
+  if (/(^|[^a-z])label_to_ship([^a-z]|$)|to ship|cho giao/.test(value)) return 'Chờ giao';
+  if (/(^|[^a-z])label_shipping([^a-z]|$)|(^|[^a-z])label_on_the_way([^a-z]|$)|shipping|on the way/.test(value)) return 'Đang giao';
+  if (/(^|[^a-z])label_cancelled([^a-z]|$)|(^|[^a-z])label_order_cancelled([^a-z]|$)|cancelled|da huy|bi huy|huy don/.test(value)) return 'Đã hủy';
+  if (/(^|[^a-z])label_return_refund([^a-z]|$)|return refund|hoan tra/.test(value)) return 'Hoàn trả';
+  if (/(^|[^a-z])label_pending_payment([^a-z]|$)|(^|[^a-z])label_to_pay([^a-z]|$)|pending payment|to pay|cho thanh toan/.test(value)) return 'Chờ thanh toán';
+  if (/(^|[^a-z])label_to_confirm([^a-z]|$)|to confirm|cho xac nhan/.test(value)) return 'Chờ xác nhận';
+  if (/(^|[^a-z])label_waiting_pickup([^a-z]|$)|waiting pickup|lay hang/.test(value)) return 'Chờ lấy hàng';
+  if (/(^|[^a-z])label_refund([^a-z]|$)|refund|hoan tien/.test(value)) return 'Hoàn tiền';
+  return raw;
+}
+
 function statusClass(status) {
-  const value = (status || '').toLowerCase();
-  if (/thanh cong|hoan thanh|da giao|delivered|completed/.test(value)) return 'st-delivered';
-  if (/dang giao|shipping|to ship|cho giao|chuan bi/.test(value)) return 'st-shipping';
-  if (/huy|cancel|hoan tra|refund/.test(value)) return 'st-cancel';
-  if (/cho|pending|xac nhan|thanh toan|pickup/.test(value)) return 'st-pending';
+  const value = normalizeStatusText(status);
+  if (/(^|[^a-z])label_delivered([^a-z]|$)|(^|[^a-z])label_to_receive([^a-z]|$)|(^|[^a-z])label_completed([^a-z]|$)|(^|[^a-z])label_order_completed([^a-z]|$)|(^|[^a-z])label_to_rate([^a-z]|$)|(^|[^a-z])label_rated([^a-z]|$)|thanh cong|hoan thanh|da giao|delivered|completed|danh gia/.test(value)) return 'st-delivered';
+  if (/(^|[^a-z])label_preparing_order([^a-z]|$)|(^|[^a-z])label_to_ship([^a-z]|$)|(^|[^a-z])label_shipping([^a-z]|$)|(^|[^a-z])label_on_the_way([^a-z]|$)|dang giao|shipping|to ship|cho giao|chuan bi|on the way|nhan hang|trung chuyen|van chuyen|den kho|giao hang/.test(value)) return 'st-shipping';
+  if (/(^|[^a-z])label_cancelled([^a-z]|$)|(^|[^a-z])label_order_cancelled([^a-z]|$)|(^|[^a-z])label_return_refund([^a-z]|$)|da huy|bi huy|huy don|cancelled|cancel|hoan tra/.test(value)) return 'st-cancel';
+  if (/(^|[^a-z])label_pending_payment([^a-z]|$)|(^|[^a-z])label_to_pay([^a-z]|$)|(^|[^a-z])label_to_confirm([^a-z]|$)|(^|[^a-z])label_waiting_pickup([^a-z]|$)|(^|[^a-z])label_refund([^a-z]|$)|cho thanh toan|pending|xac nhan|thanh toan|pickup|hoan tien|lay hang/.test(value)) return 'st-pending';
   return 'st-default';
 }
 
@@ -337,6 +366,7 @@ function renderCards(orders) {
     const card = document.createElement('div');
     card.className = 'order-card';
     card.style.animationDelay = (index * 0.03) + 's';
+    const statusText = displayStatusText(order.statusText);
     const tracking = order.tracking
       ? `<span class="tracking-code" onclick="copyText('${escapeHtml(order.tracking)}', 'Da copy ma van don.')">${escapeHtml(order.tracking)}${order.carrier ? ' · ' + escapeHtml(order.carrier) : ''}</span>`
       : '<span class="tracking-empty">Chua co</span>';
@@ -351,7 +381,7 @@ function renderCards(orders) {
           <span class="order-num">#${escapeHtml(order.orderId || 'N/A')}</span>
           <span class="order-shop-name">${escapeHtml(order.shopName || 'Shopee')}</span>
         </div>
-        <span class="badge ${badgeClass(order.statusText)}">${escapeHtml(order.statusText || 'Khong ro')}</span>
+        <span class="badge ${badgeClass(order.statusText)}">${escapeHtml(statusText)}</span>
       </div>
       <div class="order-body">
         <div class="info-grid">
@@ -366,7 +396,7 @@ function renderCards(orders) {
         </div>
         <div class="order-bottom">
           <span class="total-text">Trang thai</span>
-          <span class="total-amount">${escapeHtml(order.statusText || 'Khong ro')}</span>
+          <span class="total-amount">${escapeHtml(statusText)}</span>
         </div>
         ${cancelButton}
       </div>`;
@@ -387,7 +417,7 @@ function renderSheet() {
   const rows = state.sheetData.filter((row) => filterValue === 'all' || row.tinhTrang === filterValue);
 
   if (!rows.length) {
-    els.sheetBody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:var(--text3);padding:18px">Chua co du lieu</td></tr>';
+    els.sheetBody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--text3);padding:18px">Chưa có dữ liệu</td></tr>';
     updateSelectedCount();
     return;
   }
@@ -400,18 +430,16 @@ function renderSheet() {
         <td class="chk-cell"><input type="checkbox" class="row-chk" data-row-index="${originalIndex}" onchange="updateSelectedCount()"></td>
         <td class="stt">${index + 1}</td>
         <td class="wrap">${escapeHtml(row.username || '—')}</td>
-        <td class="wrap">${escapeHtml(row.tenKH || row.recipient || '—')}</td>
         <td>
           <select class="tt-select ${selectClass}" onchange="updateTinhTrang(${originalIndex}, this.value)">
-            <option value="chua" ${row.tinhTrang === 'chua' ? 'selected' : ''}>Chua TT</option>
-            <option value="da" ${row.tinhTrang === 'da' ? 'selected' : ''}>Da TT</option>
+            <option value="chua" ${row.tinhTrang === 'chua' ? 'selected' : ''}>Chưa TT</option>
+            <option value="da" ${row.tinhTrang === 'da' ? 'selected' : ''}>Đã TT</option>
           </select>
         </td>
-        <td class="wrap"><span class="cookie-copy" title="Click de copy cookie" onclick="copyText('${escapeHtml(row.cookie || '')}', 'Da copy cookie.')">${escapeHtml((row.cookie || '').slice(0, 24) || '—')}</span></td>
+        <td class="wrap"><span class="cookie-copy" title="Click de copy cookie" onclick="copyText('${escapeHtml(row.cookie || '')}', 'Da copy cookie.')">${escapeHtml((row.cookie || '').slice(0, 18) || '—')}</span></td>
         <td class="col-track" onclick="copyText('${escapeHtml(row.tracking || '')}', 'Da copy ma van don.')">${escapeHtml(row.tracking || '—')}</td>
-        <td class="col-status ${statusClass(row.spxStatus || row.statusText)}">${escapeHtml(row.spxStatus || row.statusText || '—')}</td>
+        <td class="col-status ${statusClass(row.spxStatus || row.statusText)}">${escapeHtml(displayStatusText(row.spxStatus || row.statusText || '—'))}</td>
         <td class="col-amount">${escapeHtml(row.total || '—')}</td>
-        <td>${escapeHtml(row.shipPhone || '—')}</td>
         <td class="wrap">${escapeHtml(row.recipient || '—')}</td>
         <td>${escapeHtml(row.phone || '—')}</td>
         <td class="wrap">${escapeHtml(row.address || '—')}</td>

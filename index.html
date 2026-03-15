@@ -43,8 +43,6 @@
         <a class="drawer-link" href="/bulk-mail.html">Th&#234;m mail</a>
         <a class="drawer-link" href="/mail.html">&#272;&#7885;c mail</a>
         <a class="drawer-link" href="/address.html">X&#7917; l&#237; &#273;&#7883;a ch&#7881;</a>
-        <button class="drawer-link" type="button" onclick="loadHistory()">L&#7883;ch s&#7917;</button>
-        <button class="drawer-link" type="button" onclick="toggleSpx()">Tra MV&#272;</button>
         <a class="drawer-link" href="/auth/logout">&#272;&#259;ng xu&#7845;t</a>
       </div>
     </aside>
@@ -53,6 +51,9 @@
       <div class="hero">
         <h1>Quản lý <span class="gradient-text">Đơn Hàng Shopee</span></h1>
         <p>Quản lý đơn hàng · QR Login · Tra cứu MVĐ SPX · Bảng Sheet</p></div>
+      <div class="sheet-actions" style="margin-bottom:16px">
+        <button class="nav-btn" type="button" onclick="toggleSpx()">Tra MVĐ</button>
+      </div>
 
       <!-- LOGIN TABS -->
       <div class="tabs">
@@ -169,7 +170,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
           <div style="display:flex;align-items:center;gap:5px">
-            <span style="font-size:11px;color:var(--text3);font-weight:600">Lọc TT:</span>
+            <span style="font-size:11px;color:var(--text3);font-weight:600">Lọc tình trạng:</span>
             <select id="filter-tt" onchange="renderSheet()"
               style="background:var(--card);color:var(--text1);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer">
               <option value="all">Tất cả</option>
@@ -189,13 +190,11 @@
                 <th class="chk-cell"><input type="checkbox" id="chk-all" onchange="toggleCheckAll(this)"></th>
                 <th>STT</th>
                 <th>Username</th>
-                <th>Tên KH</th>
                 <th>Tình trạng</th>
                 <th>Cookie</th>
                 <th>MVĐ</th>
                 <th>Trạng thái</th>
                 <th>Số tiền</th>
-                <th>SĐT Ship</th>
                 <th>Người nhận</th>
                 <th>SĐT nhận</th>
                 <th>Địa chỉ</th>

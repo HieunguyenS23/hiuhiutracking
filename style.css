@@ -210,8 +210,9 @@
 
     .main.sheet-mode {
       max-width: 100%;
-      padding-left: 12px;
-      padding-right: 12px
+      padding-left: 8px;
+      padding-right: 8px;
+      padding-bottom: 24px
     }
 
     .hero {
@@ -713,7 +714,8 @@
       border: 1px solid var(--card-border);
       background: rgba(255, 255, 255, .02);
       margin-bottom: 16px;
-      -webkit-overflow-scrolling: touch
+      -webkit-overflow-scrolling: touch;
+      width: 100%
     }
 
     .edit-input {
@@ -743,7 +745,8 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 12px;
-      min-width: 1800px
+      min-width: 1450px;
+      table-layout: fixed
     }
 
     .sheet-table thead th {
@@ -786,9 +789,76 @@
     }
 
     .sheet-table td.wrap {
-      white-space: normal;
-      max-width: 300px;
-      min-width: 160px
+      white-space: nowrap;
+      max-width: none;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis
+    }
+
+    .sheet-table th:nth-child(1),
+    .sheet-table td:nth-child(1) {
+      width: 34px
+    }
+
+    .sheet-table th:nth-child(2),
+    .sheet-table td:nth-child(2) {
+      width: 44px
+    }
+
+    .sheet-table th:nth-child(3),
+    .sheet-table td:nth-child(3) {
+      width: 120px
+    }
+
+    .sheet-table th:nth-child(4),
+    .sheet-table td:nth-child(4) {
+      width: 135px
+    }
+
+    .sheet-table th:nth-child(5),
+    .sheet-table td:nth-child(5) {
+      width: 170px
+    }
+
+    .sheet-table th:nth-child(6),
+    .sheet-table td:nth-child(6) {
+      width: 150px
+    }
+
+    .sheet-table th:nth-child(7),
+    .sheet-table td:nth-child(7) {
+      width: 220px
+    }
+
+    .sheet-table th:nth-child(8),
+    .sheet-table td:nth-child(8) {
+      width: 110px
+    }
+
+    .sheet-table th:nth-child(9),
+    .sheet-table td:nth-child(9) {
+      width: 150px
+    }
+
+    .sheet-table th:nth-child(10),
+    .sheet-table td:nth-child(10) {
+      width: 120px
+    }
+
+    .sheet-table th:nth-child(11),
+    .sheet-table td:nth-child(11) {
+      width: 220px
+    }
+
+    .sheet-table th:nth-child(12),
+    .sheet-table td:nth-child(12) {
+      width: 260px
+    }
+
+    .sheet-table th:nth-child(13),
+    .sheet-table td:nth-child(13) {
+      width: 150px
     }
 
     .sheet-table .stt {
@@ -1766,7 +1836,7 @@
 }
 
 .sheet-wrap {
-  max-height: calc(100vh - 240px);
+  max-height: calc(100vh - 190px);
   overflow: auto;
 }
 
