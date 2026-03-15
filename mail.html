@@ -1,13 +1,13 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TrackShopee - Đọc mail</title>
-  <meta name="description" content="Đọc mail Hotmail bằng OAuth2 API hoặc Graph API">
+  <title>TrackShopee - &#272;&#7885;c mail</title>
+  <meta name="description" content="&#272;&#7885;c mail Hotmail b&#7857;ng OAuth2 API ho&#7863;c Graph API">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260314e">
+  <link rel="stylesheet" href="style.css?v=20260314h">
 </head>
 <body>
   <div class="aurora"></div>
@@ -16,25 +16,35 @@
   <div class="app">
     <nav class="nav">
       <div class="nav-brand">
-        <div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <rect x="1" y="3" width="15" height="13" />
-            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-            <circle cx="5.5" cy="18.5" r="2.5" />
-            <circle cx="18.5" cy="18.5" r="2.5" />
-          </svg></div>
+        <button class="nav-menu-toggle" type="button" data-nav-toggle aria-label="M&#7903; menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg>
+        </button>
+        <div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg></div>
         <span>TrackShopee Admin</span>
       </div>
-      <div class="nav-right">
-        <a class="nav-btn" href="/index.html">Đơn hàng</a>
-        <a class="nav-btn" href="/voucher.html">Lưu Voucher</a>
-        <a class="nav-btn nav-btn-active" href="/mail.html">Đọc mail</a>
-      <a class="nav-btn" href="/auth/logout">Dang xuat</a></div>
     </nav>
+    <div class="nav-overlay" data-nav-close></div>
+    <aside class="nav-drawer" data-nav-drawer>
+      <div class="nav-drawer-head">
+        <strong>&#272;i&#7873;u h&#432;&#7899;ng</strong>
+        <button class="nav-drawer-close" type="button" data-nav-close aria-label="&#272;&#243;ng menu">&times;</button>
+      </div>
+      <div class="nav-drawer-links">
+        <a class="drawer-link" href="/index.html">&#272;&#417;n h&#224;ng</a>
+        <a class="drawer-link" href="/voucher.html">L&#432;u Voucher</a>
+        <a class="drawer-link" href="/bulk-mail.html">Th&#234;m mail</a>
+        <a class="drawer-link is-active" href="/mail.html">&#272;&#7885;c mail</a>
+        <a class="drawer-link" href="/address.html">X&#7917; l&#237; &#273;&#7883;a ch&#7881;</a>
+        <a class="drawer-link" href="/index.html#history-section">L&#7883;ch s&#7917;</a>
+        <a class="drawer-link" href="/index.html#spx-overlay">Tra MV&#272;</a>
+        <a class="drawer-link" href="/auth/logout">&#272;&#259;ng xu&#7845;t</a>
+      </div>
+    </aside>
 
     <main class="main">
       <div class="hero">
-        <h1>Đọc <span class="gradient-text">Mail Hotmail</span></h1>
-        <p>Đọc hộp thư bằng OAuth2 API hoặc Graph API, tìm link nhanh và mở hàng loạt.</p>
+        <h1>&#272;&#7885;c <span class="gradient-text">Mail Hotmail</span></h1>
+        <p>&#272;&#7885;c h&#7897;p th&#432; b&#7857;ng OAuth2 API ho&#7863;c Graph API, t&#236;m link nhanh v&#224; m&#7903; h&#224;ng lo&#7841;t.</p>
       </div>
 
       <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
@@ -44,49 +54,49 @@
           <div class="mail-grid">
             <div class="mail-main-panel">
               <div class="panel-title" style="margin-bottom:12px">
-                <h3>Danh sách tài khoản</h3>
+                <h3>Danh s&#225;ch t&#224;i kho&#7843;n</h3>
               </div>
-              <p class="mail-muted">Định dạng mỗi dòng: <code>email|pass|refresh_token|client_id</code></p>
+              <p class="mail-muted">&#272;&#7883;nh d&#7841;ng m&#7895;i d&#242;ng: <code>email|pass|refresh_token|client_id</code></p>
               <textarea id="mail-list" class="mail-textarea" placeholder="example@hotmail.com|password|refresh_token_value|client_id_value"></textarea>
 
               <div class="mail-options-row">
                 <div class="mail-option-group">
-                  <span class="mail-option-label">API đọc mail</span>
+                  <span class="mail-option-label">API &#273;&#7885;c mail</span>
                   <label class="mail-radio"><input type="radio" name="mail-api-type" value="oauth2" checked> OAuth2 API</label>
                   <label class="mail-radio"><input type="radio" name="mail-api-type" value="graph"> Graph API</label>
                 </div>
                 <div class="mail-option-group mail-regex-group">
-                  <label class="mail-option-label" for="mail-regex">Regex tìm kiếm</label>
-                  <input type="text" id="mail-regex" class="s-input" placeholder="Để trống sẽ tìm link Shopee mặc định">
+                  <label class="mail-option-label" for="mail-regex">Regex t&#236;m ki&#7871;m</label>
+                  <input type="text" id="mail-regex" class="s-input" placeholder="&#272;&#7875; tr&#7889;ng s&#7869; t&#236;m link Shopee m&#7863;c &#273;&#7883;nh">
                 </div>
               </div>
 
               <div class="mail-actions-row">
-                <button id="mail-process-btn" class="s-btn" type="button">Xử lý</button>
-                <button id="mail-open-all-btn" class="nav-btn" type="button">Mở link mới</button>
+                <button id="mail-process-btn" class="s-btn" type="button">X&#7917; l&#253;</button>
+                <button id="mail-open-all-btn" class="nav-btn" type="button">M&#7903; link m&#7899;i</button>
                 <span id="mail-status" class="info-text"></span>
               </div>
             </div>
 
             <aside class="glass voucher-panel mail-side-panel">
               <div class="panel-title" style="margin-bottom:12px">
-                <h3>Liên kết tìm thấy</h3>
+                <h3>Li&#234;n k&#7871;t t&#236;m th&#7845;y</h3>
               </div>
               <div class="mail-summary-list">
                 <div class="mail-summary-item">
-                  <span class="mail-summary-label">Tài khoản</span>
+                  <span class="mail-summary-label">T&#224;i kho&#7843;n</span>
                   <strong id="mail-total-accounts">0</strong>
                 </div>
                 <div class="mail-summary-item">
-                  <span class="mail-summary-label">Liên kết tìm thấy</span>
+                  <span class="mail-summary-label">Li&#234;n k&#7871;t t&#236;m th&#7845;y</span>
                   <strong id="mail-total-links">0</strong>
                 </div>
                 <div class="mail-summary-item">
-                  <span class="mail-summary-label">Link mới chưa mở</span>
+                  <span class="mail-summary-label">Link m&#7899;i ch&#432;a m&#7903;</span>
                   <strong id="mail-total-fresh-links">0</strong>
                 </div>
               </div>
-              <div id="mail-links-empty" class="mail-empty">Chưa có liên kết nào.</div>
+              <div id="mail-links-empty" class="mail-empty">Ch&#432;a c&#243; li&#234;n k&#7871;t n&#224;o.</div>
               <div id="mail-links-list" class="mail-links-list"></div>
             </aside>
           </div>
@@ -94,7 +104,7 @@
 
         <section class="glass voucher-panel">
           <div class="panel-title" style="margin-bottom:14px">
-            <h3>Kết quả xử lý</h3>
+            <h3>K&#7871;t qu&#7843; x&#7917; l&#253;</h3>
           </div>
           <div id="mail-results" class="mail-results"></div>
         </section>
@@ -104,6 +114,7 @@
     <footer class="footer">TrackShopee &copy; 2026</footer>
   </div>
 
+  <script src="nav.js?v=20260314a"></script>
   <script src="mail.js?v=20260314e"></script>
 </body>
 </html>

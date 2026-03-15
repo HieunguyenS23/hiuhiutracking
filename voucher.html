@@ -1,13 +1,13 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TrackShopee - Lưu Voucher</title>
-  <meta name="description" content="Lưu Voucher Shopee bằng QR và lấy cookie SPC_ST">
+  <meta name="description" content="Lưu 2 voucher Shopee cố định bằng SPC_ST">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260314f">
+  <link rel="stylesheet" href="style.css?v=20260314h">
 </head>
 <body>
   <div class="aurora"></div>
@@ -16,134 +16,95 @@
   <div class="app">
     <nav class="nav">
       <div class="nav-brand">
-        <div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <rect x="1" y="3" width="15" height="13" />
-            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
-            <circle cx="5.5" cy="18.5" r="2.5" />
-            <circle cx="18.5" cy="18.5" r="2.5" />
-          </svg></div>
+        <button class="nav-menu-toggle" type="button" data-nav-toggle aria-label="Mở menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg>
+        </button>
+        <div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg></div>
         <span>TrackShopee Admin</span>
       </div>
-      <div class="nav-right"><a class="nav-btn" href="/index.html">Đơn hàng</a><a class="nav-btn" href="/mail.html">Đọc mail</a><button class="nav-btn" type="button" id="voucher-reload-btn">Tải lại danh sách</button><a class="nav-btn" href="/auth/logout">Dang xuat</a></div>
     </nav>
+    <div class="nav-overlay" data-nav-close></div>
+    <aside class="nav-drawer" data-nav-drawer>
+      <div class="nav-drawer-head">
+        <strong>Điều hướng</strong>
+        <button class="nav-drawer-close" type="button" data-nav-close aria-label="Đóng menu">&times;</button>
+      </div>
+      <div class="nav-drawer-links">
+        <a class="drawer-link" href="/index.html">Đơn hàng</a>
+        <a class="drawer-link is-active" href="/voucher.html">Lưu Voucher</a>
+        <a class="drawer-link" href="/bulk-mail.html">Thêm mail</a>
+        <a class="drawer-link" href="/mail.html">Đọc mail</a>
+        <a class="drawer-link" href="/address.html">Xử lí địa chỉ</a>
+        <a class="drawer-link" href="/index.html#history-section">Lịch sử</a>
+        <a class="drawer-link" href="/index.html#spx-overlay">Tra MVĐ</a>
+        <a class="drawer-link" href="/auth/logout">Đăng xuất</a>
+      </div>
+    </aside>
+
     <main class="main">
       <div class="hero">
-        <h1>Lưu <span class="gradient-text">Voucher Shopee</span></h1>
-        <p>Quét QR code để lấy cookie SPC_ST, lưu danh mục nội bộ và thêm mail hàng loạt từ API otistx.</p>
+        <h1>Lưu <span class="gradient-text">2 Voucher Cố Định</span></h1>
+        <p>Dán `SPC_ST` rồi bấm lưu cho 2 mã `CRMNUICL80T3` và `FSV-1363693662932996`.</p>
       </div>
 
       <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
       <div class="voucher-shell">
         <section class="glass voucher-panel">
-          <div class="voucher-grid">
-            <div>
-              <div class="search-card glass" style="margin-bottom:14px">
-                <div class="search-inner">
-                  <div class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg></div>
-                  <input type="text" id="voucher-login-input" class="s-input" placeholder="user|pass|SPC_F" autocomplete="off">
-                  <button id="voucher-login-btn" class="s-btn" type="button">Lấy SPC_ST</button>
-                </div>
+          <div class="voucher-section-head">
+            <h2>Lưu voucher</h2>
+          </div>
+          <div class="voucher-grid voucher-grid-single">
+            <div class="search-card glass">
+              <div class="search-inner" style="margin-bottom:12px">
+                <div class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h10" /></svg></div>
+                <input type="text" id="voucher-manual-cookie-input" class="s-input" placeholder="Nhập SPC_ST hoặc SPC_ST=..." autocomplete="off">
               </div>
 
-              <div class="search-card glass" style="margin-bottom:14px">
-                <div class="voucher-item-actions" style="justify-content:flex-start">
-                  <button id="voucher-save-100k-btn" class="s-btn" type="button">100K</button>
-                  <button id="voucher-save-hot-btn" class="nav-btn" type="button">Hỏa tốc</button>
-                </div>
-                <div style="margin-top:12px">
-                  <input type="text" id="voucher-autopee-bearer-input" class="s-input" placeholder="Bearer token Autopee mới" autocomplete="off">
-                </div>
+              <div id="voucher-actions-wrap" class="voucher-item-actions" style="justify-content:flex-start">
+                <button id="voucher-save-100k-btn" class="s-btn" type="button">100K</button>
+                <button id="voucher-save-hot-btn" class="nav-btn" type="button">Hỏa tốc</button>
               </div>
 
-              <div class="search-card glass" style="margin-bottom:14px">
-                <div class="qr-box">
-                  <button id="voucher-qr-btn" class="s-btn" type="button" style="margin:0 auto">Quét QR code</button>
-                  <div id="voucher-qr-display" class="hidden">
-                    <img id="voucher-qr-img" class="qr-img" src="" alt="QR Voucher">
-                    <div class="voucher-item-actions" style="justify-content:center">
-                      <button id="voucher-copy-image-btn" class="qr-copy-btn" type="button">Copy ảnh QR</button>
-                      <button id="voucher-cancel-btn" class="qr-copy-btn" type="button">Hủy QR</button>
-                    </div>
-                    <div id="voucher-qr-status" class="qr-status">Chờ quét QR trên app Shopee...</div>
-                  </div>
-                </div>
+              <div id="voucher-action-status" class="voucher-code-box" style="margin-top:12px;display:none"></div>
+
+              <div style="margin-top:12px; color:#cbd5e1; font-size:13px">
+                Dựa theo source live của trang voucher Autopee: load danh sách qua `/api/shopee/vouchers`, `/api/shopee/freeships`
+                và lưu qua `/api/shopee/save-voucher`.
+              </div>
+
+              <details style="margin-top:12px">
+                <summary style="cursor:pointer;color:#cbd5e1">Debug API voucher</summary>
+                <pre id="voucher-api-debug" class="voucher-code-box" style="margin-top:10px;white-space:pre-wrap;max-height:260px;overflow:auto">Chưa có log.</pre>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <section class="glass voucher-panel">
+          <div class="voucher-section-head">
+            <h2>Lấy lại SPC_ST</h2>
+          </div>
+          <div class="voucher-grid voucher-grid-single">
+            <div class="search-card glass">
+              <div class="search-inner" style="margin-bottom:12px">
+                <div class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg></div>
+                <input type="text" id="voucher-login-input" class="s-input" placeholder="user|pass|SPC_F" autocomplete="off">
+                <button id="voucher-login-btn" class="s-btn" type="button">Lấy SPC_ST</button>
               </div>
 
               <div class="voucher-output">
                 <div class="voucher-code-box">
-                  <span class="voucher-code-label">SPC_ST mới nhất</span>
-                  <span class="voucher-code" id="voucher-cookie-value">Chưa có cookie nào được lưu.</span>
+                  <span class="voucher-code-label">Xuất SPC_ST</span>
+                  <span class="voucher-code" id="voucher-cookie-value">Chưa có SPC_ST.</span>
                 </div>
                 <div class="voucher-item-actions">
                   <button id="voucher-copy-cookie-btn" class="s-btn" type="button">Copy SPC_ST=...</button>
-                  <button id="voucher-copy-full-current-btn" class="nav-btn" type="button">SPC_F</button>
-                  <button id="voucher-copy-replaced-current-btn" class="nav-btn" type="button">Thay SPC_ST mới</button>
-                  <button id="voucher-clear-current-btn" class="nav-btn" type="button">Xóa kết quả hiện tại</button>
+                  <button id="voucher-copy-spcf-btn" class="nav-btn" type="button">Copy SPC_F=...</button>
+                  <button id="voucher-update-spcst-btn" class="nav-btn" type="button">Cập nhật SPC_ST</button>
                 </div>
               </div>
             </div>
-
-            <div class="glass voucher-panel">
-              <div class="panel-title" style="margin-bottom:10px">
-                <h3>Thêm mail hàng loạt</h3>
-              </div>
-              <div class="bulk-email-box">
-                <div class="voucher-note-box">API key otistx da duoc cau hinh o server.</div>
-
-                <div class="bulk-email-toolbar">
-                  <button id="bulk-upload-btn" class="nav-btn" type="button">Tải file</button>
-                  <button id="bulk-clear-btn" class="nav-btn" type="button">Xóa ô nhập</button>
-                  <input id="bulk-file-input" type="file" accept=".txt,.csv" class="hidden">
-                </div>
-
-                <label class="mail-option-label" for="bulk-email-input">Dữ liệu thêm mail</label>
-                <textarea id="bulk-email-input" class="mail-textarea bulk-email-textarea" placeholder="email1@example.com|SPC_ST=abc123|proxy:port:user:pass&#10;email2@example.com|SPC_ST=def456"></textarea>
-
-                <div class="bulk-email-meta">
-                  <span id="bulk-entry-count">0 dòng hợp lệ</span>
-                  <span id="bulk-result-summary"></span>
-                </div>
-
-                <div class="voucher-item-actions" style="justify-content:flex-start">
-                  <button id="bulk-submit-btn" class="s-btn" type="button">Bắt đầu thêm mail</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="glass voucher-panel">
-          <div class="panel-title voucher-accordion-head" style="margin-bottom:14px">
-            <h3>Danh mục voucher đã lưu</h3>
-            <button id="voucher-toggle-btn" class="nav-btn" type="button">Hiện danh mục</button>
-          </div>
-          <div id="voucher-list-wrap" class="voucher-list-wrap hidden">
-            <div id="voucher-list" class="voucher-list"></div>
-          </div>
-        </section>
-
-        <section class="glass voucher-panel">
-          <div class="panel-title" style="margin-bottom:14px">
-            <h3>Kết quả thêm mail</h3>
-          </div>
-          <div id="bulk-results-empty" class="voucher-empty">Chưa có kết quả thêm mail nào.</div>
-          <div id="bulk-results-wrap" class="bulk-results-wrap hidden">
-            <table class="sheet-table bulk-results-table">
-              <thead>
-                <tr>
-                  <th>Cookie ID</th>
-                  <th>Email</th>
-                  <th>Trạng thái</th>
-                  <th>Thông báo</th>
-                  <th>Proxy</th>
-                </tr>
-              </thead>
-              <tbody id="bulk-results-body"></tbody>
-            </table>
           </div>
         </section>
       </div>
@@ -152,6 +113,7 @@
     <footer class="footer">TrackShopee &copy; 2026</footer>
   </div>
 
-  <script src="voucher.js?v=20260314f"></script>
+  <script src="nav.js?v=20260314a"></script>
+  <script src="voucher.js?v=20260315a"></script>
 </body>
 </html>

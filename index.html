@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260314f">
+  <link rel="stylesheet" href="style.css?v=20260314h">
 </head>
 
 <body>
@@ -19,6 +19,9 @@
   <div class="app">
     <nav class="nav">
       <div class="nav-brand">
+        <button class="nav-menu-toggle" type="button" data-nav-toggle aria-label="M&#7903; menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg>
+        </button>
         <div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <rect x="1" y="3" width="15" height="13" />
             <polygon points="16 8 20 8 23 11 23 16 16 16 16 8" />
@@ -27,17 +30,24 @@
           </svg></div>
         <span>TrackShopee Admin</span>
       </div>
-      <div class="nav-right"><a class="nav-btn" href="/voucher.html">Lưu Voucher</a><a class="nav-btn" href="/mail.html">Đọc mail</a><button class="nav-btn" onclick="loadHistory()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>Lịch sử</button>
-        <button class="nav-btn" onclick="toggleSpx()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2">
-            <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-          </svg>Tra MVĐ</button>
-      <a class="nav-btn" href="/auth/logout">Dang xuat</a></div>
     </nav>
+    <div class="nav-overlay" data-nav-close></div>
+    <aside class="nav-drawer" data-nav-drawer>
+      <div class="nav-drawer-head">
+        <strong>&#272;i&#7873;u h&#432;&#7899;ng</strong>
+        <button class="nav-drawer-close" type="button" data-nav-close aria-label="&#272;&#243;ng menu">&times;</button>
+      </div>
+      <div class="nav-drawer-links">
+        <a class="drawer-link is-active" href="/index.html">&#272;&#417;n h&#224;ng</a>
+        <a class="drawer-link" href="/voucher.html">L&#432;u Voucher</a>
+        <a class="drawer-link" href="/bulk-mail.html">Th&#234;m mail</a>
+        <a class="drawer-link" href="/mail.html">&#272;&#7885;c mail</a>
+        <a class="drawer-link" href="/address.html">X&#7917; l&#237; &#273;&#7883;a ch&#7881;</a>
+        <button class="drawer-link" type="button" onclick="loadHistory()">L&#7883;ch s&#7917;</button>
+        <button class="drawer-link" type="button" onclick="toggleSpx()">Tra MV&#272;</button>
+        <a class="drawer-link" href="/auth/logout">&#272;&#259;ng xu&#7845;t</a>
+      </div>
+    </aside>
 
     <main class="main">
       <div class="hero">
@@ -229,6 +239,7 @@
   </div>
 
 
+  <script src="nav.js?v=20260314a"></script>
   <script src="app.js?v=20260314f"></script>
 
 </body>

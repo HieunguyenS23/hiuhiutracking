@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import os
+import socket
 import time
 from http import cookies
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -16,6 +17,7 @@ REMOTE_BASE = 'https://dodanhvu.dpdns.org'
 AUTOPEE_BASE = 'https://api.autopee.com'
 MAIL_BASE = 'https://tools.dongvanfb.net/api'
 OTISTX_BASE = 'https://otistx.com'
+RENDER_RELAY_BASE = os.environ.get('RENDER_RELAY_BASE', 'https://trackshopee-admin.onrender.com')
 APP_USERNAME = os.environ.get('APP_USERNAME', 'hieunguyen01')
 APP_PASSWORD = os.environ.get('APP_PASSWORD', '1')
 OTISTX_API_KEY = os.environ.get('OTISTX_API_KEY', '')
@@ -30,7 +32,7 @@ class ProxyHandler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_OPTIONS(self) -> None:
-        if self.path.startswith(('/api/', '/autopee-api/', '/mail-api/', '/otistx-api/', '/auth/')):
+        if self.path.startswith(('/api/', '/shopee/', '/autopee-api/', '/mail-api/', '/otistx-api/', '/auth/')):
             self.send_response(204)
             self.send_header('Access-Control-Allow-Origin', '*')
             self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
@@ -51,11 +53,14 @@ class ProxyHandler(SimpleHTTPRequestHandler):
             self._handle_auth_status()
             return
 
-        if path.startswith(('/api/', '/autopee-api/', '/mail-api/', '/otistx-api/')):
+        if path.startswith(('/api/', '/shopee/', '/autopee-api/', '/mail-api/', '/otistx-api/')):
             if not self._is_authenticated():
                 self._send_json(401, {'error': 'Unauthorized'})
                 return
             if path.startswith('/api/'):
+                self._proxy_request('GET', REMOTE_BASE, self.path)
+                return
+            if path.startswith('/shopee/'):
                 self._proxy_request('GET', REMOTE_BASE, self.path)
                 return
             if path.startswith('/autopee-api/'):
@@ -82,11 +87,14 @@ class ProxyHandler(SimpleHTTPRequestHandler):
             self._handle_login()
             return
 
-        if path.startswith(('/api/', '/autopee-api/', '/mail-api/', '/otistx-api/')):
+        if path.startswith(('/api/', '/shopee/', '/autopee-api/', '/mail-api/', '/otistx-api/')):
             if not self._is_authenticated():
                 self._send_json(401, {'error': 'Unauthorized'})
                 return
             if path.startswith('/api/'):
+                self._proxy_request('POST', REMOTE_BASE, self.path)
+                return
+            if path.startswith('/shopee/'):
                 self._proxy_request('POST', REMOTE_BASE, self.path)
                 return
             if path.startswith('/autopee-api/'):
@@ -276,14 +284,61 @@ class ProxyHandler(SimpleHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(data)
-        except URLError as exc:
-            payload = json.dumps({'error': f'Khong ket noi duoc API: {exc.reason}'}, ensure_ascii=False).encode('utf-8')
+        except (URLError, TimeoutError, socket.timeout) as exc:
+            relay_path = self._build_render_relay_path(base_url, path)
+            if relay_path and self._proxy_via_render(method, relay_path, body, headers):
+                return
+            reason = getattr(exc, 'reason', None) or str(exc) or 'timeout'
+            payload = json.dumps({'error': f'Khong ket noi duoc API: {reason}'}, ensure_ascii=False).encode('utf-8')
             self.send_response(502)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.send_header('Content-Length', str(len(payload)))
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(payload)
+
+    def _build_render_relay_path(self, base_url: str, path: str) -> str:
+        if base_url == REMOTE_BASE:
+            return path
+        if base_url == AUTOPEE_BASE:
+            return '/autopee-api' + path
+        if base_url == MAIL_BASE:
+            return '/mail-api' + path
+        if base_url == OTISTX_BASE:
+            return '/otistx-api' + path
+        return ''
+
+    def _proxy_via_render(self, method: str, relay_path: str, body: bytes | None, headers: dict[str, str]) -> bool:
+        relay_headers = dict(headers)
+        relay_headers['Cookie'] = self._build_render_auth_cookie()
+        request = Request(RENDER_RELAY_BASE + relay_path, data=body, headers=relay_headers, method=method)
+        try:
+            with urlopen(request, timeout=60) as response:
+                data = response.read()
+                self.send_response(response.status)
+                content_type = response.headers.get('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Content-Type', content_type)
+                self.send_header('Content-Length', str(len(data)))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('X-Proxy-Relay', 'render')
+                self.end_headers()
+                self.wfile.write(data)
+                return True
+        except HTTPError as exc:
+            data = exc.read()
+            self.send_response(exc.code)
+            self.send_header('Content-Type', exc.headers.get('Content-Type', 'application/json; charset=utf-8'))
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('X-Proxy-Relay', 'render')
+            self.end_headers()
+            self.wfile.write(data)
+            return True
+        except (URLError, TimeoutError, socket.timeout):
+            return False
+
+    def _build_render_auth_cookie(self) -> str:
+        return f'{SESSION_COOKIE_NAME}={self._make_session_token()}'
 
 
 def main() -> None:

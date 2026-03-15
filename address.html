@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrackShopee - Xử lí địa chỉ</title>
+  <meta name="description" content="Xem, xóa và thêm địa chỉ bằng API Ostix cũ">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20260314h">
+  <style>
+    .address-shell { display: grid; gap: 18px; }
+    .address-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .address-panel { padding: 20px; }
+    .address-stack { display: grid; gap: 12px; }
+    .address-label { display: grid; gap: 6px; font-size: 13px; color: rgba(226,232,240,.92); }
+    .address-label strong { font-size: 13px; color: #f8fafc; }
+    .address-textarea {
+      min-height: 96px;
+      resize: vertical;
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(148,163,184,.18);
+      background: rgba(15,23,42,.58);
+      color: #f8fafc;
+      font: inherit;
+    }
+    .address-textarea::placeholder { color: rgba(226,232,240,.45); }
+    .address-list { display: grid; gap: 10px; }
+    .address-item {
+      border: 1px solid rgba(148,163,184,.15);
+      border-radius: 18px;
+      padding: 14px;
+      background: rgba(15,23,42,.46);
+    }
+    .address-item.is-selected { border-color: rgba(248,113,113,.65); box-shadow: 0 0 0 1px rgba(248,113,113,.2) inset; }
+    .address-item-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+    .address-name { font-weight: 700; color: #f8fafc; }
+    .address-phone, .address-full, .address-meta, .address-empty {
+      color: rgba(226,232,240,.8);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .address-full { margin-top: 6px; }
+    .address-meta { margin-top: 8px; }
+    .address-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(59,130,246,.14);
+      color: #93c5fd;
+    }
+    .address-badge.warn { background: rgba(251,191,36,.16); color: #fcd34d; }
+    .address-badge.danger { background: rgba(248,113,113,.16); color: #fda4af; }
+    .address-result {
+      border-radius: 16px;
+      padding: 14px 16px;
+      border: 1px solid rgba(148,163,184,.16);
+      background: rgba(15,23,42,.52);
+      color: #e2e8f0;
+      font-size: 14px;
+    }
+    .address-result.is-success { border-color: rgba(74,222,128,.35); }
+    .address-result.is-error { border-color: rgba(248,113,113,.35); }
+    .address-inline { display: flex; gap: 10px; flex-wrap: wrap; }
+    @media (max-width: 720px) {
+      .address-panel { padding: 16px; }
+      .address-item-top { align-items: flex-start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="aurora"></div>
+  <div class="aurora aurora-2"></div>
+  <div class="aurora aurora-3"></div>
+  <div class="app">
+    <nav class="nav">
+      <div class="nav-brand">
+        <button class="nav-menu-toggle" type="button" data-nav-toggle aria-label="Mở menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg>
+        </button>
+        <div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg></div>
+        <span>TrackShopee Admin</span>
+      </div>
+    </nav>
+    <div class="nav-overlay" data-nav-close></div>
+    <aside class="nav-drawer" data-nav-drawer>
+      <div class="nav-drawer-head">
+        <strong>Điều hướng</strong>
+        <button class="nav-drawer-close" type="button" data-nav-close aria-label="Đóng menu">&times;</button>
+      </div>
+      <div class="nav-drawer-links">
+        <a class="drawer-link" href="/index.html">Đơn hàng</a>
+        <a class="drawer-link" href="/voucher.html">Lưu Voucher</a>
+        <a class="drawer-link" href="/bulk-mail.html">Thêm mail</a>
+        <a class="drawer-link" href="/mail.html">Đọc mail</a>
+        <a class="drawer-link is-active" href="/address.html">Xử lí địa chỉ</a>
+        <a class="drawer-link" href="/index.html#history-section">Lịch sử</a>
+        <a class="drawer-link" href="/index.html#spx-overlay">Tra MVĐ</a>
+        <a class="drawer-link" href="/auth/logout">Đăng xuất</a>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="hero">
+        <h1>Xử lí <span class="gradient-text">địa chỉ Shopee</span></h1>
+        <p>Dùng API Ostix cũ để xem danh sách, xóa địa chỉ đã chọn và thêm địa chỉ mới.</p>
+      </div>
+
+      <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+      <div class="address-shell">
+        <section class="glass address-panel">
+          <div class="panel-title" style="margin-bottom:14px">
+            <h3>Xem và xóa địa chỉ</h3>
+          </div>
+          <div class="address-stack">
+            <label class="address-label">
+              <strong>Cookie SPC_ST</strong>
+              <textarea id="address-view-spcst" class="address-textarea" placeholder="SPC_ST=..."></textarea>
+            </label>
+            <label class="address-label">
+              <strong>Proxy tùy chọn</strong>
+              <input id="address-view-proxy" type="text" class="s-input" placeholder="ip:port hoặc ip:port:user:pass">
+            </label>
+            <div class="address-inline">
+              <button id="address-load-btn" class="s-btn" type="button">Xem địa chỉ</button>
+              <button id="address-select-all-btn" class="nav-btn" type="button">Chọn tất cả</button>
+              <button id="address-delete-btn" class="nav-btn" type="button">Xóa địa chỉ đã chọn</button>
+              <button id="address-clear-view-btn" class="nav-btn" type="button">Xóa form xem</button>
+            </div>
+            <div id="address-view-result" class="address-result hidden"></div>
+            <div id="address-list" class="address-list">
+              <div class="address-empty">Chưa có danh sách địa chỉ.</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="glass address-panel">
+          <div class="panel-title" style="margin-bottom:14px">
+            <h3>Thêm địa chỉ mới</h3>
+          </div>
+          <div class="address-grid">
+            <label class="address-label">
+              <strong>Cookie SPC_ST</strong>
+              <textarea id="address-add-spcst" class="address-textarea" placeholder="SPC_ST=..."></textarea>
+            </label>
+            <label class="address-label">
+              <strong>Proxy tùy chọn</strong>
+              <input id="address-add-proxy" type="text" class="s-input" placeholder="ip:port hoặc ip:port:user:pass">
+            </label>
+            <label class="address-label">
+              <strong>Tên người nhận</strong>
+              <input id="address-add-name" type="text" class="s-input" placeholder="Để trống nếu muốn random">
+            </label>
+            <label class="address-label">
+              <strong>SĐT đăng ký</strong>
+              <input id="address-add-phone-account" type="text" class="s-input" placeholder="Để trống nếu muốn lấy từ tài khoản">
+            </label>
+            <label class="address-label">
+              <strong>SĐT gọi</strong>
+              <input id="address-add-phone-call" type="text" class="s-input" placeholder="Tùy chọn">
+            </label>
+            <label class="address-label" style="grid-column: 1 / -1;">
+              <strong>Địa chỉ đầy đủ</strong>
+              <textarea id="address-add-full" class="address-textarea" placeholder="Ví dụ: số 10 ngõ 5 đường Láng Hạ, Đống Đa, Hà Nội"></textarea>
+            </label>
+          </div>
+          <div class="address-inline" style="margin-top:14px">
+            <button id="address-add-btn" class="s-btn" type="button">Thêm địa chỉ</button>
+            <button id="address-clear-add-btn" class="nav-btn" type="button">Xóa form thêm</button>
+          </div>
+          <div id="address-add-result" class="address-result hidden" style="margin-top:14px"></div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer">TrackShopee &copy; 2026</footer>
+  </div>
+
+  <script src="nav.js?v=20260314a"></script>
+  <script src="address.js?v=20260314a"></script>
+</body>
+</html>

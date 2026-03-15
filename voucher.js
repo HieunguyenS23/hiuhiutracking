@@ -1,91 +1,36 @@
-﻿const API_BASE = '';
-const VOUCHER_KEY = 'ts_saved_vouchers';
-const AUTOPEE_100K_CODE = 'CRMNUICL80T3';
-const AUTOPEE_BEARER_KEY = 'ts_autopee_bearer';
-const AUTOPEE_HOT_KEYWORDS = ['hỏa tốc', 'hoa toc', 'freeship'];
-const BULK_EMAIL_INPUT_KEY = 'ts_bulk_email_input';
-const VOUCHER_LIST_COLLAPSED_KEY = 'ts_voucher_list_collapsed';
+const API_BASE = '';
+
+const FIXED_VOUCHERS = [
+  { code: 'CRMNUICL80T3', label: '100K', source: 'voucher' },
+  { code: 'FSV-1363693662932996', label: 'Hỏa tốc', source: 'freeship' }
+];
 
 const state = {
-  qrSessionId: '',
-  qrPollTimer: null,
-  currentSpcSt: '',
-  currentCookieRaw: '',
-  autopeeBearer: localStorage.getItem(AUTOPEE_BEARER_KEY) || '',
-  vouchers: readJson(VOUCHER_KEY, []),
   activeToast: null,
   activeToastTimer: null,
-  bulkInput: localStorage.getItem(BULK_EMAIL_INPUT_KEY) || '',
-  bulkResults: [],
-  voucherListCollapsed: localStorage.getItem(VOUCHER_LIST_COLLAPSED_KEY) !== '0'
+  savingCode: '',
+  voucherMap: new Map(),
+  currentSpcSt: '',
+  currentSpcF: '',
+  loginSourceRaw: ''
 };
 
+const REQUEST_TIMEOUT_MS = 20000;
+
 const els = {
+  manualCookieInput: document.getElementById('voucher-manual-cookie-input'),
   loginInput: document.getElementById('voucher-login-input'),
   loginButton: document.getElementById('voucher-login-btn'),
   save100kButton: document.getElementById('voucher-save-100k-btn'),
   saveHotButton: document.getElementById('voucher-save-hot-btn'),
-  autopeeBearerInput: document.getElementById('voucher-autopee-bearer-input'),
-  qrButton: document.getElementById('voucher-qr-btn'),
-  qrDisplay: document.getElementById('voucher-qr-display'),
-  qrImage: document.getElementById('voucher-qr-img'),
-  qrStatus: document.getElementById('voucher-qr-status'),
+  actionStatus: document.getElementById('voucher-action-status'),
+  apiDebug: document.getElementById('voucher-api-debug'),
   toastContainer: document.getElementById('toast-container'),
   cookieValue: document.getElementById('voucher-cookie-value'),
   copyCookieButton: document.getElementById('voucher-copy-cookie-btn'),
-  copyFullCurrentButton: document.getElementById('voucher-copy-full-current-btn'),
-  copyReplacedCurrentButton: document.getElementById('voucher-copy-replaced-current-btn'),
-  copyImageButton: document.getElementById('voucher-copy-image-btn'),
-  cancelButton: document.getElementById('voucher-cancel-btn'),
-  clearCurrentButton: document.getElementById('voucher-clear-current-btn'),
-  reloadButton: document.getElementById('voucher-reload-btn'),
-  toggleButton: document.getElementById('voucher-toggle-btn'),
-  listWrap: document.getElementById('voucher-list-wrap'),
-  list: document.getElementById('voucher-list'),
-  bulkInput: document.getElementById('bulk-email-input'),
-  bulkUploadButton: document.getElementById('bulk-upload-btn'),
-  bulkFileInput: document.getElementById('bulk-file-input'),
-  bulkClearButton: document.getElementById('bulk-clear-btn'),
-  bulkSubmitButton: document.getElementById('bulk-submit-btn'),
-  bulkEntryCount: document.getElementById('bulk-entry-count'),
-  bulkResultSummary: document.getElementById('bulk-result-summary'),
-  bulkResultsEmpty: document.getElementById('bulk-results-empty'),
-  bulkResultsWrap: document.getElementById('bulk-results-wrap'),
-  bulkResultsBody: document.getElementById('bulk-results-body')
+  copySpcFButton: document.getElementById('voucher-copy-spcf-btn'),
+  updateSpcStButton: document.getElementById('voucher-update-spcst-btn')
 };
-
-function readJson(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeJson(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
-
-function redirectToLogin() {
-  const next = encodeURIComponent(window.location.pathname + window.location.search);
-  window.location.href = '/login.html?next=' + next;
-}
-
-function normalizeAutopeeBearer(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return '';
-  return raw.startsWith('Bearer ') ? raw : ('Bearer ' + raw);
-}
-
-function persistAutopeeBearer() {
-  state.autopeeBearer = normalizeAutopeeBearer(els.autopeeBearerInput ? els.autopeeBearerInput.value : '');
-  if (state.autopeeBearer) {
-    localStorage.setItem(AUTOPEE_BEARER_KEY, state.autopeeBearer);
-  } else {
-    localStorage.removeItem(AUTOPEE_BEARER_KEY);
-  }
-}
 
 function clearToast(force = false) {
   if (!state.activeToast) return;
@@ -103,9 +48,7 @@ function clearToast(force = false) {
   }
 
   toast.classList.remove('is-visible');
-  window.setTimeout(() => {
-    toast.remove();
-  }, 180);
+  window.setTimeout(() => toast.remove(), 180);
 }
 
 function showToast(message, type = 'info', duration = 2400) {
@@ -118,13 +61,8 @@ function showToast(message, type = 'info', duration = 2400) {
   els.toastContainer.appendChild(toast);
   state.activeToast = toast;
 
-  requestAnimationFrame(() => {
-    toast.classList.add('is-visible');
-  });
-
-  state.activeToastTimer = window.setTimeout(() => {
-    clearToast();
-  }, duration);
+  requestAnimationFrame(() => toast.classList.add('is-visible'));
+  state.activeToastTimer = window.setTimeout(() => clearToast(), duration);
 }
 
 function showError(message) {
@@ -132,51 +70,197 @@ function showError(message) {
 }
 
 function showSuccess(message) {
-  showToast(message, 'success', 2300);
+  showToast(message, 'success', 2200);
 }
 
 function showProgress(message) {
   showToast(message, 'progress', 1600);
 }
 
-function escapeHtml(value) {
-  const div = document.createElement('div');
-  div.textContent = value == null ? '' : String(value);
-  return div.innerHTML;
-}
-
-function extractVoucherTitle(sourceText) {
-  const source = String(sourceText || '').trim();
-  if (!source) return 'QR Login';
-
-  const parts = source.split('|').map((item) => item.trim()).filter(Boolean);
-  if (parts.length >= 2 && !/^SPC_/i.test(parts[0])) {
-    return parts[0];
+function setActionStatus(message, type) {
+  if (!els.actionStatus) return;
+  if (!message) {
+    els.actionStatus.style.display = 'none';
+    els.actionStatus.textContent = '';
+    els.actionStatus.style.borderColor = '';
+    return;
   }
-  return 'QR Login';
+
+  els.actionStatus.style.display = 'block';
+  els.actionStatus.textContent = message;
+  if (type === 'success') {
+    els.actionStatus.style.borderColor = 'rgba(34,197,94,.45)';
+  } else if (type === 'error') {
+    els.actionStatus.style.borderColor = 'rgba(248,113,113,.45)';
+  } else {
+    els.actionStatus.style.borderColor = 'rgba(96,165,250,.45)';
+  }
 }
 
-function syncVoucherListVisibility() {
-  if (!els.listWrap || !els.toggleButton) return;
-  els.listWrap.classList.toggle('hidden', state.voucherListCollapsed);
-  els.toggleButton.textContent = state.voucherListCollapsed ? 'Hiện danh mục' : 'Ẩn danh mục';
+function setApiDebug(lines) {
+  if (!els.apiDebug) return;
+  const content = Array.isArray(lines) ? lines.join('\n') : String(lines || '');
+  els.apiDebug.textContent = content || 'Chưa có log.';
 }
 
-function toggleVoucherList() {
-  state.voucherListCollapsed = !state.voucherListCollapsed;
-  localStorage.setItem(VOUCHER_LIST_COLLAPSED_KEY, state.voucherListCollapsed ? '1' : '0');
-  syncVoucherListVisibility();
+function appendApiDebug(lines) {
+  if (!els.apiDebug) return;
+  const nextLines = Array.isArray(lines) ? lines : [String(lines || '')];
+  const current = els.apiDebug.textContent && els.apiDebug.textContent !== 'Chưa có log.'
+    ? els.apiDebug.textContent.split('\n')
+    : [];
+  els.apiDebug.textContent = current.concat(nextLines).slice(-120).join('\n') || 'Chưa có log.';
+}
+
+function normalizeSpcStInput(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const match = raw.match(/SPC_ST=[^;|\s"]+/);
+  if (match) return match[0];
+  if (!/=/.test(raw)) return 'SPC_ST=' + raw;
+  return raw;
+}
+
+function extractSpcSt(raw) {
+  const source = String(raw || '').trim();
+  const match = source.match(/SPC_ST=([^;|\s"]+)/);
+  return match ? match[1] : source;
+}
+
+function extractSpcF(raw) {
+  const source = String(raw || '').trim();
+  const match = source.match(/SPC_F=[^;|\s"]+/);
+  return match ? match[0] : '';
+}
+
+function getCookieInput() {
+  const value = normalizeSpcStInput(els.manualCookieInput ? els.manualCookieInput.value : '');
+  if (els.manualCookieInput && value && els.manualCookieInput.value.trim() !== value) {
+    els.manualCookieInput.value = value;
+  }
+  return value;
+}
+
+function syncCurrentCookieDisplay() {
+  if (els.cookieValue) {
+    els.cookieValue.textContent = state.currentSpcSt ? ('SPC_ST=' + state.currentSpcSt) : 'Chưa có SPC_ST.';
+  }
+}
+
+function setCurrentSpcData(cookie, fallbackSpcSt, sourceInput) {
+  const spcSt = extractSpcSt(cookie || fallbackSpcSt || '');
+  const spcF = extractSpcF(sourceInput || '');
+  state.loginSourceRaw = String(sourceInput || '').trim();
+  state.currentSpcSt = spcSt || '';
+  state.currentSpcF = spcF || '';
+  if (spcSt && els.manualCookieInput) {
+    els.manualCookieInput.value = 'SPC_ST=' + spcSt;
+  }
+  syncCurrentCookieDisplay();
+}
+
+function setButtonBusy(button, busy, busyLabel) {
+  if (!button) return;
+  if (!button.dataset.defaultLabel) {
+    button.dataset.defaultLabel = button.textContent;
+  }
+  button.disabled = busy;
+  button.textContent = busy ? busyLabel : button.dataset.defaultLabel;
+}
+
+function updateFixedButtons() {
+  const fixed100k = state.voucherMap.get('CRMNUICL80T3');
+  const fixedHot = state.voucherMap.get('FSV-1363693662932996');
+
+  if (els.save100kButton) {
+    els.save100kButton.disabled = !fixed100k || state.savingCode === 'CRMNUICL80T3';
+    els.save100kButton.title = fixed100k ? fixed100k.voucherName || fixed100k.voucherCode : 'Chưa tải được metadata cho mã 100K.';
+  }
+
+  if (els.saveHotButton) {
+    els.saveHotButton.disabled = !fixedHot || state.savingCode === 'FSV-1363693662932996';
+    els.saveHotButton.title = fixedHot ? fixedHot.voucherName || fixedHot.voucherCode : 'Chưa tải được metadata cho mã Hỏa tốc.';
+  }
+}
+
+function normalizeVoucherItem(item, source) {
+  return {
+    source,
+    promotionId: item.promotionId || item.promotionid,
+    voucherCode: item.voucherCode || item.voucher_code,
+    signature: item.signature,
+    voucherName: item.voucherName || item.voucher_name || item.title || item.voucherCode || item.voucher_code || source
+  };
+}
+
+function extractVoucherList(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.data)) return payload.data;
+  if (payload && payload.data && Array.isArray(payload.data.data)) return payload.data.data;
+  return [];
+}
+
+async function autopeeApi(path, options = {}) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), options.timeoutMs || REQUEST_TIMEOUT_MS);
+  let response;
+  try {
+    response = await fetch(API_BASE + '/autopee-api' + path, {
+      method: options.method || 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error && error.name === 'AbortError') {
+      throw new Error('API Autopee phản hồi quá lâu, đã tự dừng sau 20 giây.');
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text;
+  }
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    data,
+    text
+  };
 }
 
 async function apiRequest(path, options = {}) {
-  const response = await fetch(API_BASE + path, {
-    method: options.method || 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined
-  });
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), options.timeoutMs || REQUEST_TIMEOUT_MS);
+  let response;
+  try {
+    response = await fetch(API_BASE + path, {
+      method: options.method || 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error && error.name === 'AbortError') {
+      throw new Error('API phản hồi quá lâu, đã tự dừng sau 20 giây.');
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 
   const text = await response.text();
   let data = {};
@@ -187,619 +271,271 @@ async function apiRequest(path, options = {}) {
   }
 
   if (!response.ok || data.error) {
-    let fallback = 'HTTP ' + response.status;
-    if (response.status === 400) fallback = 'Thong tin dang nhap khong hop le hoac thieu SPC_F.';
-    if (response.status === 401) {
-      showError('Phien dang nhap da het han. Dang quay lai trang dang nhap...');
-      window.setTimeout(redirectToLogin, 800);
-      fallback = 'Phien dang nhap da het han.';
-    }
-    throw new Error(data.error || fallback);
+    throw new Error(data.error || ('HTTP ' + response.status));
   }
 
   return data;
 }
 
-async function autopeeRequest(path, options = {}) {
-  const requestOnce = async (actualPath) => {
-    const response = await fetch(API_BASE + '/autopee-api' + actualPath, {
-      method: options.method || 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(state.autopeeBearer ? { Authorization: state.autopeeBearer } : {}),
-        ...(options.headers || {})
-      },
-      body: options.body ? JSON.stringify(options.body) : undefined
-    });
+async function loadVoucherMetadata() {
+  setActionStatus('Đang tải metadata cho 2 mã voucher...', 'progress');
 
-    const text = await response.text();
-    let data = {};
-    try {
-      data = text ? JSON.parse(text) : {};
-    } catch {
-      data = {};
+  const [voucherResult, freeshipResult] = await Promise.all([
+    autopeeApi('/api/shopee/vouchers?limit=200'),
+    autopeeApi('/api/shopee/freeships?limit=200')
+  ]);
+
+  const logs = [
+    '[voucher] /autopee-api/api/shopee/vouchers?limit=200',
+    'status=' + voucherResult.status + ' ok=' + voucherResult.ok,
+    'sample=' + (typeof voucherResult.data === 'string'
+      ? voucherResult.data.slice(0, 300)
+      : JSON.stringify(voucherResult.data, null, 2).slice(0, 1200)),
+    '',
+    '[freeship] /autopee-api/api/shopee/freeships?limit=200',
+    'status=' + freeshipResult.status + ' ok=' + freeshipResult.ok,
+    'sample=' + (typeof freeshipResult.data === 'string'
+      ? freeshipResult.data.slice(0, 300)
+      : JSON.stringify(freeshipResult.data, null, 2).slice(0, 1200))
+  ];
+  setApiDebug(logs);
+
+  const voucherItems = extractVoucherList(voucherResult.data).map((item) => normalizeVoucherItem(item, 'voucher'));
+  const freeshipItems = extractVoucherList(freeshipResult.data).map((item) => normalizeVoucherItem(item, 'freeship'));
+
+  state.voucherMap.clear();
+  voucherItems.concat(freeshipItems).forEach((item) => {
+    if (item.voucherCode && item.promotionId && item.signature) {
+      state.voucherMap.set(String(item.voucherCode).trim().toUpperCase(), item);
     }
-
-    return { response, data };
-  };
-
-  let result = await requestOnce(path);
-  if (result.response.status === 404 && !String(path).startsWith('/api/')) {
-    result = await requestOnce('/api' + path);
-  }
-
-  if (!result.response.ok) {
-    if (result.response.status === 401) {
-      showError('Phien dang nhap da het han. Dang quay lai trang dang nhap...');
-      window.setTimeout(redirectToLogin, 800);
-    }
-    const message = result.data?.error?.message || result.data?.error || result.data?.message || ('HTTP ' + result.response.status);
-    throw new Error(message);
-  }
-
-  if (result.data && result.data.success === false) {
-    const message = result.data?.error?.message || result.data?.error || result.data?.message || 'Yeu cau Autopee that bai.';
-    throw new Error(message);
-  }
-
-  return result.data;
-}
-
-async function otistxRequest(path, options = {}) {
-  const response = await fetch(API_BASE + '/otistx-api' + path, {
-    method: options.method || 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    },
-    body: options.body ? JSON.stringify(options.body) : undefined
   });
 
-  const text = await response.text();
-  let data = null;
+  updateFixedButtons();
+
+  const loaded = FIXED_VOUCHERS.filter((item) => state.voucherMap.has(item.code)).length;
+  if (!loaded) {
+    setActionStatus('Không tải được metadata voucher. Theo bundle live, API này thực tế đang ở api.autopee.com và thường yêu cầu phiên Autopee hợp lệ.', 'error');
+    return;
+  }
+
+  setActionStatus('Đã tải metadata cho ' + loaded + '/2 mã voucher.', loaded === FIXED_VOUCHERS.length ? 'success' : 'error');
+}
+
+function parseSaveResult(result, voucherCode) {
+  const payload = result && typeof result.data === 'object' && result.data !== null ? result.data : result;
+  const inner = payload && typeof payload.data === 'object' && payload.data !== null ? payload.data : payload;
+  const voucherInfo = inner && inner.data && inner.data.voucher ? inner.data.voucher : inner && inner.voucher ? inner.voucher : null;
+  const errorCode = inner && typeof inner.error === 'number' ? inner.error : payload && typeof payload.error === 'number' ? payload.error : null;
+  const claimedBefore = Boolean(voucherInfo && voucherInfo.is_claimed_before === true);
+
+  if (errorCode === 0) {
+    return { ok: true, message: 'Đã lưu voucher ' + voucherCode + ' thành công.' };
+  }
+  if (errorCode === 5 || claimedBefore) {
+    return { ok: true, message: 'Voucher ' + voucherCode + ' đã được lưu trước đó.', claimedBefore: true };
+  }
+
+  const message = (inner && inner.error_msg) || (payload && payload.error) || (payload && payload.message) || 'API chưa xác nhận đã lưu voucher.';
+  return { ok: false, message };
+}
+
+async function saveVoucherByCode(code, button, label) {
+  const voucher = state.voucherMap.get(String(code || '').trim().toUpperCase());
+  if (!voucher) {
+    showError('Chưa có metadata cho mã ' + label + '.');
+    setActionStatus('Chưa có metadata cho mã ' + label + '.', 'error');
+    return;
+  }
+
+  const cookie = getCookieInput();
+  if (!cookie) {
+    showError('Bạn chưa nhập SPC_ST.');
+    setActionStatus('Bạn chưa nhập SPC_ST.', 'error');
+    if (els.manualCookieInput) els.manualCookieInput.focus();
+    return;
+  }
+
+  state.savingCode = code;
+  updateFixedButtons();
+  setButtonBusy(button, true, 'Đang lưu...');
+  showProgress('Đang lưu ' + label + '...');
+  setActionStatus('Đang lưu ' + voucher.voucherCode + '...', 'progress');
+  appendApiDebug([
+    '[save] ' + voucher.voucherCode,
+    'endpoint=/autopee-api/api/shopee/save-voucher',
+    'payload=' + JSON.stringify({
+      cookie,
+      voucher_promotionid: voucher.promotionId,
+      signature: voucher.signature,
+      voucher_code: voucher.voucherCode
+    }).slice(0, 1200),
+    ''
+  ]);
+
   try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = text || null;
-  }
+    const result = await autopeeApi('/api/shopee/save-voucher', {
+      method: 'POST',
+      body: {
+        cookie,
+        voucher_promotionid: voucher.promotionId,
+        signature: voucher.signature,
+        voucher_code: voucher.voucherCode
+      }
+    });
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error('API key otistx khong hop le hoac da het han.');
+    appendApiDebug([
+      '[save-response] ' + voucher.voucherCode,
+      'status=' + result.status + ' ok=' + result.ok,
+      typeof result.data === 'string' ? result.data.slice(0, 1200) : JSON.stringify(result.data, null, 2).slice(0, 2000),
+      ''
+    ]);
+
+    if (!result.ok) {
+      const message = typeof result.data === 'object' && result.data !== null
+        ? result.data.error || result.data.message || ('HTTP ' + result.status)
+        : ('HTTP ' + result.status);
+      throw new Error(message);
     }
-    const message = data?.message || data?.error || ('HTTP ' + response.status);
-    throw new Error(message);
+
+    const parsed = parseSaveResult(result, voucher.voucherCode);
+    if (!parsed.ok) {
+      throw new Error(parsed.message);
+    }
+
+    setActionStatus(parsed.message, parsed.claimedBefore ? 'progress' : 'success');
+    showSuccess(parsed.message);
+  } catch (error) {
+    const message = error.message || 'Có lỗi xảy ra khi lưu voucher.';
+    appendApiDebug([
+      '[save-error] ' + voucher.voucherCode,
+      message,
+      ''
+    ]);
+    setActionStatus('Lưu thất bại: ' + message, 'error');
+    showError(message);
+  } finally {
+    state.savingCode = '';
+    updateFixedButtons();
+    setButtonBusy(button, false, 'Đang lưu...');
   }
-
-  return data;
-}
-
-function extractSpcSt(rawCookie, fallbackSpcSt) {
-  const source = rawCookie || fallbackSpcSt || '';
-  const cookieMatch = source.match(/SPC_ST=([^;|\s"]+)/);
-  if (cookieMatch) return cookieMatch[1];
-  return source.trim();
-}
-
-function buildCookieFromCurrentSpcSt() {
-  if (!state.currentSpcSt) {
-    throw new Error('Chưa có SPC_ST mới nhất để lưu voucher. Hãy lấy SPC_ST trước.');
-  }
-  return 'SPC_ST=' + state.currentSpcSt;
-}
-
-function buildCookieForAutopee() {
-  const latest = state.vouchers[0];
-  const raw = state.currentCookieRaw || (latest ? (latest.rawCookie || latest.sourceText || '') : '');
-  if (raw && /=/.test(raw)) return raw.trim();
-  return buildCookieFromCurrentSpcSt();
-}
-
-function extractSpcF(source) {
-  const match = String(source || '').match(/SPC_F=[^;|\s"]+/);
-  return match ? match[0] : '';
-}
-
-function buildReplacementValue(source) {
-  if (!state.currentSpcSt) {
-    throw new Error('Chưa có SPC_ST mới để thay thế.');
-  }
-
-  const baseSource = source || '';
-  if (/SPC_ST=/.test(baseSource)) {
-    return baseSource.replace(/SPC_ST=[^|\s"]+/, 'SPC_ST=' + state.currentSpcSt);
-  }
-  if (baseSource) {
-    return baseSource + '|SPC_ST=' + state.currentSpcSt;
-  }
-  return 'SPC_ST=' + state.currentSpcSt;
-}
-
-function setCurrentSpcSt(rawCookie, fallbackSpcSt) {
-  const spcSt = extractSpcSt(rawCookie, fallbackSpcSt);
-  state.currentSpcSt = spcSt;
-  state.currentCookieRaw = rawCookie || (spcSt ? ('SPC_ST=' + spcSt) : '');
-  els.cookieValue.textContent = spcSt || 'Chưa có cookie nào được lưu.';
-}
-
-function saveVoucherEntry(spcSt, rawCookie, sourceText = '') {
-  if (!spcSt) return;
-  const normalizedSource = sourceText || rawCookie || ('SPC_ST=' + spcSt);
-  const next = {
-    id: Date.now(),
-    createdAt: new Date().toISOString(),
-    spcSt,
-    rawCookie: rawCookie || ('SPC_ST=' + spcSt),
-    sourceText: normalizedSource,
-    title: extractVoucherTitle(normalizedSource)
-  };
-  state.vouchers.unshift(next);
-  state.vouchers = state.vouchers.slice(0, 30);
-  writeJson(VOUCHER_KEY, state.vouchers);
-}
-
-function formatTime(isoString) {
-  return new Date(isoString || Date.now()).toLocaleString('vi-VN');
-}
-
-function renderVoucherList() {
-  syncVoucherListVisibility();
-
-  if (!state.vouchers.length) {
-    els.list.innerHTML = '<div class="voucher-empty">Chưa có voucher nào được lưu.</div>';
-    return;
-  }
-
-  els.list.innerHTML = state.vouchers.map((item) => {
-    const title = item.title || extractVoucherTitle(item.sourceText || item.rawCookie || '');
-    return `
-    <div class="voucher-item">
-      <div class="voucher-item-top">
-        <span class="voucher-item-name">${escapeHtml(title)}</span>
-        <span class="voucher-item-time">${escapeHtml(formatTime(item.createdAt))}</span>
-      </div>
-      <div class="voucher-code-box" style="margin-bottom:10px">
-        <span class="voucher-code">${escapeHtml(item.spcSt)}</span>
-      </div>
-      <div class="voucher-item-actions">
-        <button class="nav-btn" type="button" onclick="deleteVoucher(${item.id})">Xóa</button>
-      </div>
-    </div>
-  `;
-  }).join('');
-}
-
-function syncBulkEntryCount() {
-  const entries = parseBulkEntries(els.bulkInput.value || '');
-  els.bulkEntryCount.textContent = entries.length + ' dòng hợp lệ';
-}
-
-function renderBulkResults() {
-  if (!state.bulkResults.length) {
-    els.bulkResultsEmpty.classList.remove('hidden');
-    els.bulkResultsWrap.classList.add('hidden');
-    els.bulkResultsBody.innerHTML = '';
-    els.bulkResultSummary.textContent = '';
-    return;
-  }
-
-  const successCount = state.bulkResults.filter((item) => item.status).length;
-  const failCount = state.bulkResults.length - successCount;
-  els.bulkResultSummary.textContent = successCount + ' thành công, ' + failCount + ' thất bại';
-  els.bulkResultsEmpty.classList.add('hidden');
-  els.bulkResultsWrap.classList.remove('hidden');
-  els.bulkResultsBody.innerHTML = state.bulkResults.map((item) => {
-    const cookieId = item.cookieId || item.cookie || item.cookieFull || item.cookiePreview || '-';
-    return `
-      <tr>
-        <td class="wrap">${escapeHtml(cookieId)}</td>
-        <td class="wrap">${escapeHtml(item.email || '-')}</td>
-        <td class="wrap">${item.status ? '<span class="bulk-status bulk-status-ok">Thành công</span>' : '<span class="bulk-status bulk-status-fail">Thất bại</span>'}</td>
-        <td class="wrap">${escapeHtml(item.message || '-')}</td>
-        <td class="wrap">${escapeHtml(item.proxy || '-')}</td>
-      </tr>`;
-  }).join('');
-}
-
-function resetQrDisplay() {
-  state.qrSessionId = '';
-  if (state.qrPollTimer) {
-    clearInterval(state.qrPollTimer);
-    state.qrPollTimer = null;
-  }
-  els.qrDisplay.classList.add('hidden');
-  els.qrImage.src = '';
-  els.qrStatus.textContent = 'Chờ quét QR trên app Shopee...';
-  els.qrButton.disabled = false;
-  els.qrButton.textContent = 'Quét QR code';
-}
-
-async function handleVoucherSuccess(rawCookie, fallbackSpcSt, successMessage, sourceText = '') {
-  const spcSt = extractSpcSt(rawCookie, fallbackSpcSt);
-  if (!spcSt) throw new Error('API không trả về SPC_ST.');
-  setCurrentSpcSt(rawCookie, fallbackSpcSt);
-  saveVoucherEntry(spcSt, rawCookie || ('SPC_ST=' + spcSt), sourceText || rawCookie || ('SPC_ST=' + spcSt));
-  renderVoucherList();
-  showSuccess(successMessage);
 }
 
 async function loginByAccount() {
-  const input = (els.loginInput.value || '').trim();
+  const input = String(els.loginInput ? els.loginInput.value : '').trim();
   if (!input) {
     showError('Bạn chưa nhập user|pass|SPC_F.');
-    els.loginInput.focus();
+    setActionStatus('Bạn chưa nhập user|pass|SPC_F.', 'error');
+    if (els.loginInput) els.loginInput.focus();
     return;
   }
 
-  els.loginButton.disabled = true;
-  els.loginButton.textContent = 'Đang lấy...';
-  showProgress('Đang lấy SPC_ST từ tài khoản...');
+  setButtonBusy(els.loginButton, true, 'Đang lấy...');
+  showProgress('Đang lấy SPC_ST...');
+  setActionStatus('Đang lấy SPC_ST từ tài khoản...', 'progress');
 
   try {
-    const data = await apiRequest('/api/login', { method: 'POST', body: { input } });
-    await handleVoucherSuccess(data.cookie || '', data.spcST || '', 'Đã lấy SPC_ST từ tài khoản thành công.', input);
+    const data = await apiRequest('/api/login', {
+      method: 'POST',
+      body: { input }
+    });
+    const cookie = data.cookie || data.spcST || '';
+    if (!cookie) {
+      throw new Error('API không trả về SPC_ST.');
+    }
+    setCurrentSpcData(cookie, data.spcST || '', input);
+    setActionStatus('Đã lấy SPC_ST thành công.', 'success');
+    showSuccess('Đã lấy SPC_ST thành công.');
   } catch (error) {
-    showError(error.message);
+    const message = error.message || 'Không thể lấy SPC_ST.';
+    setActionStatus(message, 'error');
+    showError(message);
   } finally {
-    els.loginButton.disabled = false;
-    els.loginButton.textContent = 'Lấy SPC_ST';
+    setButtonBusy(els.loginButton, false, 'Đang lấy...');
   }
 }
 
-async function startQrLogin() {
-  els.qrButton.disabled = true;
-  els.qrButton.textContent = 'Đang tạo QR...';
-  showProgress('Đang tạo mã QR đăng nhập...');
-
-  try {
-    const data = await apiRequest('/api/qr/generate', { method: 'POST', body: {} });
-    state.qrSessionId = data.sessionId;
-    els.qrImage.src = String(data.qrBase64 || '').startsWith('data:') ? data.qrBase64 : ('data:image/png;base64,' + data.qrBase64);
-    els.qrDisplay.classList.remove('hidden');
-    els.qrStatus.textContent = 'Chờ quét QR trên app Shopee...';
-    if (state.qrPollTimer) clearInterval(state.qrPollTimer);
-    state.qrPollTimer = setInterval(pollQrStatus, 2000);
-    showSuccess('Đã tạo QR, hãy mở app Shopee để quét.');
-  } catch (error) {
-    els.qrButton.disabled = false;
-    els.qrButton.textContent = 'Quét QR code';
-    showError(error.message);
-  }
-}
-
-async function pollQrStatus() {
-  if (!state.qrSessionId) return;
-
-  try {
-    const data = await apiRequest('/api/qr/status/' + state.qrSessionId);
-    if (data.status === 'waiting') {
-      els.qrStatus.textContent = 'Chờ quét QR trên app Shopee...';
-      return;
-    }
-    if (data.status === 'scanned') {
-      els.qrStatus.textContent = 'Đã quét, vui lòng xác nhận trên app Shopee...';
-      showProgress('Đã quét QR, chờ xác nhận trên app Shopee.');
-      return;
-    }
-    if (data.status === 'success' || data.status === 'done') {
-      await handleVoucherSuccess(data.cookie || '', data.spcST || '', 'Đã lấy và lưu SPC_ST thành công.');
-      resetQrDisplay();
-      return;
-    }
-    if (data.status === 'failed' || data.status === 'expired' || data.status === 'error') {
-      showError(data.error || 'QR đã hết hạn hoặc thất bại.');
-      resetQrDisplay();
-    }
-  } catch (error) {
-    showError(error.message);
-    resetQrDisplay();
-  }
-}
-
-async function cancelQrLogin() {
-  if (state.qrSessionId) {
-    try {
-      await apiRequest('/api/qr/cancel', { method: 'POST', body: { sessionId: state.qrSessionId } });
-    } catch {
-    }
-  }
-  resetQrDisplay();
-  showSuccess('Đã hủy phiên QR hiện tại.');
-}
-
-async function copyQrImage() {
-  if (!els.qrImage.src) {
-    showError('Chưa có ảnh QR để copy.');
-    return;
-  }
-
-  try {
-    await navigator.clipboard.writeText(els.qrImage.src);
-    showSuccess('Đã copy dữ liệu ảnh QR.');
-  } catch (error) {
-    showError(error.message);
-  }
-}
-
-async function copyCurrentCookie() {
+async function copyCurrentSpcSt() {
   if (!state.currentSpcSt) {
     showError('Chưa có SPC_ST để copy.');
     return;
   }
-
-  try {
-    await navigator.clipboard.writeText(buildCookieFromCurrentSpcSt());
-    showSuccess('Đã copy chuỗi SPC_ST=...');
-  } catch (error) {
-    showError(error.message);
-  }
+  await navigator.clipboard.writeText('SPC_ST=' + state.currentSpcSt);
+  showSuccess('Đã copy SPC_ST=...');
 }
 
-async function copyCurrentFullCookie() {
-  const latest = state.vouchers[0];
-  const source = latest ? (latest.sourceText || latest.rawCookie || '') : '';
-  const spcF = extractSpcF(source);
-
-  if (!spcF) {
-    showError('Không tìm thấy SPC_F để copy.');
+async function copyCurrentSpcF() {
+  if (!state.currentSpcF) {
+    showError('Chưa có SPC_F để copy.');
     return;
   }
-
-  try {
-    await navigator.clipboard.writeText(spcF);
-    showSuccess('Đã copy SPC_F.');
-  } catch (error) {
-    showError(error.message);
-  }
+  await navigator.clipboard.writeText(state.currentSpcF);
+  showSuccess('Đã copy SPC_F=...');
 }
 
-async function copyCurrentReplacedValue() {
+function buildUpdatedLoginSource() {
   if (!state.currentSpcSt) {
-    showError('Chưa có SPC_ST mới để thay.');
-    return;
+    throw new Error('Chưa có SPC_ST mới để cập nhật.');
   }
 
-  const latest = state.vouchers[0];
-  const source = latest ? (latest.sourceText || latest.rawCookie || '') : '';
+  const source = String(state.loginSourceRaw || (els.loginInput ? els.loginInput.value : '') || '').trim();
+  if (!source) {
+    throw new Error('Chưa có chuỗi gốc để cập nhật.');
+  }
+
+  if (/SPC_ST=[^|\s"]+/.test(source)) {
+    return source.replace(/SPC_ST=[^|\s"]+/, 'SPC_ST=' + state.currentSpcSt);
+  }
+
+  return source + '|SPC_ST=' + state.currentSpcSt;
+}
+
+async function updateSpcStInSource() {
   try {
-    const nextValue = buildReplacementValue(source);
-    await navigator.clipboard.writeText(nextValue);
-    showSuccess('Đã tạo chuỗi thay SPC_ST mới và copy.');
-  } catch (error) {
-    showError(error.message);
-  }
-}
-
-function clearCurrentCookie() {
-  if (!state.currentSpcSt) {
-    showError('Không có kết quả hiện tại để xóa.');
-    return;
-  }
-
-  state.currentSpcSt = '';
-  els.cookieValue.textContent = 'Chưa có cookie nào được lưu.';
-  showSuccess('Đã xóa SPC_ST hiện tại.');
-}
-
-function getVoucherById(id) {
-  return state.vouchers.find((item) => item.id === id);
-}
-
-function deleteVoucher(id) {
-  const item = getVoucherById(id);
-  if (!item) {
-    showError('Không tìm thấy voucher cần xóa.');
-    return;
-  }
-
-  state.vouchers = state.vouchers.filter((entry) => entry.id !== id);
-  writeJson(VOUCHER_KEY, state.vouchers);
-  renderVoucherList();
-  showSuccess('Đã xóa SPC_ST đã lưu.');
-}
-
-async function findAutopeeVoucherByCode(voucherCode) {
-  const data = await autopeeRequest('/api/shopee/vouchers?limit=200');
-  const items = Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.data) ? data.data : []);
-  const found = items.find((item) => String(item.voucherCode || '').trim().toUpperCase() === voucherCode.toUpperCase());
-  if (!found) {
-    throw new Error('Không tìm thấy mã ' + voucherCode + ' trong danh sách voucher Autopee mới.');
-  }
-  return found;
-}
-
-async function findAutopeeHotVoucher() {
-  const data = await autopeeRequest('/api/shopee/freeships?limit=200');
-  const items = Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.data) ? data.data : []);
-  const found = items.find((item) => {
-    const hay = [item.voucherName, item.voucherCode, item.description, ...(item.customisedLabels || [])]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
-    return AUTOPEE_HOT_KEYWORDS.some((keyword) => hay.includes(keyword));
-  }) || items[0];
-  if (!found) {
-    throw new Error('Không tìm thấy mã Hỏa tốc trong danh sách freeship mới.');
-  }
-  return found;
-}
-
-function buildAutopeeSavePayload(voucher, cookie) {
-  return {
-    cookie,
-    voucher_promotionid: voucher.promotionId,
-    signature: voucher.signature,
-    voucher_code: voucher.voucherCode
-  };
-}
-
-function getAutopeeSaveResultMessage(result, voucherCode) {
-  const payload = result?.data?.data || result?.data || result;
-  const voucherInfo = payload?.data?.voucher || payload?.voucher;
-  const errorCode = payload?.error;
-
-  if (errorCode === 0) return 'Đã lưu voucher ' + voucherCode + ' thành công.';
-  if (errorCode === 5 || voucherInfo?.is_claimed_before === true) return 'Voucher ' + voucherCode + ' đã được lưu trước đó.';
-  if (payload?.error_msg) throw new Error(payload.error_msg);
-  if (result?.error) throw new Error(result.error);
-  if (result?.ok === false) throw new Error(result.error || 'Không thể lưu voucher.');
-  return result?.message || ('Đã gửi yêu cầu lưu voucher ' + voucherCode + '.');
-}
-
-async function saveAutopeeItem(loader, triggerButton, buttonLabel) {
-  const previousText = triggerButton.textContent;
-  triggerButton.disabled = true;
-  triggerButton.textContent = 'Đang lưu...';
-  showProgress('Đang gửi yêu cầu lưu ' + buttonLabel + '...');
-
-  try {
-    persistAutopeeBearer();
-    if (!state.autopeeBearer) {
-      throw new Error('Bạn chưa nhập Bearer token Autopee mới.');
+    const updated = buildUpdatedLoginSource();
+    if (els.loginInput) {
+      els.loginInput.value = updated;
     }
-    const cookie = buildCookieForAutopee();
-    const voucher = await loader();
-    const result = await autopeeRequest('/api/shopee/save-voucher', {
-      method: 'POST',
-      body: buildAutopeeSavePayload(voucher, cookie)
-    });
-    showSuccess(getAutopeeSaveResultMessage(result, voucher.voucherCode || buttonLabel));
+    state.loginSourceRaw = updated;
+    await navigator.clipboard.writeText(updated);
+    showSuccess('Đã cập nhật SPC_ST mới và copy.');
+    setActionStatus('Đã thay SPC_ST cũ bằng SPC_ST mới và copy.', 'success');
   } catch (error) {
-    showError(error.message || 'Có lỗi xảy ra khi lưu voucher.');
-  } finally {
-    triggerButton.disabled = false;
-    triggerButton.textContent = previousText;
-  }
-}
-
-function save100kVoucher() {
-  return saveAutopeeItem(() => findAutopeeVoucherByCode(AUTOPEE_100K_CODE), els.save100kButton, 'voucher 100K');
-}
-
-function saveHotVoucher() {
-  return saveAutopeeItem(findAutopeeHotVoucher, els.saveHotButton, 'voucher Hỏa tốc');
-}
-
-function reloadVoucherList() {
-  renderVoucherList();
-  renderBulkResults();
-  showSuccess('Đã tải lại danh sách SPC_ST đã lưu.');
-}
-
-function parseBulkEntries(rawText) {
-  return String(rawText || '')
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line, index) => {
-      const parts = line.split('|');
-      if (parts.length < 2) return null;
-      return {
-        email: (parts[0] || '').trim(),
-        cookie: (parts[1] || '').trim(),
-        proxy: (parts[2] || '').trim() || undefined,
-        index
-      };
-    })
-    .filter((entry) => entry && entry.email && entry.cookie);
-}
-
-function persistBulkInput() {
-  state.bulkInput = els.bulkInput.value || '';
-  localStorage.setItem(BULK_EMAIL_INPUT_KEY, state.bulkInput);
-  syncBulkEntryCount();
-}
-
-function handleBulkFileUpload(event) {
-  const file = event.target.files && event.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (loadEvent) => {
-    const text = String(loadEvent.target?.result || '');
-    els.bulkInput.value = text;
-    persistBulkInput();
-    showSuccess('Đã tải file bulk mail.');
-  };
-  reader.readAsText(file);
-}
-
-function clearBulkInput() {
-  els.bulkInput.value = '';
-  persistBulkInput();
-  showSuccess('Đã xóa dữ liệu thêm mail.');
-}
-
-async function submitBulkEmailAdd() {
-  persistBulkInput();
-
-  const entries = parseBulkEntries(state.bulkInput);
-  if (!entries.length) {
-    showError('Bạn chưa nhập dữ liệu bulk mail hợp lệ.');
-    els.bulkInput.focus();
-    return;
-  }
-
-  const previousText = els.bulkSubmitButton.textContent;
-  els.bulkSubmitButton.disabled = true;
-  els.bulkSubmitButton.textContent = 'Đang gửi...';
-  showProgress('Đang gửi yêu cầu thêm mail hàng loạt...');
-
-  try {
-    const data = await otistxRequest('/api/email-additions/bulk', {
-      method: 'POST',
-      body: { entries }
-    });
-    state.bulkResults = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
-    renderBulkResults();
-    if (!state.bulkResults.length) {
-      showSuccess('Đã gửi yêu cầu nhưng API không trả danh sách kết quả.');
-      return;
-    }
-    const successCount = state.bulkResults.filter((item) => item.status).length;
-    const failCount = state.bulkResults.length - successCount;
-    showSuccess('Đã xử lý ' + state.bulkResults.length + ' dòng: ' + successCount + ' thành công, ' + failCount + ' thất bại.');
-  } catch (error) {
-    showError(error.message || 'Không thể thêm mail hàng loạt.');
-  } finally {
-    els.bulkSubmitButton.disabled = false;
-    els.bulkSubmitButton.textContent = previousText;
+    const message = error.message || 'Không thể cập nhật SPC_ST.';
+    showError(message);
+    setActionStatus(message, 'error');
   }
 }
 
 function bindEvents() {
-  els.loginButton.addEventListener('click', loginByAccount);
-  els.loginInput.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') loginByAccount();
-  });
-  els.save100kButton.addEventListener('click', save100kVoucher);
-  els.saveHotButton.addEventListener('click', saveHotVoucher);
-  els.qrButton.addEventListener('click', startQrLogin);
-  els.cancelButton.addEventListener('click', cancelQrLogin);
-  els.copyImageButton.addEventListener('click', copyQrImage);
-  els.copyCookieButton.addEventListener('click', copyCurrentCookie);
-  els.copyFullCurrentButton.addEventListener('click', copyCurrentFullCookie);
-  els.copyReplacedCurrentButton.addEventListener('click', copyCurrentReplacedValue);
-  els.clearCurrentButton.addEventListener('click', clearCurrentCookie);
-  els.reloadButton.addEventListener('click', reloadVoucherList);
-  els.bulkInput.addEventListener('input', persistBulkInput);
-  els.bulkUploadButton.addEventListener('click', () => els.bulkFileInput.click());
-  els.bulkFileInput.addEventListener('change', handleBulkFileUpload);
-  els.bulkClearButton.addEventListener('click', clearBulkInput);
-  els.bulkSubmitButton.addEventListener('click', submitBulkEmailAdd);
-  if (els.autopeeBearerInput) els.autopeeBearerInput.addEventListener('input', persistAutopeeBearer);
-  if (els.toggleButton) els.toggleButton.addEventListener('click', toggleVoucherList);
+  if (els.loginButton) {
+    els.loginButton.addEventListener('click', loginByAccount);
+  }
+  if (els.loginInput) {
+    els.loginInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') loginByAccount();
+    });
+  }
+  if (els.save100kButton) {
+    els.save100kButton.addEventListener('click', () => saveVoucherByCode('CRMNUICL80T3', els.save100kButton, '100K'));
+  }
+  if (els.saveHotButton) {
+    els.saveHotButton.addEventListener('click', () => saveVoucherByCode('FSV-1363693662932996', els.saveHotButton, 'Hỏa tốc'));
+  }
+  if (els.copyCookieButton) {
+    els.copyCookieButton.addEventListener('click', copyCurrentSpcSt);
+  }
+  if (els.copySpcFButton) {
+    els.copySpcFButton.addEventListener('click', copyCurrentSpcF);
+  }
+  if (els.updateSpcStButton) {
+    els.updateSpcStButton.addEventListener('click', updateSpcStInSource);
+  }
 }
-
-function hydrateInputs() {
-  els.bulkInput.value = state.bulkInput;
-  if (els.autopeeBearerInput) els.autopeeBearerInput.value = state.autopeeBearer.replace(/^Bearer\s+/, '');
-  syncBulkEntryCount();
-}
-
-window.loginByAccount = loginByAccount;
-window.deleteVoucher = deleteVoucher;
 
 bindEvents();
-hydrateInputs();
-renderVoucherList();
-renderBulkResults();
+updateFixedButtons();
+syncCurrentCookieDisplay();
+loadVoucherMetadata().catch((error) => {
+  setActionStatus(error.message || 'Không thể tải metadata voucher.', 'error');
+  showError(error.message || 'Không thể tải metadata voucher.');
+});

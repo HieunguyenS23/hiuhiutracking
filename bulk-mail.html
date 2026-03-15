@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrackShopee - Th&#234;m mail</title>
+  <meta name="description" content="Th&#234;m mail h&#224;ng lo&#7841;t b&#7857;ng API otistx">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20260314h">
+</head>
+<body>
+  <div class="aurora"></div>
+  <div class="aurora aurora-2"></div>
+  <div class="aurora aurora-3"></div>
+  <div class="app">
+    <nav class="nav">
+      <div class="nav-brand">
+        <button class="nav-menu-toggle" type="button" data-nav-toggle aria-label="M&#7903; menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg>
+        </button>
+        <div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg></div>
+        <span>TrackShopee Admin</span>
+      </div>
+    </nav>
+    <div class="nav-overlay" data-nav-close></div>
+    <aside class="nav-drawer" data-nav-drawer>
+      <div class="nav-drawer-head">
+        <strong>&#272;i&#7873;u h&#432;&#7899;ng</strong>
+        <button class="nav-drawer-close" type="button" data-nav-close aria-label="&#272;&#243;ng menu">&times;</button>
+      </div>
+      <div class="nav-drawer-links">
+        <a class="drawer-link" href="/index.html">&#272;&#417;n h&#224;ng</a>
+        <a class="drawer-link" href="/voucher.html">L&#432;u Voucher</a>
+        <a class="drawer-link is-active" href="/bulk-mail.html">Th&#234;m mail</a>
+        <a class="drawer-link" href="/mail.html">&#272;&#7885;c mail</a>
+        <a class="drawer-link" href="/address.html">X&#7917; l&#237; &#273;&#7883;a ch&#7881;</a>
+        <a class="drawer-link" href="/index.html#history-section">L&#7883;ch s&#7917;</a>
+        <a class="drawer-link" href="/index.html#spx-overlay">Tra MV&#272;</a>
+        <a class="drawer-link" href="/auth/logout">&#272;&#259;ng xu&#7845;t</a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="hero">
+        <h1>Th&#234;m <span class="gradient-text">Mail H&#224;ng Lo&#7841;t</span></h1>
+        <p>G&#7917;i danh s&#225;ch email k&#232;m cookie Shopee qua API otistx.</p>
+      </div>
+
+      <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+      <div class="voucher-shell">
+        <section class="glass voucher-panel">
+          <div class="panel-title" style="margin-bottom:10px">
+            <h3>Th&#234;m mail h&#224;ng lo&#7841;t</h3>
+          </div>
+          <div class="bulk-email-box">
+            <div class="voucher-note-box">API key otistx &#273;&#227; &#273;&#432;&#7907;c c&#7845;u h&#236;nh &#7903; server.</div>
+
+            <div class="bulk-email-toolbar">
+              <button id="bulk-upload-btn" class="nav-btn" type="button">T&#7843;i file</button>
+              <button id="bulk-clear-btn" class="nav-btn" type="button">X&#243;a &#244; nh&#7853;p</button>
+              <input id="bulk-file-input" type="file" accept=".txt,.csv" class="hidden">
+            </div>
+
+            <label class="mail-option-label" for="bulk-email-input">D&#7919; li&#7879;u th&#234;m mail</label>
+            <textarea id="bulk-email-input" class="mail-textarea bulk-email-textarea" placeholder="email1@example.com|SPC_ST=abc123|proxy:port:user:pass&#10;email2@example.com|SPC_ST=def456"></textarea>
+
+            <div class="bulk-email-meta">
+              <span id="bulk-entry-count">0 d&#242;ng h&#7907;p l&#7879;</span>
+              <span id="bulk-result-summary"></span>
+            </div>
+
+            <div class="voucher-item-actions" style="justify-content:flex-start">
+              <button id="bulk-submit-btn" class="s-btn" type="button">B&#7855;t &#273;&#7847;u th&#234;m mail</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="glass voucher-panel">
+          <div class="panel-title" style="margin-bottom:14px">
+            <h3>K&#7871;t qu&#7843; th&#234;m mail</h3>
+          </div>
+          <div id="bulk-results-empty" class="voucher-empty">Ch&#432;a c&#243; k&#7871;t qu&#7843; th&#234;m mail n&#224;o.</div>
+          <div id="bulk-results-wrap" class="bulk-results-wrap hidden">
+            <table class="sheet-table bulk-results-table">
+              <thead>
+                <tr>
+                  <th>Cookie ID</th>
+                  <th>Email</th>
+                  <th>Tr&#7841;ng th&#225;i</th>
+                  <th>Th&#244;ng b&#225;o</th>
+                  <th>Proxy</th>
+                </tr>
+              </thead>
+              <tbody id="bulk-results-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer">TrackShopee &copy; 2026</footer>
+  </div>
+
+  <script src="nav.js?v=20260314a"></script>
+  <script src="bulk-mail.js?v=20260314b"></script>
+</body>
+</html>
