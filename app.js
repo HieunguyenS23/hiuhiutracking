@@ -211,41 +211,167 @@ function copyText(text, successMessage = 'Da copy du lieu.') {
     .catch(() => showErr('Khong copy duoc du lieu.'));
 }
 
+function buildTrackingLink(tracking) {
+  const code = String(tracking || '').trim();
+  if (!code) return '';
+  if (/^[SV]/i.test(code)) {
+    return 'https://tramavandon.com/spx/?tracking_number=' + encodeURIComponent(code);
+  }
+  if (/^G/i.test(code)) {
+    return 'https://www.trackingmore.com/track/en/' + encodeURIComponent(code) + '?express=ghn';
+  }
+  return '';
+}
+
+function copyTrackingLink(tracking) {
+  const link = buildTrackingLink(tracking);
+  if (!tracking) {
+    showErr('Đơn này chưa có mã vận đơn.');
+    return;
+  }
+  if (!link) {
+    showErr('Chưa lấy link được cho mã vận đơn này.');
+    return;
+  }
+  copyText(link, 'Đã copy link vận đơn.');
+}
+
 function normalizeStatusText(status) {
   return String(status || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
     .toLowerCase()
     .trim();
 }
 
-function displayStatusText(status) {
+function resolveStatusMeta(status) {
   const raw = String(status || '').trim();
   const value = normalizeStatusText(raw);
-  if (!raw) return 'Chưa rõ';
-  if (/(^|[^a-z])label_delivered([^a-z]|$)|order delivered|delivered|giao hang thanh cong/.test(value)) return 'Giao hàng thành công';
-  if (/(^|[^a-z])label_to_receive([^a-z]|$)|to receive|cho nhan hang/.test(value)) return 'Chờ nhận hàng';
-  if (/(^|[^a-z])label_completed([^a-z]|$)|(^|[^a-z])label_order_completed([^a-z]|$)|completed|hoan thanh/.test(value)) return 'Hoàn thành';
-  if (/(^|[^a-z])label_to_rate([^a-z]|$)|to rate|cho danh gia/.test(value)) return 'Chờ đánh giá';
-  if (/(^|[^a-z])label_rated([^a-z]|$)|rated|da danh gia/.test(value)) return 'Đã đánh giá';
-  if (/(^|[^a-z])label_preparing_order([^a-z]|$)|preparing order|chuan bi giao/.test(value)) return 'Chuẩn bị giao';
-  if (/(^|[^a-z])label_to_ship([^a-z]|$)|to ship|cho giao/.test(value)) return 'Chờ giao';
-  if (/(^|[^a-z])label_shipping([^a-z]|$)|(^|[^a-z])label_on_the_way([^a-z]|$)|shipping|on the way/.test(value)) return 'Đang giao';
-  if (/(^|[^a-z])label_cancelled([^a-z]|$)|(^|[^a-z])label_order_cancelled([^a-z]|$)|cancelled|da huy|bi huy|huy don/.test(value)) return 'Đã hủy';
-  if (/(^|[^a-z])label_return_refund([^a-z]|$)|return refund|hoan tra/.test(value)) return 'Hoàn trả';
-  if (/(^|[^a-z])label_pending_payment([^a-z]|$)|(^|[^a-z])label_to_pay([^a-z]|$)|pending payment|to pay|cho thanh toan/.test(value)) return 'Chờ thanh toán';
-  if (/(^|[^a-z])label_to_confirm([^a-z]|$)|to confirm|cho xac nhan/.test(value)) return 'Chờ xác nhận';
-  if (/(^|[^a-z])label_waiting_pickup([^a-z]|$)|waiting pickup|lay hang/.test(value)) return 'Chờ lấy hàng';
-  if (/(^|[^a-z])label_refund([^a-z]|$)|refund|hoan tien/.test(value)) return 'Hoàn tiền';
-  return raw;
+  if (!raw) {
+    return { text: 'Chưa rõ', tone: 'default' };
+  }
+
+  const matches = (patterns) => patterns.some((pattern) => pattern.test(value));
+
+  const labelMap = [
+    { pattern: /(^|[^a-z])label_pending_payment([^a-z]|$)|(^|[^a-z])label_to_pay([^a-z]|$)/, text: 'Chờ thanh toán', tone: 'pending' },
+    { pattern: /(^|[^a-z])label_to_confirm([^a-z]|$)/, text: 'Chờ xác nhận', tone: 'pending' },
+    { pattern: /(^|[^a-z])label_waiting_pickup([^a-z]|$)/, text: 'Chờ lấy hàng', tone: 'pending' },
+    { pattern: /(^|[^a-z])label_preparing_order([^a-z]|$)/, text: 'Chuẩn bị giao', tone: 'shipping' },
+    { pattern: /(^|[^a-z])label_to_ship([^a-z]|$)/, text: 'Chờ giao', tone: 'shipping' },
+    { pattern: /(^|[^a-z])label_shipping([^a-z]|$)|(^|[^a-z])label_on_the_way([^a-z]|$)/, text: 'Đang giao', tone: 'shipping' },
+    { pattern: /(^|[^a-z])label_delivered([^a-z]|$)/, text: 'Đã giao', tone: 'delivered' },
+    { pattern: /(^|[^a-z])label_to_receive([^a-z]|$)/, text: 'Chờ nhận hàng', tone: 'delivered' },
+    { pattern: /(^|[^a-z])label_completed([^a-z]|$)|(^|[^a-z])label_order_completed([^a-z]|$)/, text: 'Hoàn thành', tone: 'delivered' },
+    { pattern: /(^|[^a-z])label_cancelled([^a-z]|$)|(^|[^a-z])label_order_cancelled([^a-z]|$)/, text: 'Đã hủy', tone: 'cancel' },
+    { pattern: /(^|[^a-z])label_return_refund([^a-z]|$)/, text: 'Hoàn trả', tone: 'cancel' },
+    { pattern: /(^|[^a-z])label_refund([^a-z]|$)/, text: 'Hoàn tiền', tone: 'cancel' },
+    { pattern: /(^|[^a-z])label_to_rate([^a-z]|$)/, text: 'Chờ đánh giá', tone: 'delivered' },
+    { pattern: /(^|[^a-z])label_rated([^a-z]|$)/, text: 'Đã đánh giá', tone: 'delivered' }
+  ];
+
+  for (const item of labelMap) {
+    if (item.pattern.test(value)) {
+      return { text: item.text, tone: item.tone };
+    }
+  }
+
+  const cancelPatterns = [
+    /da huy/,
+    /bi huy/,
+    /huy don/,
+    /yeu cau huy/,
+    /cancelled/,
+    /cancel/,
+    /hoan tra/,
+    /hoan tien/,
+    /refund/,
+    /khong tim thay/,
+    /that bai/,
+    /giao hang that bai/,
+    /khong giao duoc/
+  ];
+
+  if (matches(cancelPatterns)) {
+    return { text: raw, tone: 'cancel' };
+  }
+
+  const deliveredPatterns = [
+    /giao hang thanh cong/,
+    /giao thanh cong/,
+    /da giao hang/,
+    /da giao$/,
+    /delivered/,
+    /completed/,
+    /hoan thanh/,
+    /thanh cong/,
+    /da danh gia/,
+    /nhan hang thanh cong/
+  ];
+
+  if (matches(deliveredPatterns)) {
+    return { text: raw, tone: 'delivered' };
+  }
+
+  const shippingPatterns = [
+    /nguoi gui dang chuan bi hang/,
+    /chuan bi giao/,
+    /cho giao/,
+    /dang giao/,
+    /dang duoc trung chuyen/,
+    /trung chuyen/,
+    /van chuyen/,
+    /dang van chuyen/,
+    /den kho/,
+    /roi kho/,
+    /dang tren duong giao/,
+    /dang duoc giao/,
+    /dang giao cho nguoi nhan/,
+    /shipping/,
+    /on the way/,
+    /delivery/,
+    /departed/,
+    /arrived/,
+    /in transit/,
+    /out for delivery/,
+    /received at facility/,
+    /processed at facility/
+  ];
+
+  if (matches(shippingPatterns)) {
+    return { text: raw, tone: 'shipping' };
+  }
+
+  const pendingPatterns = [
+    /cho thanh toan/,
+    /pending/,
+    /cho xac nhan/,
+    /xac nhan/,
+    /waiting pickup/,
+    /pickup/,
+    /lay hang/,
+    /cho lay hang/
+  ];
+
+  if (matches(pendingPatterns)) {
+    return { text: raw, tone: 'pending' };
+  }
+
+  return { text: raw, tone: 'default' };
+}
+
+function displayStatusText(status) {
+  return resolveStatusMeta(status).text;
 }
 
 function statusClass(status) {
-  const value = normalizeStatusText(status);
-  if (/(^|[^a-z])label_delivered([^a-z]|$)|(^|[^a-z])label_to_receive([^a-z]|$)|(^|[^a-z])label_completed([^a-z]|$)|(^|[^a-z])label_order_completed([^a-z]|$)|(^|[^a-z])label_to_rate([^a-z]|$)|(^|[^a-z])label_rated([^a-z]|$)|thanh cong|hoan thanh|da giao|delivered|completed|danh gia/.test(value)) return 'st-delivered';
-  if (/(^|[^a-z])label_preparing_order([^a-z]|$)|(^|[^a-z])label_to_ship([^a-z]|$)|(^|[^a-z])label_shipping([^a-z]|$)|(^|[^a-z])label_on_the_way([^a-z]|$)|dang giao|shipping|to ship|cho giao|chuan bi|on the way|nhan hang|trung chuyen|van chuyen|den kho|giao hang/.test(value)) return 'st-shipping';
-  if (/(^|[^a-z])label_cancelled([^a-z]|$)|(^|[^a-z])label_order_cancelled([^a-z]|$)|(^|[^a-z])label_return_refund([^a-z]|$)|da huy|bi huy|huy don|cancelled|cancel|hoan tra/.test(value)) return 'st-cancel';
-  if (/(^|[^a-z])label_pending_payment([^a-z]|$)|(^|[^a-z])label_to_pay([^a-z]|$)|(^|[^a-z])label_to_confirm([^a-z]|$)|(^|[^a-z])label_waiting_pickup([^a-z]|$)|(^|[^a-z])label_refund([^a-z]|$)|cho thanh toan|pending|xac nhan|thanh toan|pickup|hoan tien|lay hang/.test(value)) return 'st-pending';
+  const tone = resolveStatusMeta(status).tone;
+  if (tone === 'delivered') return 'st-delivered';
+  if (tone === 'shipping') return 'st-shipping';
+  if (tone === 'cancel') return 'st-cancel';
+  if (tone === 'pending') return 'st-pending';
   return 'st-default';
 }
 
@@ -343,7 +469,7 @@ function renderStats(orders) {
   let done = 0;
   let cancel = 0;
   source.forEach((order) => {
-    const cls = statusClass(order.statusText || order.status || '');
+    const cls = statusClass(order.spxStatus || order.statusText || order.status || '');
     if (cls === 'st-shipping') shipping += 1;
     if (cls === 'st-delivered') done += 1;
     if (cls === 'st-cancel') cancel += 1;
@@ -366,7 +492,8 @@ function renderCards(orders) {
     const card = document.createElement('div');
     card.className = 'order-card';
     card.style.animationDelay = (index * 0.03) + 's';
-    const statusText = displayStatusText(order.statusText);
+    const statusSource = order.spxStatus || order.statusText;
+    const statusText = displayStatusText(statusSource);
     const tracking = order.tracking
       ? `<span class="tracking-code" onclick="copyText('${escapeHtml(order.tracking)}', 'Da copy ma van don.')">${escapeHtml(order.tracking)}${order.carrier ? ' · ' + escapeHtml(order.carrier) : ''}</span>`
       : '<span class="tracking-empty">Chua co</span>';
@@ -381,7 +508,7 @@ function renderCards(orders) {
           <span class="order-num">#${escapeHtml(order.orderId || 'N/A')}</span>
           <span class="order-shop-name">${escapeHtml(order.shopName || 'Shopee')}</span>
         </div>
-        <span class="badge ${badgeClass(order.statusText)}">${escapeHtml(statusText)}</span>
+        <span class="badge ${badgeClass(statusSource)}">${escapeHtml(statusText)}</span>
       </div>
       <div class="order-body">
         <div class="info-grid">
@@ -417,7 +544,7 @@ function renderSheet() {
   const rows = state.sheetData.filter((row) => filterValue === 'all' || row.tinhTrang === filterValue);
 
   if (!rows.length) {
-    els.sheetBody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--text3);padding:18px">Chưa có dữ liệu</td></tr>';
+    els.sheetBody.innerHTML = '<tr><td colspan="14" style="text-align:center;color:var(--text3);padding:18px">Chưa có dữ liệu</td></tr>';
     updateSelectedCount();
     return;
   }
@@ -437,7 +564,8 @@ function renderSheet() {
           </select>
         </td>
         <td class="wrap"><span class="cookie-copy" title="Click de copy cookie" onclick="copyText('${escapeHtml(row.cookie || '')}', 'Da copy cookie.')">${escapeHtml((row.cookie || '').slice(0, 18) || '—')}</span></td>
-        <td class="col-track" onclick="copyText('${escapeHtml(row.tracking || '')}', 'Da copy ma van don.')">${escapeHtml(row.tracking || '—')}</td>
+        <td class="col-track" onclick="copyText('${escapeHtml(row.tracking || '')}', 'Da copy ma van don.')">${escapeHtml(row.tracking || 'Chưa có')}</td>
+        <td class="col-action"><button class="track-link-btn" type="button" onclick="copyTrackingLink('${escapeHtml(row.tracking || '')}')" title="Copy link vận đơn">🚚</button></td>
         <td class="col-status ${statusClass(row.spxStatus || row.statusText)}">${escapeHtml(displayStatusText(row.spxStatus || row.statusText || '—'))}</td>
         <td class="col-amount">${escapeHtml(row.total || '—')}</td>
         <td class="wrap">${escapeHtml(row.recipient || '—')}</td>
@@ -695,8 +823,12 @@ async function refreshOrders() {
       (spxData.results || []).forEach((item) => {
         const row = state.sheetData.find((entry) => entry.tracking === item.tracking);
         if (row) row.spxStatus = item.status || item.error || row.spxStatus;
+        const order = state.currentOrders.find((entry) => entry.tracking === item.tracking || entry.sls_tn === item.tracking);
+        if (order) order.spxStatus = item.status || item.error || order.spxStatus;
       });
       persistSheet();
+      persistOrders();
+      renderCards(state.currentOrders);
       renderSheet();
     }
 
@@ -732,12 +864,13 @@ async function lookupSpx() {
     els.spxResult.innerHTML = results.map((item) => {
       const timeline = (item.records || item.timeline || []).slice().reverse();
       const latest = item.latest || timeline[0] || null;
+      const statusText = displayStatusText(item.status || item.error || '?');
       return `
         <div class="spx-item">
           <div class="spx-head"><span class="spx-tn">${escapeHtml(item.tracking || '')}</span><span class="spx-carrier">${escapeHtml(item.carrier || '')}</span></div>
           ${item.sls_tn ? `<div class="spx-sls">Tracking: ${escapeHtml(item.sls_tn)}</div>` : ''}
           ${item.receiverName ? `<div class="spx-receiver">${escapeHtml(item.receiverName)}</div>` : ''}
-          <div class="spx-st ${statusClass(item.status || item.error)}">${escapeHtml(item.status || item.error || '?')}</div>
+          <div class="spx-st ${statusClass(item.status || item.error)}">${escapeHtml(statusText)}</div>
           ${latest ? `<div style="padding:6px 8px;background:rgba(124,92,252,.06);border-radius:6px;margin:6px 0"><div style="font-size:9px;color:var(--text3);font-weight:600">TRANG THAI MOI NHAT</div><div style="font-size:10px;font-weight:600;margin-top:2px">${escapeHtml((latest.emoji || '') + ' ' + (latest.desc || latest.description || ''))}</div>${latest.time ? `<div style="font-size:8px;color:var(--text3)">${escapeHtml(latest.time)}</div>` : ''}</div>` : ''}
           ${timeline.length ? `<div class="spx-timeline">${timeline.map((step) => `<div class="spx-step"><div class="spx-step-time">${escapeHtml(step.time || '')}</div><div class="spx-step-desc">${escapeHtml((step.emoji || '') + ' ' + (step.desc || step.description || ''))}</div></div>`).join('')}</div>` : ''}
         </div>`;
@@ -880,6 +1013,7 @@ window.updateSelectedCount = updateSelectedCount;
 window.updateTinhTrang = updateTinhTrang;
 window.cancelOrder = cancelOrder;
 window.viewHistory = viewHistory;
+window.copyTrackingLink = copyTrackingLink;
 
 initPage();
 
