@@ -1,13 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TrackShopee - Luu Voucher</title>
-  <meta name="description" content="Luu 2 voucher Shopee co dinh bang SPC_ST">
+  <title>TrackShopee - Lưu Voucher</title>
+  <meta name="description" content="Lưu voucher Shopee bằng cookie SPC_ST hoặc QR login">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20260314h">
+  <link rel="stylesheet" href="style.css?v=20260316g">
 </head>
 <body>
   <div class="aurora"></div>
@@ -16,7 +16,7 @@
   <div class="app">
     <nav class="nav">
       <div class="nav-brand">
-        <button class="nav-menu-toggle" type="button" data-nav-toggle aria-label="Mo menu">
+        <button class="nav-menu-toggle" type="button" data-nav-toggle aria-label="Mở menu">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg>
         </button>
         <div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg></div>
@@ -26,109 +26,118 @@
     <div class="nav-overlay" data-nav-close></div>
     <aside class="nav-drawer" data-nav-drawer>
       <div class="nav-drawer-head">
-        <strong>Dieu huong</strong>
-        <button class="nav-drawer-close" type="button" data-nav-close aria-label="Dong menu">&times;</button>
+        <strong>Điều hướng</strong>
+        <button class="nav-drawer-close" type="button" data-nav-close aria-label="Đóng menu">&times;</button>
       </div>
       <div class="nav-drawer-links">
-        <a class="drawer-link" href="/index.html">Don hang</a>
-        <a class="drawer-link is-active" href="/voucher.html">Luu Voucher</a>
-        <a class="drawer-link" href="/bulk-mail.html">Them mail</a>
-        <a class="drawer-link" href="/mail.html">Doc mail</a>
-        <a class="drawer-link" href="/address.html">Xu li dia chi</a>
-        <a class="drawer-link" href="/auth/logout">Dang xuat</a>
+        <a class="drawer-link" href="/index.html">Đơn hàng</a>
+        <a class="drawer-link is-active" href="/voucher.html">Lưu Voucher</a>
+        <a class="drawer-link" href="/bulk-mail.html">Thêm mail</a>
+        <a class="drawer-link" href="/mail.html">Đọc mail</a>
+        <a class="drawer-link" href="/address.html">Xử lí địa chỉ</a>
+        <a class="drawer-link" href="/auth/logout">Đăng xuất</a>
       </div>
     </aside>
-
     <main class="main">
-      <div class="hero">
-        <h1>Luu <span class="gradient-text">2 Voucher Co Dinh</span></h1>
-        <p>Dan SPC_ST roi bam luu cho 2 ma CRMNUICL80T3 va FSV-1363693662932996.</p>
+      <div class="hero voucher-hero voucher-hero-light">
+        <h1>Lấy <span class="gradient-text">Voucher Shopee</span></h1>
+        <p>Lưu mã giảm giá và freeship vào tài khoản bằng cookie Shopee. Có thể lấy lại SPC_ST bằng tài khoản hàng loạt hoặc quét QR ngay phía trên.</p>
       </div>
-
       <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
-
-      <div class="voucher-shell">
-        <section class="glass voucher-panel">
-          <div class="voucher-section-head">
-            <h2>Luu voucher</h2>
-          </div>
-          <div class="voucher-grid voucher-grid-single">
-            <div class="search-card glass">
-              <div class="search-inner" style="margin-bottom:12px">
-                <div class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h10" /></svg></div>
-                <input type="text" id="voucher-manual-cookie-input" class="s-input" placeholder="Nhap SPC_ST hoac SPC_ST=..." autocomplete="off">
-              </div>
-
-              <div id="voucher-actions-wrap" class="voucher-item-actions" style="justify-content:flex-start">
-                <button id="voucher-save-100k-btn" class="s-btn" type="button">100K</button>
-                <button id="voucher-save-hot-btn" class="nav-btn" type="button">Hoa toc</button>
-              </div>
-
-              <div id="voucher-action-status" class="voucher-code-box" style="margin-top:12px;display:none"></div>
-              <pre id="voucher-api-debug" class="voucher-code-box hidden" style="margin-top:10px;white-space:pre-wrap;max-height:260px;overflow:auto">Chua co log.</pre>
+      <div class="voucher-autopee-shell">
+        <section class="voucher-autopee-panel voucher-spc-panel-compact">
+          <div class="voucher-autopee-head">
+            <div>
+              <h2>Lấy lại SPC_ST</h2>
+              <p>Mỗi dòng là 1 tài khoản theo định dạng <code>user|pass|SPC_F</code>. SPC_ST lấy được sẽ hiển thị đầy đủ trong ô bên phải.</p>
             </div>
           </div>
-        </section>
-
-        <section class="glass voucher-panel">
-          <div class="voucher-section-head">
-            <h2>Lay lai SPC_ST</h2>
-          </div>
-          <div class="voucher-grid voucher-grid-single">
-            <div class="search-card glass">
-              <div class="search-inner" style="margin-bottom:12px">
-                <div class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg></div>
-                <input type="text" id="voucher-login-input" class="s-input" placeholder="user|pass|SPC_F" autocomplete="off">
-                <button id="voucher-login-btn" class="s-btn" type="button">Lay SPC_ST</button>
-              </div>
-
-              <div class="voucher-output">
-                <div class="voucher-code-box">
-                  <span class="voucher-code-label">Xuat SPC_ST</span>
-                  <span class="voucher-code" id="voucher-cookie-value">Chua co SPC_ST.</span>
+          <div class="voucher-spc-grid voucher-spc-grid-compact">
+            <div class="voucher-spc-card">
+              <div class="voucher-form-stack">
+                <label class="voucher-field-label" for="voucher-login-input">Tài khoản Shopee hàng loạt</label>
+                <textarea id="voucher-login-input" class="voucher-cookie-textarea voucher-login-textarea" placeholder="user1|pass1|SPC_F=...&#10;user2|pass2|SPC_F=...&#10;user3|pass3|SPC_F=..."></textarea>
+                <div class="voucher-action-row">
+                  <button id="voucher-login-btn" class="voucher-primary-btn" type="button">Lấy SPC_ST hàng loạt</button>
                 </div>
-                <div class="voucher-item-actions">
-                  <button id="voucher-copy-cookie-btn" class="s-btn" type="button">Copy SPC_ST=...</button>
-                  <button id="voucher-copy-spcf-btn" class="nav-btn" type="button">Copy SPC_F=...</button>
-                  <button id="voucher-update-spcst-btn" class="nav-btn" type="button">Cap nhat SPC_ST</button>
+              </div>
+              <div class="voucher-form-stack">
+                <label class="voucher-field-label">QR Login</label>
+                <div class="voucher-action-row">
+                  <button id="voucher-qr-btn" class="voucher-primary-btn" type="button">Quét QR code</button>
+                  <button id="voucher-qr-cancel-btn" class="voucher-secondary-btn hidden" type="button">Hủy QR</button>
+                </div>
+                <div id="voucher-qr-box" class="voucher-qr-box hidden">
+                  <img id="voucher-qr-image" alt="QR Shopee">
+                  <div id="voucher-qr-status" class="voucher-qr-status">Chờ quét QR...</div>
                 </div>
               </div>
             </div>
+            <div class="voucher-spc-card">
+              <div class="voucher-output-card">
+                <span class="voucher-output-label">SPC_ST hiện tại</span>
+                <textarea id="voucher-cookie-value" class="voucher-output-value voucher-output-textarea" spellcheck="false">Chưa có SPC_ST.</textarea>
+              </div>
+              <div class="voucher-action-row voucher-action-row-tight">
+                <button id="voucher-copy-cookie-btn" class="voucher-primary-btn" type="button">Copy SPC_ST=...</button>
+                <button id="voucher-copy-spcf-btn" class="voucher-secondary-btn" type="button">Copy SPC_F=...</button>
+                <button id="voucher-update-spcst-btn" class="voucher-secondary-btn" type="button">Cập nhật SPC_ST</button>
+              </div>
+              <div id="voucher-batch-summary" class="voucher-inline-status hidden"></div>
+            </div>
           </div>
         </section>
-
-        <section class="glass voucher-panel">
-          <div class="voucher-section-head">
-            <h2>Check voucher</h2>
-            <p class="voucher-section-note">Dung API Otis cu va API key tren server de check voucher theo SPC_ST.</p>
+        <section class="voucher-autopee-panel voucher-save-panel">
+          <div class="voucher-autopee-head">
+            <div>
+              <h2>Lưu Voucher Shopee</h2>
+              <p>Dựa theo luồng Autopee: dán cookie, làm mới danh sách, chọn tab voucher/freeship và lưu vào tài khoản.</p>
+            </div>
           </div>
-          <div class="voucher-grid voucher-grid-single">
-            <div class="search-card glass">
-              <div class="voucher-output">
-                <div class="voucher-code-box">
-                  <span class="voucher-code-label">Danh sach cookie SPC_ST</span>
-                  <textarea id="voucher-check-cookies" class="address-textarea voucher-check-textarea" placeholder="SPC_ST=..."></textarea>
+          <div class="voucher-save-shell">
+            <div class="voucher-cookie-card voucher-cookie-card-compact">
+              <button id="voucher-cookie-toggle" class="voucher-accordion-head" type="button" aria-expanded="true">
+                <span>Cookie Shopee</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6" /></svg>
+              </button>
+              <div id="voucher-cookie-panel" class="voucher-accordion-body is-open">
+                <p class="voucher-cookie-note">Mỗi dòng là 1 cookie. Có thể dán <code>SPC_ST=...</code> hoặc full cookie Shopee.</p>
+                <textarea id="voucher-cookie-input" class="voucher-cookie-textarea voucher-cookie-textarea-compact" placeholder="SPC_ST=... (tài khoản 1)&#10;SPC_ST=... (tài khoản 2)"></textarea>
+                <div class="voucher-action-row voucher-action-row-tight">
+                  <button id="voucher-save-fixed-btn" class="voucher-primary-btn" type="button">Lưu tất cả</button>
+                  <button id="voucher-refresh-btn" class="voucher-secondary-btn" type="button">Làm mới</button>
                 </div>
-                <div class="search-inner">
-                  <div class="search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg></div>
-                  <input type="text" id="voucher-check-query" class="s-input" placeholder="Nhap ma hoac ten voucher can tim" autocomplete="off">
-                  <button id="voucher-check-btn" class="s-btn" type="button">Check voucher</button>
-                </div>
-                <div id="voucher-check-summary" class="voucher-code-box" style="display:none"></div>
-                <div id="voucher-check-results" class="voucher-list">
-                  <div class="voucher-empty">Chua check voucher.</div>
-                </div>
+                <div id="voucher-action-status" class="voucher-inline-status hidden"></div>
               </div>
+            </div>
+            <div class="voucher-cookie-card voucher-link-card voucher-cookie-card-compact">
+              <button id="voucher-link-toggle" class="voucher-accordion-head" type="button" aria-expanded="false">
+                <span>Gửi link voucher</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6" /></svg>
+              </button>
+              <div id="voucher-link-panel" class="voucher-accordion-body hidden">
+                <p class="voucher-cookie-note">Shopee → Ví voucher → Chọn mã → Chia sẻ → dán link vào đây để đẩy vào danh sách.</p>
+                <div class="voucher-link-row">
+                  <input type="text" id="voucher-link-input" class="voucher-link-input" placeholder="https://shopee.vn/voucher/details?evcode=..." autocomplete="off">
+                  <button id="voucher-link-submit-btn" class="voucher-primary-btn" type="button">Thêm</button>
+                </div>
+                <div id="voucher-link-status" class="voucher-inline-status hidden"></div>
+              </div>
+            </div>
+            <div class="voucher-tabbar voucher-tabbar-compact">
+              <button id="voucher-tab-voucher" class="voucher-tab-btn is-active" type="button">Mã giảm giá <span id="voucher-count-badge">0</span></button>
+              <button id="voucher-tab-freeship" class="voucher-tab-btn" type="button">Freeship <span id="voucher-freeship-count-badge">0</span></button>
+            </div>
+            <div id="voucher-list" class="voucher-catalog-list voucher-catalog-list-compact">
+              <div class="voucher-empty-card">Đang tải danh sách voucher...</div>
             </div>
           </div>
         </section>
       </div>
     </main>
-
     <footer class="footer">TrackShopee &copy; 2026</footer>
   </div>
-
   <script src="nav.js?v=20260314a"></script>
-  <script src="voucher.js?v=20260315a"></script>
+  <script src="voucher.js?v=20260316g"></script>
 </body>
 </html>
