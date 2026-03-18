@@ -17,7 +17,7 @@ REMOTE_BASE = 'https://dodanhvu.dpdns.org'
 AUTOPEE_BASE = 'https://api.autopee.com'
 MAIL_BASE = 'https://tools.dongvanfb.net/api'
 OTISTX_BASE = 'https://otistx.com'
-RENDER_RELAY_BASE = os.environ.get('RENDER_RELAY_BASE', 'https://trackshopee-admin.onrender.com')
+RENDER_RELAY_BASE = os.environ.get('RENDER_RELAY_BASE', '').strip()
 APP_USERNAME = os.environ.get('APP_USERNAME', 'hieunguyen01')
 APP_PASSWORD = os.environ.get('APP_PASSWORD', '1')
 OTISTX_API_KEY = os.environ.get('OTISTX_API_KEY', '')
@@ -315,6 +315,8 @@ class ProxyHandler(SimpleHTTPRequestHandler):
     def _proxy_via_render(self, method: str, relay_path: str, body: bytes | None, headers: dict[str, str]) -> bool:
         relay_headers = dict(headers)
         relay_headers['Cookie'] = self._build_render_auth_cookie()
+        if not RENDER_RELAY_BASE:
+            return False
         request = Request(RENDER_RELAY_BASE + relay_path, data=body, headers=relay_headers, method=method)
         try:
             with urlopen(request, timeout=60) as response:
@@ -354,3 +356,4 @@ def main() -> None:
 
 if __name__ == '__main__':
     main()
+
