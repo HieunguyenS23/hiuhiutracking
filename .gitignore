@@ -1,6 +1,6 @@
-﻿__pycache__/
-server.out.log
-server.err.log
+﻿node_modules
+.next
+.vercel
 .env
-.env.*
-*.pyc
+.env.local
+data/store.json
