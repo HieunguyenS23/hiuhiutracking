@@ -1,9 +1,5 @@
-﻿{
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 60
-    }
-  },
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
       "source": "/",
@@ -11,27 +7,27 @@
     },
     {
       "source": "/auth/:path*",
-      "destination": "/api/index.py"
+      "destination": "https://trackshopee-admin.onrender.com/auth/:path*"
     },
     {
       "source": "/api/:path*",
-      "destination": "/api/index.py"
+      "destination": "https://trackshopee-admin.onrender.com/api/:path*"
     },
     {
       "source": "/shopee/:path*",
-      "destination": "/api/index.py"
+      "destination": "https://trackshopee-admin.onrender.com/shopee/:path*"
     },
     {
       "source": "/autopee-api/:path*",
-      "destination": "/api/index.py"
+      "destination": "https://trackshopee-admin.onrender.com/autopee-api/:path*"
     },
     {
       "source": "/mail-api/:path*",
-      "destination": "/api/index.py"
+      "destination": "https://trackshopee-admin.onrender.com/mail-api/:path*"
     },
     {
       "source": "/otistx-api/:path*",
-      "destination": "/api/index.py"
+      "destination": "https://trackshopee-admin.onrender.com/otistx-api/:path*"
     }
   ]
 }

@@ -1,27 +1,24 @@
 ﻿# Vercel Deploy Draft
 
-Project này đã được chuẩn bị theo hướng deploy lên Vercel với 2 phần:
+Project này hiện được cấu hình theo hướng đơn giản và ổn định hơn cho Vercel:
 
-- Frontend tĩnh: `login.html`, `index.html`, `voucher.html`, `mail.html`, `bulk-mail.html`, `address.html`
-- Backend serverless: `api/index.py` dùng lại logic từ `server.py`
+- Frontend tĩnh chạy trên Vercel
+- Các route backend được rewrite sang backend đang chạy ở Render:
+  - `/auth/*`
+  - `/api/*`
+  - `/shopee/*`
+  - `/autopee-api/*`
+  - `/mail-api/*`
+  - `/otistx-api/*`
 
-## Files chính
+## Ý nghĩa
 
-- `vercel.json`: rewrite route về Python function
-- `api/index.py`: entrypoint cho Vercel
-- `auth-guard.js`: kiểm tra phiên đăng nhập cho các trang HTML
-- `server.py`: giữ toàn bộ auth + proxy logic hiện tại
-
-## Environment variables cần cấu hình trên Vercel
-
-- `APP_USERNAME`
-- `APP_PASSWORD`
-- `SESSION_SECRET`
-- `OTISTX_API_KEY`
-- `RENDER_RELAY_BASE` (tuỳ chọn)
+- Trang mở nhanh hơn trên domain Vercel
+- Không cần ép Python runtime nội bộ của Vercel ngay từ đầu
+- Dễ deploy hơn và tránh lỗi `Invalid vercel.json`
 
 ## Lưu ý
 
-- Đây là bản nháp tương thích Vercel.
-- Do app vẫn có nhiều route proxy Python, Vercel có thể vẫn có cold start ở function.
-- Nếu muốn ổn định hoàn toàn như app backend riêng, Render/Northflank vẫn hợp hơn.
+- API vẫn đi qua backend Render hiện tại
+- Nếu backend Render đang sleep thì thao tác API vẫn có thể chậm
+- Đây là bước trung gian gọn và an toàn nhất để đưa frontend lên Vercel trước
