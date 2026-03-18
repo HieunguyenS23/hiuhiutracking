@@ -7,11 +7,11 @@ export default async function NewOrderPage() {
   const recentOrders = await getOrdersByUsername(session.username);
 
   return (
-    <div className="page-stack">
+    <div className="page-stack page-stack-spaced">
       <section className="hero-card">
         <p className="eyebrow">Dịch vụ</p>
         <h1>Lên đơn Shopee</h1>
-        <p>Khách hàng tự điền đơn trên điện thoại với giao diện gọn, rõ và dễ thao tác.</p>
+        <p>Chọn địa chỉ bằng Google Maps, kiểm tra tên và số điện thoại ngay trên form, rồi gửi đơn trực tiếp vào hệ thống.</p>
       </section>
       <OrderForm />
       <section className="phone-card">

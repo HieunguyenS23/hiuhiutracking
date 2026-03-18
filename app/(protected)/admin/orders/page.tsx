@@ -6,11 +6,11 @@ export default async function AdminOrdersPage() {
   const orders = await getOrders();
 
   return (
-    <div className="page-stack">
+    <div className="page-stack page-stack-spaced">
       <section className="hero-card">
         <p className="eyebrow">Admin</p>
         <h1>Quản lí đơn đặt</h1>
-        <p>Tất cả đơn khách hàng gửi lên đều đổ về đây và luôn kèm username.</p>
+        <p>Tất cả đơn khách hàng gửi lên đều đổ về đây, có kèm username và đầy đủ địa chỉ đã chọn từ Google Maps.</p>
       </section>
       <section className="phone-card">
         <div className="section-head">
@@ -30,7 +30,7 @@ export default async function AdminOrdersPage() {
               </div>
               <p><strong>SĐT:</strong> {order.phone}</p>
               <p><strong>Địa chỉ:</strong> {order.addressLine}, {order.ward}, {order.district}, {order.province}</p>
-              <p><strong>Sản phẩm:</strong> {order.productLink}</p>
+              <p><strong>Sản phẩm:</strong> <a href={order.productLink} target="_blank">{order.productLink}</a></p>
               <p><strong>Phân loại:</strong> {order.variant} · <strong>SL:</strong> {order.quantity}</p>
               <div className="order-row muted">
                 <span>{order.voucherType.toUpperCase()}</span>

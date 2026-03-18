@@ -1,8 +1,10 @@
 ﻿'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { VoucherType } from '@/lib/types';
-import { locationTree } from '@/lib/locations';
+import { hasAtLeastThreeWords, isValidVietnamPhone } from '@/lib/validators';
+import { AddressCombobox } from '@/components/address-combobox';
 
 const voucherOptions: { value: VoucherType; label: string }[] = [
   { value: '100k', label: 'Mã 100k' },
@@ -11,9 +13,10 @@ const voucherOptions: { value: VoucherType; label: string }[] = [
 ];
 
 export function OrderForm() {
-  const [province, setProvince] = useState<string>(locationTree[0].province);
-  const [district, setDistrict] = useState<string>(locationTree[0].districts[0].district);
-  const [ward, setWard] = useState<string>(locationTree[0].districts[0].wards[0]);
+  const router = useRouter();
+  const [province, setProvince] = useState('');
+  const [district, setDistrict] = useState('');
+  const [ward, setWard] = useState('');
   const [recipientName, setRecipientName] = useState('');
   const [phone, setPhone] = useState('');
   const [addressLine, setAddressLine] = useState('');
@@ -25,26 +28,27 @@ export function OrderForm() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const provinceData = useMemo(() => locationTree.find((item) => item.province === province) || locationTree[0], [province]);
-  const districtData = useMemo(() => provinceData.districts.find((item) => item.district === district) || provinceData.districts[0], [provinceData, district]);
-
-  function onProvinceChange(value: string) {
-    const nextProvince = locationTree.find((item) => item.province === value) || locationTree[0];
-    setProvince(nextProvince.province);
-    setDistrict(nextProvince.districts[0].district);
-    setWard(nextProvince.districts[0].wards[0]);
-  }
-
-  function onDistrictChange(value: string) {
-    const nextDistrict = provinceData.districts.find((item) => item.district === value) || provinceData.districts[0];
-    setDistrict(nextDistrict.district);
-    setWard(nextDistrict.wards[0]);
-  }
-
   async function submitOrder() {
     setLoading(true);
     setMessage('');
     setError('');
+
+    if (!hasAtLeastThreeWords(recipientName)) {
+      setLoading(false);
+      setError('Tên người nhận phải có ít nhất 3 từ.');
+      return;
+    }
+    if (!isValidVietnamPhone(phone)) {
+      setLoading(false);
+      setError('Số điện thoại phải đúng 10 chữ số.');
+      return;
+    }
+    if (!province || !district || !ward) {
+      setLoading(false);
+      setError('Vui lòng chọn đủ tỉnh, quận và phường từ danh sách.');
+      return;
+    }
+
     try {
       const response = await fetch('/api/orders', {
         method: 'POST',
@@ -56,11 +60,15 @@ export function OrderForm() {
       setRecipientName('');
       setPhone('');
       setAddressLine('');
+      setProvince('');
+      setDistrict('');
+      setWard('');
       setVoucherType('100k');
       setProductLink('');
       setVariant('');
       setQuantity('1');
       setMessage('Đơn đã được gửi thành công.');
+      router.refresh();
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : 'Đã có lỗi xảy ra.');
     } finally {
@@ -69,7 +77,7 @@ export function OrderForm() {
   }
 
   return (
-    <section className="phone-card">
+    <section className="phone-card order-form-card">
       <div className="section-head">
         <div>
           <p className="eyebrow">Lên đơn</p>
@@ -78,12 +86,12 @@ export function OrderForm() {
         <span className="chip">Mobile-first</span>
       </div>
       <div className="form-grid compact">
-        <label><span>Tên người nhận</span><input value={recipientName} onChange={(event) => setRecipientName(event.target.value)} placeholder="Nguyễn Văn A" /></label>
-        <label><span>Số điện thoại</span><input value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="09xxxxxxxx" /></label>
+        <label><span>Tên người nhận</span><input value={recipientName} onChange={(event) => setRecipientName(event.target.value)} placeholder="Nguyễn Văn A B" /></label>
+        <label><span>Số điện thoại</span><input value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="09xxxxxxxx" /></label>
         <label className="full-span"><span>Địa chỉ cụ thể</span><input value={addressLine} onChange={(event) => setAddressLine(event.target.value)} placeholder="Số nhà, tên đường, toà nhà..." /></label>
-        <label><span>Tỉnh / Thành phố</span><select value={province} onChange={(event) => onProvinceChange(event.target.value)}>{locationTree.map((item) => <option key={item.province} value={item.province}>{item.province}</option>)}</select></label>
-        <label><span>Quận / Huyện</span><select value={district} onChange={(event) => onDistrictChange(event.target.value)}>{provinceData.districts.map((item) => <option key={item.district} value={item.district}>{item.district}</option>)}</select></label>
-        <label><span>Phường / Xã</span><select value={ward} onChange={(event) => setWard(event.target.value)}>{districtData.wards.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+        <AddressCombobox label="Tỉnh / Thành phố" level="province" value={province} onChange={(value) => { setProvince(value); setDistrict(''); setWard(''); }} placeholder="Tìm tỉnh / thành" />
+        <AddressCombobox label="Quận / Huyện" level="district" value={district} province={province} onChange={(value) => { setDistrict(value); setWard(''); }} placeholder="Tìm quận / huyện" disabled={!province} />
+        <AddressCombobox label="Phường / Xã" level="ward" value={ward} province={province} district={district} onChange={(value) => setWard(value)} placeholder="Tìm phường / xã" disabled={!district} />
         <label><span>Loại mã</span><select value={voucherType} onChange={(event) => setVoucherType(event.target.value as VoucherType)}>{voucherOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
         <label className="full-span"><span>Link sản phẩm</span><input value={productLink} onChange={(event) => setProductLink(event.target.value)} placeholder="https://shopee.vn/..." /></label>
         <label><span>Phân loại sản phẩm</span><input value={variant} onChange={(event) => setVariant(event.target.value)} placeholder="Màu đỏ / size M" /></label>
@@ -91,8 +99,9 @@ export function OrderForm() {
       </div>
       {message ? <div className="inline-success">{message}</div> : null}
       {error ? <div className="inline-error">{error}</div> : null}
-      <button className="primary-button" disabled={loading} onClick={submitOrder} type="button">{loading ? 'Đang gửi đơn...' : 'Gửi đơn'}</button>
+      <div className="submit-bar">
+        <button className="primary-button" disabled={loading} onClick={submitOrder} type="button">{loading ? 'Đang gửi đơn...' : 'Gửi đơn'}</button>
+      </div>
     </section>
   );
 }
-
