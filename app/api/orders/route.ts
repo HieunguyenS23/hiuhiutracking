@@ -1,6 +1,5 @@
 ﻿import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { validateAddressWithGoogleMaps } from '@/lib/google-maps';
 import { requireSession } from '@/lib/session';
 import { createOrder, getOrders, getOrdersByUsername } from '@/lib/store';
 import { hasAtLeastThreeWords, isValidVietnamPhone } from '@/lib/validators';
@@ -36,11 +35,6 @@ export async function POST(request: Request) {
   }
   if (!/^https?:\/\//.test(productLink)) {
     return NextResponse.json({ error: 'Link sản phẩm phải bắt đầu bằng http hoặc https.' }, { status: 400 });
-  }
-
-  const addressValidation = await validateAddressWithGoogleMaps(addressLine, ward, district, province);
-  if (!addressValidation.ok) {
-    return NextResponse.json({ error: addressValidation.message || 'Địa chỉ chưa hợp lệ.' }, { status: 400 });
   }
 
   const order = await createOrder({
