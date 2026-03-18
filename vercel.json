@@ -1,0 +1,37 @@
+﻿{
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/login.html"
+    },
+    {
+      "source": "/auth/:path*",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/shopee/:path*",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/autopee-api/:path*",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/mail-api/:path*",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/otistx-api/:path*",
+      "destination": "/api/index.py"
+    }
+  ]
+}

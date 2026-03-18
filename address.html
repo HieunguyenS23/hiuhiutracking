@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TrackShopee - Xử lí địa chỉ</title>
-  <meta name="description" content="Xem, xóa và thêm địa chỉ bằng API Ostix cũ">
+  <title>TrackShopee - Xá»­ lÃ­ Ä‘á»‹a chá»‰</title>
+  <meta name="description" content="Xem, xÃ³a vÃ  thÃªm Ä‘á»‹a chá»‰ báº±ng API Ostix cÅ©">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css?v=20260314h">
@@ -79,7 +79,7 @@
   <div class="app">
     <nav class="nav">
       <div class="nav-brand">
-        <button class="nav-menu-toggle" type="button" data-nav-toggle aria-label="Mở menu">
+        <button class="nav-menu-toggle" type="button" data-nav-toggle aria-label="Má»Ÿ menu">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16" /><path d="M4 12h16" /><path d="M4 17h16" /></svg>
         </button>
         <div class="nav-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg></div>
@@ -89,22 +89,22 @@
     <div class="nav-overlay" data-nav-close></div>
     <aside class="nav-drawer" data-nav-drawer>
       <div class="nav-drawer-head">
-        <strong>Điều hướng</strong>
-        <button class="nav-drawer-close" type="button" data-nav-close aria-label="Đóng menu">&times;</button>
+        <strong>Äiá»u hÆ°á»›ng</strong>
+        <button class="nav-drawer-close" type="button" data-nav-close aria-label="ÄÃ³ng menu">&times;</button>
       </div>
       <div class="nav-drawer-links">
-        <a class="drawer-link" href="/index.html">Đơn hàng</a>
-        <a class="drawer-link" href="/voucher.html">Lưu Voucher</a>
-        <a class="drawer-link" href="/bulk-mail.html">Thêm mail</a>
-        <a class="drawer-link" href="/mail.html">Đọc mail</a>
-        <a class="drawer-link is-active" href="/address.html">Xử lí địa chỉ</a>
-        <a class="drawer-link" href="/auth/logout">Đăng xuất</a>
+        <a class="drawer-link" href="/index.html">ÄÆ¡n hÃ ng</a>
+        <a class="drawer-link" href="/voucher.html">LÆ°u Voucher</a>
+        <a class="drawer-link" href="/bulk-mail.html">ThÃªm mail</a>
+        <a class="drawer-link" href="/mail.html">Äá»c mail</a>
+        <a class="drawer-link is-active" href="/address.html">Xá»­ lÃ­ Ä‘á»‹a chá»‰</a>
+        <a class="drawer-link" href="/auth/logout">ÄÄƒng xuáº¥t</a>
       </div>
     </aside>
     <main class="main">
       <div class="hero">
-        <h1>Xử lí <span class="gradient-text">địa chỉ Shopee</span></h1>
-        <p>Dùng API Ostix cũ để xem danh sách, xóa địa chỉ đã chọn và thêm địa chỉ mới.</p>
+        <h1>Xá»­ lÃ­ <span class="gradient-text">Ä‘á»‹a chá»‰ Shopee</span></h1>
+        <p>DÃ¹ng API Ostix cÅ© Ä‘á»ƒ xem danh sÃ¡ch, xÃ³a Ä‘á»‹a chá»‰ Ä‘Ã£ chá»n vÃ  thÃªm Ä‘á»‹a chá»‰ má»›i.</p>
       </div>
 
       <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
@@ -112,7 +112,7 @@
       <div class="address-shell">
         <section class="glass address-panel">
           <div class="panel-title" style="margin-bottom:14px">
-            <h3>Xem và xóa địa chỉ</h3>
+            <h3>Xem vÃ  xÃ³a Ä‘á»‹a chá»‰</h3>
           </div>
           <div class="address-stack">
             <label class="address-label">
@@ -120,25 +120,25 @@
               <textarea id="address-view-spcst" class="address-textarea" placeholder="SPC_ST=..."></textarea>
             </label>
             <label class="address-label">
-              <strong>Proxy tùy chọn</strong>
-              <input id="address-view-proxy" type="text" class="s-input" placeholder="ip:port hoặc ip:port:user:pass">
+              <strong>Proxy tÃ¹y chá»n</strong>
+              <input id="address-view-proxy" type="text" class="s-input" placeholder="ip:port hoáº·c ip:port:user:pass">
             </label>
             <div class="address-inline">
-              <button id="address-load-btn" class="s-btn" type="button">Xem địa chỉ</button>
-              <button id="address-select-all-btn" class="nav-btn" type="button">Chọn tất cả</button>
-              <button id="address-delete-btn" class="nav-btn" type="button">Xóa địa chỉ đã chọn</button>
-              <button id="address-clear-view-btn" class="nav-btn" type="button">Xóa form xem</button>
+              <button id="address-load-btn" class="s-btn" type="button">Xem Ä‘á»‹a chá»‰</button>
+              <button id="address-select-all-btn" class="nav-btn" type="button">Chá»n táº¥t cáº£</button>
+              <button id="address-delete-btn" class="nav-btn" type="button">XÃ³a Ä‘á»‹a chá»‰ Ä‘Ã£ chá»n</button>
+              <button id="address-clear-view-btn" class="nav-btn" type="button">XÃ³a form xem</button>
             </div>
             <div id="address-view-result" class="address-result hidden"></div>
             <div id="address-list" class="address-list">
-              <div class="address-empty">Chưa có danh sách địa chỉ.</div>
+              <div class="address-empty">ChÆ°a cÃ³ danh sÃ¡ch Ä‘á»‹a chá»‰.</div>
             </div>
           </div>
         </section>
 
         <section class="glass address-panel">
           <div class="panel-title" style="margin-bottom:14px">
-            <h3>Thêm địa chỉ mới</h3>
+            <h3>ThÃªm Ä‘á»‹a chá»‰ má»›i</h3>
           </div>
           <div class="address-grid">
             <label class="address-label">
@@ -146,29 +146,29 @@
               <textarea id="address-add-spcst" class="address-textarea" placeholder="SPC_ST=..."></textarea>
             </label>
             <label class="address-label">
-              <strong>Proxy tùy chọn</strong>
-              <input id="address-add-proxy" type="text" class="s-input" placeholder="ip:port hoặc ip:port:user:pass">
+              <strong>Proxy tÃ¹y chá»n</strong>
+              <input id="address-add-proxy" type="text" class="s-input" placeholder="ip:port hoáº·c ip:port:user:pass">
             </label>
             <label class="address-label">
-              <strong>Tên người nhận</strong>
-              <input id="address-add-name" type="text" class="s-input" placeholder="Để trống nếu muốn random">
+              <strong>TÃªn ngÆ°á»i nháº­n</strong>
+              <input id="address-add-name" type="text" class="s-input" placeholder="Äá»ƒ trá»‘ng náº¿u muá»‘n random">
             </label>
             <label class="address-label">
-              <strong>SĐT đăng ký</strong>
-              <input id="address-add-phone-account" type="text" class="s-input" placeholder="Để trống nếu muốn lấy từ tài khoản">
+              <strong>SÄT Ä‘Äƒng kÃ½</strong>
+              <input id="address-add-phone-account" type="text" class="s-input" placeholder="Äá»ƒ trá»‘ng náº¿u muá»‘n láº¥y tá»« tÃ i khoáº£n">
             </label>
             <label class="address-label">
-              <strong>SĐT gọi</strong>
-              <input id="address-add-phone-call" type="text" class="s-input" placeholder="Tùy chọn">
+              <strong>SÄT gá»i</strong>
+              <input id="address-add-phone-call" type="text" class="s-input" placeholder="TÃ¹y chá»n">
             </label>
             <label class="address-label" style="grid-column: 1 / -1;">
-              <strong>Địa chỉ đầy đủ</strong>
-              <textarea id="address-add-full" class="address-textarea" placeholder="Ví dụ: số 10 ngõ 5 đường Láng Hạ, Đống Đa, Hà Nội"></textarea>
+              <strong>Äá»‹a chá»‰ Ä‘áº§y Ä‘á»§</strong>
+              <textarea id="address-add-full" class="address-textarea" placeholder="VÃ­ dá»¥: sá»‘ 10 ngÃµ 5 Ä‘Æ°á»ng LÃ¡ng Háº¡, Äá»‘ng Äa, HÃ  Ná»™i"></textarea>
             </label>
           </div>
           <div class="address-inline" style="margin-top:14px">
-            <button id="address-add-btn" class="s-btn" type="button">Thêm địa chỉ</button>
-            <button id="address-clear-add-btn" class="nav-btn" type="button">Xóa form thêm</button>
+            <button id="address-add-btn" class="s-btn" type="button">ThÃªm Ä‘á»‹a chá»‰</button>
+            <button id="address-clear-add-btn" class="nav-btn" type="button">XÃ³a form thÃªm</button>
           </div>
           <div id="address-add-result" class="address-result hidden" style="margin-top:14px"></div>
         </section>
@@ -178,7 +178,10 @@
     <footer class="footer">TrackShopee &copy; 2026</footer>
   </div>
 
+  <script src="auth-guard.js"></script>
   <script src="nav.js?v=20260314a"></script>
   <script src="address.js?v=20260314a"></script>
 </body>
 </html>
+
+
