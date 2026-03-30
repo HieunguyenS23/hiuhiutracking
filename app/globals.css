@@ -14,7 +14,7 @@
   --radius-xl: 28px;
   --radius-lg: 22px;
   --radius-md: 16px;
-  --container: 760px;
+  --container: 860px;
   font-family: 'Be Vietnam Pro', 'Segoe UI', sans-serif;
 }
 * { box-sizing: border-box; }
@@ -54,7 +54,8 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
 .inline-success { background: #eefaf3; border: 1px solid #bde3c9; color: #216c3b; }
 .auth-footnote { margin-top: 12px; font-size: 12px; }
 .app-frame { width: min(100%, var(--container)); margin: 0 auto; }
-.mobile-topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 16px; padding: 16px 18px; background: rgba(255, 252, 248, 0.9); border: 1px solid rgba(220, 194, 171, 0.75); border-radius: 20px; position: sticky; top: 14px; backdrop-filter: blur(14px); z-index: 10; }
+.app-frame-admin { width: min(100%, 1380px); }
+.mobile-topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 16px; padding: 14px 18px; background: rgba(255, 252, 248, 0.95); border: 1px solid rgba(220, 194, 171, 0.75); border-radius: 20px; position: sticky; top: 14px; backdrop-filter: blur(14px); z-index: 10; }
 .mobile-tabbar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); width: min(calc(100% - 24px), 500px); padding: 10px; background: rgba(255, 252, 248, 0.92); border: 1px solid rgba(220, 194, 171, 0.85); border-radius: 24px; box-shadow: 0 16px 40px rgba(95, 57, 23, 0.14); z-index: 20; }
 .hero-card, .phone-card { padding: 20px; }
 .order-form-card { padding-bottom: 28px; }
@@ -68,7 +69,7 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
 .empty-state { padding: 18px; border-radius: 18px; border: 1px dashed var(--line-strong); color: var(--muted); text-align: center; background: rgba(255,255,255,0.55); }
 .muted { color: var(--muted); font-size: 13px; }
 .submit-bar { margin-top: 8px; }
-@media (max-width: 640px) { .form-grid.compact { grid-template-columns: 1fr; } .mobile-topbar { padding: 14px 16px; } .hero-card, .phone-card, .auth-card { padding: 18px; border-radius: 24px; } }
+@media (max-width: 640px) { .form-grid.compact { grid-template-columns: 1fr; } .mobile-topbar { padding: 12px 14px; } .profile-card { flex: 1; min-width: 0; } .profile-meta strong { font-size: 18px; } .hero-card, .phone-card, .auth-card { padding: 18px; border-radius: 24px; } }
 
 .sheet-wrap {
   width: 100%;
@@ -121,3 +122,75 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
   color: #b4451f;
   font-weight: 700;
 }
+
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: #fff8f2;
+  border: 1px solid #f0dbc8;
+}
+
+.profile-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: #ffffff;
+  background: linear-gradient(135deg, #ff8d5d, #ff6d3f);
+}
+
+.profile-meta {
+  display: grid;
+  gap: 2px;
+}
+
+.profile-meta strong {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.logout-form-desktop {
+  margin: 0;
+}
+
+.app-frame-admin .page-stack {
+  gap: 18px;
+}
+
+.app-frame-admin .hero-card,
+.app-frame-admin .phone-card {
+  width: 100%;
+  max-width: none;
+}
+
+.app-frame-admin .hero-card {
+  padding: 24px 24px;
+}
+
+.app-frame-admin .phone-card {
+  padding: 22px 22px;
+}
+
+.app-frame-admin .sheet-wrap {
+  border-radius: 18px;
+}
+
+.app-frame-admin .sheet-table {
+  min-width: 1280px;
+}
+
+.app-frame-admin .sheet-table th,
+.app-frame-admin .sheet-table td {
+  padding: 14px;
+  font-size: 15px;
+}
+
+.app-frame-admin .sheet-table th {
+  font-size: 16px;
+}
+
