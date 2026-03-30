@@ -55,8 +55,8 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
 .auth-footnote { margin-top: 12px; font-size: 12px; }
 .app-frame { width: min(100%, var(--container)); margin: 0 auto; }
 .app-frame-admin { width: min(100%, 1380px); }
-.mobile-topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 16px; padding: 14px 18px; background: rgba(255, 252, 248, 0.95); border: 1px solid rgba(220, 194, 171, 0.75); border-radius: 20px; position: sticky; top: 14px; backdrop-filter: blur(14px); z-index: 10; }
-.mobile-tabbar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); width: min(calc(100% - 24px), 500px); padding: 10px; background: rgba(255, 252, 248, 0.92); border: 1px solid rgba(220, 194, 171, 0.85); border-radius: 24px; box-shadow: 0 16px 40px rgba(95, 57, 23, 0.14); z-index: 20; }
+.mobile-topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; padding: 14px 18px; background: rgba(255, 252, 248, 0.95); border: 1px solid rgba(220, 194, 171, 0.75); border-radius: 20px; position: sticky; top: 14px; backdrop-filter: blur(14px); z-index: 10; }
+.mobile-tabbar { width: 100%; margin-bottom: 12px; padding: 10px; background: rgba(255, 252, 248, 0.92); border: 1px solid rgba(220, 194, 171, 0.85); border-radius: 24px; box-shadow: 0 10px 24px rgba(95, 57, 23, 0.08); }
 .hero-card, .phone-card { padding: 20px; }
 .order-form-card { padding-bottom: 28px; }
 .section-head, .order-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -182,6 +182,7 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
 
 .app-frame-admin .sheet-table {
   min-width: 1280px;
+  table-layout: fixed;
 }
 
 .app-frame-admin .sheet-table th,
@@ -193,4 +194,25 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
 .app-frame-admin .sheet-table th {
   font-size: 16px;
 }
+
+
+.order-link {
+  color: var(--accent-strong);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.col-address {
+  width: 280px;
+}
+
+.cell-address {
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 

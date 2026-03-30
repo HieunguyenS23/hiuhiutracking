@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { VoucherType } from '@/lib/types';
 import { locationTree } from '@/lib/locations';
-import { hasAtLeastThreeWords, isValidVietnamPhone } from '@/lib/validators';
+import { hasAtLeastTwoWords, isValidVietnamPhone } from '@/lib/validators';
 
 const voucherOptions: { value: VoucherType; label: string }[] = [
   { value: '100k', label: 'Mã 100k' },
@@ -37,9 +37,9 @@ export function OrderForm() {
     setMessage('');
     setError('');
 
-    if (!hasAtLeastThreeWords(recipientName)) {
+    if (!hasAtLeastTwoWords(recipientName)) {
       setLoading(false);
-      setError('Tên người nhận phải có ít nhất 3 từ.');
+      setError('Tên người nhận phải có ít nhất 2 từ.');
       return;
     }
     if (!isValidVietnamPhone(phone)) {
@@ -98,10 +98,9 @@ export function OrderForm() {
           <p className="eyebrow">Lên đơn</p>
           <h2>Điền thông tin đặt hàng</h2>
         </div>
-        <span className="chip">Dropdown hành chính cũ</span>
       </div>
       <div className="form-grid compact">
-        <label><span>Tên người nhận</span><input value={recipientName} onChange={(event) => setRecipientName(event.target.value)} placeholder="Nguyễn Văn A B" /></label>
+        <label><span>Tên người nhận</span><input value={recipientName} onChange={(event) => setRecipientName(event.target.value)} placeholder="Nguyễn Văn A" /></label>
         <label><span>Số điện thoại</span><input value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="09xxxxxxxx" /></label>
         <label className="full-span"><span>Địa chỉ cụ thể</span><input value={addressLine} onChange={(event) => setAddressLine(event.target.value)} placeholder="Số nhà, tên đường, toà nhà..." /></label>
         <label>
@@ -143,3 +142,4 @@ export function OrderForm() {
     </section>
   );
 }
+

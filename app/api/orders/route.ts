@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/session';
 import { createOrder, getOrders, getOrdersByUsername } from '@/lib/store';
-import { hasAtLeastThreeWords, isValidVietnamPhone } from '@/lib/validators';
+import { hasAtLeastTwoWords, isValidVietnamPhone } from '@/lib/validators';
 
 export async function GET() {
   const session = await requireSession();
@@ -31,8 +31,8 @@ export async function POST(request: Request) {
   if (!recipientName || !phone || !addressLine || !ward || !district || !province || !voucherType || !productLink || !variant || quantity < 1) {
     return NextResponse.json({ error: 'Vui lòng điền đủ thông tin đơn hàng.' }, { status: 400 });
   }
-  if (!hasAtLeastThreeWords(recipientName)) {
-    return NextResponse.json({ error: 'Tên người nhận phải có ít nhất 3 từ.' }, { status: 400 });
+  if (!hasAtLeastTwoWords(recipientName)) {
+    return NextResponse.json({ error: 'Tên người nhận phải có ít nhất 2 từ.' }, { status: 400 });
   }
   if (!isValidVietnamPhone(phone)) {
     return NextResponse.json({ error: 'Số điện thoại phải đúng 10 chữ số.' }, { status: 400 });
@@ -64,3 +64,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không gửi được đơn.' }, { status: 503 });
   }
 }
+
+

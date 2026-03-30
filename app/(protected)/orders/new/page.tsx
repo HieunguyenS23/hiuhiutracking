@@ -19,7 +19,7 @@ export default async function NewOrderPage() {
       <section className="hero-card">
         <p className="eyebrow">Dịch vụ</p>
         <h1>Lên đơn Shopee</h1>
-        <p>Chọn địa chỉ hành chính cũ bằng dropdown, kiểm tra tên và số điện thoại, rồi gửi đơn trực tiếp vào hệ thống.</p>
+        <p>Chọn địa chỉ hành chính bằng dropdown, kiểm tra tên và số điện thoại, rồi gửi đơn trực tiếp vào hệ thống.</p>
       </section>
       <OrderForm />
       <section className="phone-card">
@@ -41,6 +41,7 @@ export default async function NewOrderPage() {
               </div>
               <p>{order.addressLine}, {order.ward}, {order.district}, {order.province}</p>
               <p>{order.variant} · SL {order.quantity}</p>
+              <a className="order-link" href={order.productLink} target="_blank" rel="noreferrer">Mở link sản phẩm</a>
               <div className="order-row muted">
                 <span>{new Date(order.createdAt).toLocaleString('vi-VN')}</span>
                 <span>@{order.username}</span>

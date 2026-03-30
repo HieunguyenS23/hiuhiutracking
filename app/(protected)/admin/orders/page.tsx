@@ -15,12 +15,6 @@ export default async function AdminOrdersPage() {
 
   return (
     <div className="page-stack page-stack-spaced">
-      <section className="hero-card">
-        <p className="eyebrow">Admin</p>
-        <h1>Quản lí đơn đặt</h1>
-        <p>Bên admin hiển thị dạng sheet để lọc và xử lí nhanh theo từng dòng đơn.</p>
-      </section>
-
       <section className="phone-card">
         <div className="section-head">
           <div>
@@ -40,7 +34,7 @@ export default async function AdminOrdersPage() {
                 <th>Username</th>
                 <th>Người nhận</th>
                 <th>SĐT</th>
-                <th>Địa chỉ</th>
+                <th className="col-address">Địa chỉ</th>
                 <th>Loại mã</th>
                 <th>Sản phẩm</th>
                 <th>Phân loại</th>
@@ -59,9 +53,11 @@ export default async function AdminOrdersPage() {
                   <td>@{order.username}</td>
                   <td>{order.recipientName}</td>
                   <td>{order.phone}</td>
-                  <td>{order.addressLine}, {order.ward}, {order.district}, {order.province}</td>
+                  <td className="cell-address" title={`${order.addressLine}, ${order.ward}, ${order.district}, ${order.province}`}>
+                    {order.addressLine}, {order.ward}, {order.district}, {order.province}
+                  </td>
                   <td>{order.voucherType.toUpperCase()}</td>
-                  <td><a href={order.productLink} target="_blank">Mở link</a></td>
+                  <td><a href={order.productLink} target="_blank" rel="noreferrer">Mở link</a></td>
                   <td>{order.variant}</td>
                   <td>{order.quantity}</td>
                 </tr>
