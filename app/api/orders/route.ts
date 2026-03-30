@@ -53,24 +53,54 @@ function pickOrderAmountFromCheckResponse(data: any) {
   return '';
 }
 
-function pickProductNameFromCheckResponse(data: any) {
-  const first = pickFirstOrder(data);
+function pickMatchedOrderFromCheckResponse(data: any, order: any) {
+  const orders = Array.isArray(data?.orders) ? data.orders : [];
+  if (orders.length === 0) return null;
+
+  const byOrderId = String(order?.orderCode || '').trim();
+  if (byOrderId) {
+    const found = orders.find((item: any) => String(item?.orderId || item?.order_id || item?.id || '').trim() === byOrderId);
+    if (found) return found;
+  }
+
+  const byTracking = String(order?.deliveryTracking || '').trim();
+  if (byTracking) {
+    const found = orders.find((item: any) => String(item?.tracking || item?.trackingCode || item?.tracking_number || '').trim() === byTracking);
+    if (found) return found;
+  }
+
+  return orders[0];
+}
+
+function pickProductNameFromOrderItem(item: any) {
+  const value = item?.name || item?.title || item?.productName || item?.product_name;
+  if (typeof value === 'string' && value.trim()) return value.trim();
+  return '';
+}
+
+function pickProductNameFromCheckResponse(data: any, order: any) {
+  const matchedOrder = pickMatchedOrderFromCheckResponse(data, order);
+  if (!matchedOrder) return '';
+
+  const products = Array.isArray(matchedOrder?.products) ? matchedOrder.products : [];
+  const productNames = products
+    .map((item: any) => pickProductNameFromOrderItem(item))
+    .filter((name: string) => Boolean(name));
+
+  if (productNames.length > 0) {
+    return productNames.join(' | ');
+  }
+
+  // Fallback an toàn nếu API thay đổi format
   const direct =
-    first?.productName ||
-    first?.product_name ||
-    first?.itemName ||
-    first?.item_name ||
-    first?.title ||
-    first?.name ||
-    first?.productTitle ||
-    first?.product_title;
+    matchedOrder?.productName ||
+    matchedOrder?.product_name ||
+    matchedOrder?.itemName ||
+    matchedOrder?.item_name ||
+    matchedOrder?.title ||
+    matchedOrder?.name;
 
   if (typeof direct === 'string' && direct.trim()) return direct.trim();
-
-  const item = Array.isArray(first?.items) ? first.items[0] : null;
-  const nested = item?.name || item?.title || item?.productName || item?.product_name;
-  if (typeof nested === 'string' && nested.trim()) return nested.trim();
-
   return '';
 }
 
@@ -88,7 +118,7 @@ async function enrichProductNameByCookie(order: any) {
     if (!response.ok) return order;
 
     const data = await response.json().catch(() => ({}));
-    const productName = pickProductNameFromCheckResponse(data);
+    const productName = pickProductNameFromCheckResponse(data, order);
     if (!productName) return order;
 
     return { ...order, productName };
@@ -400,3 +430,4 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không xóa được đơn.' }, { status: 500 });
   }
 }
+

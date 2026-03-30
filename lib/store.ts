@@ -230,7 +230,7 @@ export async function createOrder(order: OrderRecord) {
         ${order.id}, ${order.username}, ${order.recipientName}, ${order.phone}, ${order.addressLine}, ${order.ward},
         ${order.district}, ${order.province}, ${order.voucherType}, ${order.productLink}, ${order.variant},
         ${order.quantity}, ${order.status}, ${order.orderCode}, ${order.orderAmount}, ${order.deliveryStatus},
-        , , ,
+        ${order.deliveryCheckedAt}, ${order.deliveryTracking}, ${order.processingCookie},
         ${order.processingAccount}, ${order.createdAt}
       )
     `;
@@ -495,6 +495,8 @@ export async function deleteUserRecord(username: string) {
 
   return { ok: true };
 }
+
+
 
 
 
