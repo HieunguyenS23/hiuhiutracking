@@ -43,16 +43,14 @@ export function AdminOrdersTable({ initialOrders }: Props) {
     }
   }
 
-  async function fillCookie(order: OrderRecord) {
-    const input = window.prompt('Nhập cookie xử lí cho đơn này:', order.processingCookie || '');
-    if (input === null) return;
-    await patchOrder(order.id, { processingCookie: input });
+  function setOrderField(orderId: string, field: 'processingCookie' | 'processingAccount', value: string) {
+    setOrders((prev) => prev.map((item) => (item.id === orderId ? { ...item, [field]: value } : item)));
   }
 
-  async function fillAccount(order: OrderRecord) {
-    const input = window.prompt('Nhập account xử lí cho đơn này:', order.processingAccount || '');
-    if (input === null) return;
-    await patchOrder(order.id, { processingAccount: input });
+  async function commitField(order: OrderRecord, field: 'processingCookie' | 'processingAccount', value: string) {
+    const normalized = value.trim();
+    if (normalized === (order[field] || '').trim()) return;
+    await patchOrder(order.id, { [field]: normalized });
   }
 
   const total = useMemo(() => orders.length, [orders.length]);
@@ -120,14 +118,24 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                   </select>
                 </td>
                 <td>
-                  <button className="mini-action" disabled={savingId === order.id} onClick={() => fillCookie(order)} type="button">
-                    Điền cookie
-                  </button>
+                  <input
+                    className="admin-inline-input"
+                    value={order.processingCookie || ''}
+                    disabled={savingId === order.id}
+                    placeholder="Nhập cookie"
+                    onChange={(event) => setOrderField(order.id, 'processingCookie', event.target.value)}
+                    onBlur={(event) => commitField(order, 'processingCookie', event.target.value)}
+                  />
                 </td>
                 <td>
-                  <button className="mini-action" disabled={savingId === order.id} onClick={() => fillAccount(order)} type="button">
-                    Điền account
-                  </button>
+                  <input
+                    className="admin-inline-input"
+                    value={order.processingAccount || ''}
+                    disabled={savingId === order.id}
+                    placeholder="Nhập account"
+                    onChange={(event) => setOrderField(order.id, 'processingAccount', event.target.value)}
+                    onBlur={(event) => commitField(order, 'processingAccount', event.target.value)}
+                  />
                 </td>
               </tr>
             ))}

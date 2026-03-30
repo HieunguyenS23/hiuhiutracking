@@ -280,3 +280,23 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
   opacity: 0.6;
   cursor: wait;
 }
+
+.admin-inline-input {
+  width: 180px;
+  min-height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .admin-inline-input {
+    width: 160px;
+  }
+
+  .status-select {
+    min-width: 130px;
+  }
+}
