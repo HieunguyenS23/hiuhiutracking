@@ -13,11 +13,18 @@ const statusOptions: { value: OrderStatus; label: string }[] = [
   { value: 'ordered', label: 'Đã đặt' },
 ];
 
+const statusLabel: Record<OrderStatus, string> = {
+  pending: 'Chờ xác nhận',
+  confirmed: 'Đã xác nhận',
+  ordered: 'Đã đặt',
+};
+
 export function AdminOrdersTable({ initialOrders }: Props) {
   const [orders, setOrders] = useState(initialOrders);
   const [savingId, setSavingId] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [detailOrder, setDetailOrder] = useState<OrderRecord | null>(null);
 
   async function patchOrder(orderId: string, payload: Partial<Pick<OrderRecord, 'status' | 'processingCookie' | 'processingAccount'>>) {
     setSavingId(orderId);
@@ -35,6 +42,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
 
       const updated = data.order as OrderRecord;
       setOrders((prev) => prev.map((item) => (item.id === orderId ? updated : item)));
+      if (detailOrder?.id === updated.id) setDetailOrder(updated);
       setMessage('Đã cập nhật đơn thành công.');
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : 'Đã có lỗi xảy ra.');
@@ -45,6 +53,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
 
   function setOrderField(orderId: string, field: 'processingCookie' | 'processingAccount', value: string) {
     setOrders((prev) => prev.map((item) => (item.id === orderId ? { ...item, [field]: value } : item)));
+    if (detailOrder?.id === orderId) setDetailOrder({ ...detailOrder, [field]: value });
   }
 
   async function commitField(order: OrderRecord, field: 'processingCookie' | 'processingAccount', value: string) {
@@ -73,30 +82,22 @@ export function AdminOrdersTable({ initialOrders }: Props) {
           <thead>
             <tr>
               <th>Thời gian</th>
-              <th>Username</th>
-              <th className="col-check">Check</th>
-              <th>Người nhận</th>
-              <th>SĐT</th>
-              <th className="col-address">Địa chỉ</th>
-              <th>Loại mã</th>
-              <th>Sản phẩm</th>
-              <th>Phân loại</th>
-              <th>SL</th>
+              <th>Check</th>
               <th className="col-cookie">Cookie</th>
               <th className="col-account">Account</th>
+              <th>Chi tiết</th>
             </tr>
           </thead>
           <tbody>
             {orders.length === 0 ? (
               <tr>
-                <td className="sheet-empty" colSpan={12}>Chưa có đơn nào.</td>
+                <td className="sheet-empty" colSpan={5}>Chưa có đơn nào.</td>
               </tr>
             ) : null}
             {orders.map((order) => (
               <tr key={order.id}>
                 <td>{new Date(order.createdAt).toLocaleString('vi-VN')}</td>
-                <td>@{order.username}</td>
-                <td>
+                <td className="col-check">
                   <select
                     className={`status-select status-${order.status}`}
                     value={order.status}
@@ -108,15 +109,6 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                     ))}
                   </select>
                 </td>
-                <td>{order.recipientName}</td>
-                <td>{order.phone}</td>
-                <td className="cell-address" title={`${order.addressLine}, ${order.ward}, ${order.district}, ${order.province}`}>
-                  {order.addressLine}, {order.ward}, {order.district}, {order.province}
-                </td>
-                <td>{order.voucherType.toUpperCase()}</td>
-                <td><a href={order.productLink} target="_blank" rel="noreferrer">Mở link</a></td>
-                <td>{order.variant}</td>
-                <td>{order.quantity}</td>
                 <td>
                   <input
                     className="admin-inline-input"
@@ -137,11 +129,41 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                     onBlur={(event) => commitField(order, 'processingAccount', event.target.value)}
                   />
                 </td>
+                <td>
+                  <button className="mini-action" type="button" onClick={() => setDetailOrder(order)}>
+                    Xem chi tiết
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {detailOrder ? (
+        <div className="modal-backdrop" onClick={() => setDetailOrder(null)}>
+          <div className="modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h3>Chi tiết đơn hàng</h3>
+              <button className="mini-action" onClick={() => setDetailOrder(null)} type="button">Đóng</button>
+            </div>
+            <div className="modal-body">
+              <p><strong>Trạng thái:</strong> <span className={`status-pill status-${detailOrder.status}`}>{statusLabel[detailOrder.status]}</span></p>
+              <p><strong>Username:</strong> @{detailOrder.username}</p>
+              <p><strong>Người nhận:</strong> {detailOrder.recipientName}</p>
+              <p><strong>SĐT:</strong> {detailOrder.phone}</p>
+              <p><strong>Địa chỉ:</strong> {detailOrder.addressLine}, {detailOrder.ward}, {detailOrder.district}, {detailOrder.province}</p>
+              <p><strong>Loại mã:</strong> {detailOrder.voucherType.toUpperCase()}</p>
+              <p><strong>Sản phẩm:</strong> <a href={detailOrder.productLink} target="_blank" rel="noreferrer">Mở link</a></p>
+              <p><strong>Phân loại:</strong> {detailOrder.variant}</p>
+              <p><strong>Số lượng:</strong> {detailOrder.quantity}</p>
+              <p><strong>Cookie xử lí:</strong> {detailOrder.processingCookie || '(trống)'}</p>
+              <p><strong>Account xử lí:</strong> {detailOrder.processingAccount || '(trống)'}</p>
+              <p><strong>Thời gian tạo:</strong> {new Date(detailOrder.createdAt).toLocaleString('vi-VN')}</p>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }
