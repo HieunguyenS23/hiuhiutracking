@@ -51,9 +51,9 @@ export function OrderForm() {
       setError('Tên người nhận phải có ít nhất 2 từ.');
       return;
     }
-    if (!isValidVietnamPhone(phone)) {
+    if (phone.trim() && !isValidVietnamPhone(phone)) {
       setLoading(false);
-      setError('Số điện thoại phải đúng 10 chữ số.');
+      setError('Số điện thoại phải đúng 10 chữ số hoặc để trống.');
       return;
     }
     if (!province || !district || !ward) {
@@ -110,7 +110,7 @@ export function OrderForm() {
       </div>
       <div className="form-grid compact">
         <label><span>Tên người nhận</span><input value={recipientName} onChange={(event) => setRecipientName(event.target.value)} placeholder="Nguyễn Văn A" /></label>
-        <label><span>Số điện thoại</span><input value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="09xxxxxxxx" /></label>
+        <label><span>Số điện thoại</span><input value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="09xxxxxxxx (có thể để trống)" /></label>
         <label className="full-span"><span>Địa chỉ cụ thể</span><input value={addressLine} onChange={(event) => setAddressLine(event.target.value)} placeholder="Số nhà, tên đường, toà nhà..." /></label>
         <label>
           <span>Tỉnh / Thành phố</span>
@@ -151,6 +151,8 @@ export function OrderForm() {
     </section>
   );
 }
+
+
 
 
 

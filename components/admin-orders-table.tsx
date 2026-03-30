@@ -256,7 +256,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
               <div className="detail-grid">
                 <div className="detail-item"><span>Username</span><strong>@{detailOrder.username}</strong></div>
                 <div className="detail-item"><span>Người nhận</span><strong>{detailOrder.recipientName}</strong></div>
-                <div className="detail-item"><span>SĐT</span><strong>{detailOrder.phone}</strong></div>
+                <div className="detail-item"><span>SĐT</span><strong>{detailOrder.phone || 'ảo'}</strong></div>
                 <div className="detail-item"><span>Loại mã</span><strong>{detailOrder.voucherType.toUpperCase()}</strong></div>
                 <div className="detail-item"><span>Phân loại</span><strong>{detailOrder.variant}</strong></div>
                 <div className="detail-item"><span>Số lượng</span><strong>{detailOrder.quantity}</strong></div>
@@ -294,3 +294,4 @@ export function AdminOrdersTable({ initialOrders }: Props) {
     </>
   );
 }
+

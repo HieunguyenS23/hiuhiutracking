@@ -107,14 +107,14 @@ export async function POST(request: Request) {
   const variant = String(body.variant || '').trim();
   const quantity = Number(body.quantity || 0);
 
-  if (!recipientName || !phone || !addressLine || !ward || !district || !province || !voucherType || !productLink || !variant || quantity < 1) {
+  if (!recipientName || !addressLine || !ward || !district || !province || !voucherType || !productLink || !variant || quantity < 1) {
     return NextResponse.json({ error: 'Vui lòng điền đủ thông tin đơn hàng.' }, { status: 400 });
   }
   if (!hasAtLeastTwoWords(recipientName)) {
     return NextResponse.json({ error: 'Tên người nhận phải có ít nhất 2 từ.' }, { status: 400 });
   }
-  if (!isValidVietnamPhone(phone)) {
-    return NextResponse.json({ error: 'Số điện thoại phải đúng 10 chữ số.' }, { status: 400 });
+  if (phone && !isValidVietnamPhone(phone)) {
+    return NextResponse.json({ error: 'Số điện thoại phải đúng 10 chữ số hoặc để trống.' }, { status: 400 });
   }
   if (!/^https?:\/\//.test(productLink)) {
     return NextResponse.json({ error: 'Link sản phẩm phải bắt đầu bằng http hoặc https.' }, { status: 400 });
@@ -218,3 +218,4 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không thể cập nhật đơn.' }, { status: 500 });
   }
 }
+
