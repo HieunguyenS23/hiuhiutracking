@@ -15,14 +15,6 @@ export function MobileTabbar({ isAdmin, username }: Props) {
 
   return (
     <header className="mobile-topbar combined-topbar">
-      <nav className="mobile-tabbar">
-        <Link className={pathname.startsWith('/orders') ? 'is-active' : ''} href="/orders/new">Lên đơn</Link>
-        {isAdmin ? <Link className={pathname.startsWith('/admin') ? 'is-active' : ''} href="/admin/orders">Quản lí đơn</Link> : null}
-        <form action="/api/auth/logout" method="post" className="tabbar-logout-form">
-          <button className="tabbar-logout" type="submit">Đăng xuất</button>
-        </form>
-      </nav>
-
       <div className="profile-card profile-inline">
         <div className="profile-avatar">{profileInitial}</div>
         <div className="profile-meta">
@@ -30,6 +22,18 @@ export function MobileTabbar({ isAdmin, username }: Props) {
           <strong>@{username}</strong>
         </div>
       </div>
+
+      <nav className="mobile-tabbar">
+        <Link className={pathname.startsWith('/orders') && !pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/new">Lên đơn</Link>
+        {isAdmin ? (
+          <Link className={pathname.startsWith('/admin') ? 'is-active' : ''} href="/admin/orders">Quản lí đơn</Link>
+        ) : (
+          <Link className={pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/history">Lịch sử</Link>
+        )}
+        <form action="/api/auth/logout" method="post" className="tabbar-logout-form">
+          <button className="tabbar-logout" type="submit">Đăng xuất</button>
+        </form>
+      </nav>
     </header>
   );
 }

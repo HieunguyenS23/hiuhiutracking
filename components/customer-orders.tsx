@@ -54,8 +54,8 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
     <section className="phone-card">
       <div className="section-head">
         <div>
-          <p className="eyebrow">Lịch sử cá nhân</p>
-          <h2>Đơn gần đây của bạn</h2>
+          <p className="eyebrow">Lịch sử đơn hàng</p>
+          <h2>Danh sách đơn của bạn</h2>
         </div>
         <span className="chip">{orders.length} đơn</span>
       </div>
@@ -90,3 +90,4 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
     </section>
   );
 }
+

@@ -12,11 +12,28 @@ const voucherOptions: { value: VoucherType; label: string }[] = [
   { value: '60k', label: 'Mã 60k' },
 ];
 
+function normalizeKeyword(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function findExactByName<T extends { name: string }>(items: T[], keyword: string) {
+  const key = normalizeKeyword(keyword);
+  if (!key) return null;
+  return items.find((item) => normalizeKeyword(item.name) === key) || null;
+}
+
 export function OrderForm() {
   const router = useRouter();
   const [provinceCode, setProvinceCode] = useState('');
   const [districtCode, setDistrictCode] = useState('');
   const [wardCode, setWardCode] = useState('');
+  const [provinceQuery, setProvinceQuery] = useState('');
+  const [districtQuery, setDistrictQuery] = useState('');
+  const [wardQuery, setWardQuery] = useState('');
   const [recipientName, setRecipientName] = useState('');
   const [phone, setPhone] = useState('');
   const [addressLine, setAddressLine] = useState('');
@@ -31,7 +48,10 @@ export function OrderForm() {
   const province = useMemo(() => locationTree.find((item) => item.code === provinceCode) || null, [provinceCode]);
   const district = useMemo(() => province?.districts.find((item) => item.code === districtCode) || null, [province, districtCode]);
   const ward = useMemo(() => district?.wards.find((item) => item.code === wardCode) || null, [district, wardCode]);
-  
+
+  const districtOptions = province?.districts || [];
+  const wardOptions = district?.wards || [];
+
   useEffect(() => {
     if (!message && !error) return;
     const timer = window.setTimeout(() => {
@@ -40,6 +60,38 @@ export function OrderForm() {
     }, 3000);
     return () => window.clearTimeout(timer);
   }, [message, error]);
+
+  function onProvinceInput(value: string) {
+    setProvinceQuery(value);
+    const matched = findExactByName(locationTree, value);
+    const nextProvinceCode = matched?.code || '';
+
+    if (nextProvinceCode !== provinceCode) {
+      setProvinceCode(nextProvinceCode);
+      setDistrictCode('');
+      setWardCode('');
+      setDistrictQuery('');
+      setWardQuery('');
+    }
+  }
+
+  function onDistrictInput(value: string) {
+    setDistrictQuery(value);
+    const matched = findExactByName(districtOptions, value);
+    const nextDistrictCode = matched?.code || '';
+
+    if (nextDistrictCode !== districtCode) {
+      setDistrictCode(nextDistrictCode);
+      setWardCode('');
+      setWardQuery('');
+    }
+  }
+
+  function onWardInput(value: string) {
+    setWardQuery(value);
+    const matched = findExactByName(wardOptions, value);
+    setWardCode(matched?.code || '');
+  }
 
   async function submitOrder() {
     setLoading(true);
@@ -58,7 +110,7 @@ export function OrderForm() {
     }
     if (!province || !district || !ward) {
       setLoading(false);
-      setError('Vui lòng chọn đủ tỉnh, quận và phường từ dropdown.');
+      setError('Vui lòng chọn đủ tỉnh, huyện và xã từ danh sách gợi ý.');
       return;
     }
 
@@ -70,9 +122,9 @@ export function OrderForm() {
           recipientName,
           phone,
           addressLine,
-          ward: ward.fullName,
-          district: district.fullName,
-          province: province.fullName,
+          ward: ward.name,
+          district: district.name,
+          province: province.name,
           voucherType,
           productLink,
           variant,
@@ -81,12 +133,16 @@ export function OrderForm() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Không gửi được đơn.');
+
       setRecipientName('');
       setPhone('');
       setAddressLine('');
       setProvinceCode('');
       setDistrictCode('');
       setWardCode('');
+      setProvinceQuery('');
+      setDistrictQuery('');
+      setWardQuery('');
       setVoucherType('100k');
       setProductLink('');
       setVariant('');
@@ -112,27 +168,51 @@ export function OrderForm() {
         <label><span>Tên người nhận</span><input value={recipientName} onChange={(event) => setRecipientName(event.target.value)} placeholder="Nguyễn Văn A" /></label>
         <label><span>Số điện thoại</span><input value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="09xxxxxxxx (có thể để trống)" /></label>
         <label className="full-span"><span>Địa chỉ cụ thể</span><input value={addressLine} onChange={(event) => setAddressLine(event.target.value)} placeholder="Số nhà, tên đường, toà nhà..." /></label>
+
         <label>
           <span>Tỉnh / Thành phố</span>
-          <select value={provinceCode} onChange={(event) => { setProvinceCode(event.target.value); setDistrictCode(''); setWardCode(''); }}>
-            <option value="">Chọn tỉnh / thành</option>
-            {locationTree.map((item) => <option key={item.code} value={item.code}>{item.fullName}</option>)}
-          </select>
+          <input
+            list="province-options"
+            value={provinceQuery}
+            onChange={(event) => onProvinceInput(event.target.value)}
+            placeholder="Gõ để tìm nhanh"
+            autoComplete="off"
+          />
+          <datalist id="province-options">
+            {locationTree.map((item) => <option key={item.code} value={item.name} />)}
+          </datalist>
         </label>
+
         <label>
           <span>Quận / Huyện</span>
-          <select value={districtCode} disabled={!province} onChange={(event) => { setDistrictCode(event.target.value); setWardCode(''); }}>
-            <option value="">Chọn quận / huyện</option>
-            {(province?.districts || []).map((item) => <option key={item.code} value={item.code}>{item.fullName}</option>)}
-          </select>
+          <input
+            list="district-options"
+            value={districtQuery}
+            onChange={(event) => onDistrictInput(event.target.value)}
+            placeholder={province ? 'Gõ để tìm nhanh' : 'Chọn tỉnh trước'}
+            autoComplete="off"
+            disabled={!province}
+          />
+          <datalist id="district-options">
+            {districtOptions.map((item) => <option key={item.code} value={item.name} />)}
+          </datalist>
         </label>
+
         <label>
           <span>Phường / Xã</span>
-          <select value={wardCode} disabled={!district} onChange={(event) => setWardCode(event.target.value)}>
-            <option value="">Chọn phường / xã</option>
-            {(district?.wards || []).map((item) => <option key={item.code} value={item.code}>{item.fullName}</option>)}
-          </select>
+          <input
+            list="ward-options"
+            value={wardQuery}
+            onChange={(event) => onWardInput(event.target.value)}
+            placeholder={district ? 'Gõ để tìm nhanh' : 'Chọn huyện trước'}
+            autoComplete="off"
+            disabled={!district}
+          />
+          <datalist id="ward-options">
+            {wardOptions.map((item) => <option key={item.code} value={item.name} />)}
+          </datalist>
         </label>
+
         <label>
           <span>Loại mã</span>
           <select value={voucherType} onChange={(event) => setVoucherType(event.target.value as VoucherType)}>
@@ -151,8 +231,3 @@ export function OrderForm() {
     </section>
   );
 }
-
-
-
-
-

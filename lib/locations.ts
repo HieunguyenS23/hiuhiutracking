@@ -40,16 +40,16 @@ export type ProvinceOption = {
   districts: DistrictOption[];
 };
 
-function normalizeProvinceName(name: string, unit: string) {
-  return `${unit} ${name}`.trim();
+function normalizeProvinceName(name: string) {
+  return name.trim();
 }
 
-function normalizeDistrictName(name: string, unit: string) {
-  return `${unit} ${name}`.trim();
+function normalizeDistrictName(name: string) {
+  return name.trim();
 }
 
-function normalizeWardName(name: string, unit: string) {
-  return `${unit} ${name}`.trim();
+function normalizeWardName(name: string) {
+  return name.trim();
 }
 
 const rawTree = subVN.getProvincesWithDetail() as Record<string, RawProvince>;
@@ -58,15 +58,15 @@ export const locationTree: ProvinceOption[] = Object.values(rawTree)
   .map((province) => ({
     code: province.code,
     name: province.name,
-    fullName: normalizeProvinceName(province.name, province.unit),
+    fullName: normalizeProvinceName(province.name),
     districts: Object.values(province.districts || {}).map((district) => ({
       code: district.code,
       name: district.name,
-      fullName: normalizeDistrictName(district.name, district.unit),
+      fullName: normalizeDistrictName(district.name),
       wards: Object.values(district.wards || {}).map((ward) => ({
         code: ward.code,
         name: ward.name,
-        fullName: normalizeWardName(ward.name, ward.unit),
+        fullName: normalizeWardName(ward.name),
       })),
     })),
   }))
