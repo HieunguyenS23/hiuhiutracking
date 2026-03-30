@@ -69,7 +69,6 @@ async function ensureDatabaseReady() {
     delivery_status TEXT NOT NULL DEFAULT '',
     delivery_checked_at TEXT NOT NULL DEFAULT '',
     delivery_tracking TEXT NOT NULL DEFAULT '',
-    product_image TEXT NOT NULL DEFAULT '',
     processing_cookie TEXT NOT NULL DEFAULT '',
     processing_account TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -121,7 +120,6 @@ async function readFileStore() {
       deliveryStatus: String(order.deliveryStatus || ''),
       deliveryCheckedAt: String(order.deliveryCheckedAt || ''),
       deliveryTracking: String(order.deliveryTracking || ''),
-      productImage: String(order.productImage || ''),
       processingCookie: String(order.processingCookie || ''),
       processingAccount: String(order.processingAccount || ''),
     }));
@@ -174,7 +172,6 @@ function mapOrder(row: Record<string, unknown>): OrderRecord {
     deliveryStatus: String(row.delivery_status || ''),
     deliveryCheckedAt: String(row.delivery_checked_at || ''),
     deliveryTracking: String(row.delivery_tracking || ''),
-    productImage: String(row.product_image || ''),
     processingCookie: String(row.processing_cookie || ''),
     processingAccount: String(row.processing_account || ''),
     createdAt: new Date(String(row.created_at)).toISOString(),
@@ -227,13 +224,13 @@ export async function createOrder(order: OrderRecord) {
       INSERT INTO orders (
         id, username, recipient_name, phone, address_line, ward, district, province,
         voucher_type, product_link, variant, quantity, status, order_code, order_amount,
-        delivery_status, delivery_checked_at, delivery_tracking, product_image, processing_cookie,
+        delivery_status, delivery_checked_at, delivery_tracking, processing_cookie,
         processing_account, created_at
       ) VALUES (
         ${order.id}, ${order.username}, ${order.recipientName}, ${order.phone}, ${order.addressLine}, ${order.ward},
         ${order.district}, ${order.province}, ${order.voucherType}, ${order.productLink}, ${order.variant},
         ${order.quantity}, ${order.status}, ${order.orderCode}, ${order.orderAmount}, ${order.deliveryStatus},
-        ${order.deliveryCheckedAt}, ${order.deliveryTracking}, ${order.productImage}, ${order.processingCookie},
+        , , ,
         ${order.processingAccount}, ${order.createdAt}
       )
     `;
@@ -248,7 +245,7 @@ export async function createOrder(order: OrderRecord) {
 
 export async function updateOrder(
   orderId: string,
-  payload: Partial<Pick<OrderRecord, 'status' | 'recipientName' | 'phone' | 'addressLine' | 'ward' | 'district' | 'province' | 'voucherType' | 'productLink' | 'variant' | 'quantity' | 'orderCode' | 'orderAmount' | 'deliveryStatus' | 'deliveryCheckedAt' | 'deliveryTracking' | 'productImage' | 'processingCookie' | 'processingAccount'>>
+  payload: Partial<Pick<OrderRecord, 'status' | 'recipientName' | 'phone' | 'addressLine' | 'ward' | 'district' | 'province' | 'voucherType' | 'productLink' | 'variant' | 'quantity' | 'orderCode' | 'orderAmount' | 'deliveryStatus' | 'deliveryCheckedAt' | 'deliveryTracking' | 'processingCookie' | 'processingAccount'>>
 ) {
   ensurePersistentOrderStore();
 
@@ -257,7 +254,7 @@ export async function updateOrder(
     const rows = await sql`
       SELECT id, username, recipient_name, phone, address_line, ward, district, province,
              voucher_type, product_link, variant, quantity, status, order_code, order_amount,
-             delivery_status, delivery_checked_at, delivery_tracking, product_image, processing_cookie,
+             delivery_status, delivery_checked_at, delivery_tracking, processing_cookie,
              processing_account, created_at
       FROM orders
       WHERE id = ${orderId}
@@ -282,7 +279,6 @@ export async function updateOrder(
     const nextDeliveryStatus = payload.deliveryStatus ?? current.deliveryStatus;
     const nextDeliveryCheckedAt = payload.deliveryCheckedAt ?? current.deliveryCheckedAt;
     const nextDeliveryTracking = payload.deliveryTracking ?? current.deliveryTracking;
-    const nextProductImage = payload.productImage ?? current.productImage;
     const nextCookie = payload.processingCookie ?? current.processingCookie;
     const nextAccount = payload.processingAccount ?? current.processingAccount;
 
@@ -304,7 +300,6 @@ export async function updateOrder(
           delivery_status = ${nextDeliveryStatus},
           delivery_checked_at = ${nextDeliveryCheckedAt},
           delivery_tracking = ${nextDeliveryTracking},
-          product_image = ${nextProductImage},
           processing_cookie = ${nextCookie},
           processing_account = ${nextAccount}
       WHERE id = ${orderId}
@@ -328,7 +323,6 @@ export async function updateOrder(
       deliveryStatus: nextDeliveryStatus,
       deliveryCheckedAt: nextDeliveryCheckedAt,
       deliveryTracking: nextDeliveryTracking,
-      productImage: nextProductImage,
       processingCookie: nextCookie,
       processingAccount: nextAccount,
     };
@@ -357,7 +351,6 @@ export async function updateOrder(
     deliveryStatus: payload.deliveryStatus ?? current.deliveryStatus,
     deliveryCheckedAt: payload.deliveryCheckedAt ?? current.deliveryCheckedAt,
     deliveryTracking: payload.deliveryTracking ?? current.deliveryTracking,
-    productImage: payload.productImage ?? current.productImage,
     processingCookie: payload.processingCookie ?? current.processingCookie,
     processingAccount: payload.processingAccount ?? current.processingAccount,
   };
@@ -373,7 +366,7 @@ export async function getOrders() {
     const rows = await sql`
       SELECT id, username, recipient_name, phone, address_line, ward, district, province,
              voucher_type, product_link, variant, quantity, status, order_code, order_amount,
-             delivery_status, delivery_checked_at, delivery_tracking, product_image, processing_cookie,
+             delivery_status, delivery_checked_at, delivery_tracking, processing_cookie,
              processing_account, created_at
       FROM orders
       ORDER BY created_at DESC
@@ -393,7 +386,7 @@ export async function getOrdersByUsername(username: string) {
     const rows = await sql`
       SELECT id, username, recipient_name, phone, address_line, ward, district, province,
              voucher_type, product_link, variant, quantity, status, order_code, order_amount,
-             delivery_status, delivery_checked_at, delivery_tracking, product_image, processing_cookie,
+             delivery_status, delivery_checked_at, delivery_tracking, processing_cookie,
              processing_account, created_at
       FROM orders
       WHERE username = ${username}
@@ -502,6 +495,7 @@ export async function deleteUserRecord(username: string) {
 
   return { ok: true };
 }
+
 
 
 

@@ -53,26 +53,6 @@ function pickOrderAmountFromCheckResponse(data: any) {
   return '';
 }
 
-function pickProductImageFromCheckResponse(data: any) {
-  const first = pickFirstOrder(data);
-  const direct =
-    first?.productImage ||
-    first?.product_image ||
-    first?.image ||
-    first?.imageUrl ||
-    first?.image_url ||
-    first?.item_image ||
-    first?.itemImage;
-
-  if (typeof direct === 'string' && direct.trim()) return direct.trim();
-
-  const item = Array.isArray(first?.items) ? first.items[0] : null;
-  const nested = item?.image || item?.imageUrl || item?.image_url || item?.thumbnail;
-  if (typeof nested === 'string' && nested.trim()) return nested.trim();
-
-  return '';
-}
-
 async function fetchDeliveryStatusByCookie(cookieInput: string) {
   const cookie = normalizeCookie(cookieInput);
   if (!cookie) throw new Error('Thiếu cookie để kiểm tra trạng thái giao hàng.');
@@ -94,7 +74,6 @@ async function fetchDeliveryStatusByCookie(cookieInput: string) {
     tracking: pickTrackingCodeFromCheckResponse(data),
     orderCode: pickOrderCodeFromCheckResponse(data),
     orderAmount: pickOrderAmountFromCheckResponse(data),
-    productImage: pickProductImageFromCheckResponse(data),
     normalizedCookie: String(data?.cookie || cookie),
   };
 }
@@ -180,7 +159,6 @@ export async function POST(request: Request) {
       deliveryStatus: 'Chưa kiểm tra',
       deliveryCheckedAt: '',
       deliveryTracking: '',
-      productImage: '',
       processingCookie: '',
       processingAccount: '',
       createdAt: new Date().toISOString(),
@@ -239,7 +217,6 @@ export async function PATCH(request: Request) {
     deliveryStatus?: string;
     deliveryCheckedAt?: string;
     deliveryTracking?: string;
-    productImage?: string;
     processingCookie?: string;
     processingAccount?: string;
   } = {};
@@ -325,7 +302,6 @@ export async function PATCH(request: Request) {
       payload.deliveryTracking = delivery.tracking;
       payload.orderCode = delivery.orderCode;
       payload.orderAmount = delivery.orderAmount;
-      payload.productImage = delivery.productImage;
       payload.deliveryCheckedAt = new Date().toISOString();
       payload.processingCookie = delivery.normalizedCookie;
     }
@@ -348,8 +324,7 @@ export async function PATCH(request: Request) {
       payload.deliveryCheckedAt === undefined &&
       payload.deliveryTracking === undefined &&
       payload.orderCode === undefined &&
-      payload.orderAmount === undefined &&
-      payload.productImage === undefined
+      payload.orderAmount === undefined
     ) {
       return NextResponse.json({ error: 'Không có dữ liệu cần cập nhật.' }, { status: 400 });
     }

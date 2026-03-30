@@ -104,48 +104,38 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
           const deliveryTone = detectDeliveryTone(order.deliveryStatus || '');
           return (
             <article className="order-card order-card-rich" key={order.id}>
-              <div className="customer-order-layout">
-                <div className="customer-order-main">
-                  <div className="order-row order-top-row">
-                    <strong>{order.recipientName}</strong>
-                    <div className="order-status-wrap">
-                      <span className={`status-pill status-${order.status}`}>{statusLabel[order.status] || 'Chờ xác nhận'}</span>
-                      {order.deliveryTracking ? <span className="tracking-tag">{order.deliveryTracking}</span> : null}
-                      {order.deliveryTracking ? (
-                        <button
-                          className="mini-action"
-                          type="button"
-                          onClick={() => openTracking(order.deliveryTracking)}
-                          disabled={trackingLoading === order.deliveryTracking}
-                        >
-                          {trackingLoading === order.deliveryTracking ? 'Đang tra...' : 'Xem hành trình'}
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="order-meta-grid">
-                    <span className="order-code-chip">Mã chi tiết: {order.orderCode || 'Chưa có'}</span>
-                    <span className="amount-text">{order.orderAmount || 'Chưa có thành tiền'}</span>
-                  </div>
-
-                  <div className="order-row muted">
-                    <span className={`delivery-pill delivery-${deliveryTone}`}>{order.deliveryStatus || 'Chưa kiểm tra'}</span>
-                  </div>
-                  <p>{order.addressLine}, {order.ward}, {order.district}, {order.province}</p>
-                  <p>{order.variant} · SL {order.quantity}</p>
-                  <a className="order-link" href={order.productLink} target="_blank" rel="noreferrer">Mở link sản phẩm</a>
-                  <div className="order-row muted">
-                    <span>{new Date(order.createdAt).toLocaleString('vi-VN')}</span>
-                    <span>@{order.username}</span>
-                  </div>
+              <div className="order-row order-top-row">
+                <strong>{order.recipientName}</strong>
+                <div className="order-status-wrap">
+                  <span className={`status-pill status-${order.status}`}>{statusLabel[order.status] || 'Chờ xác nhận'}</span>
+                  {order.deliveryTracking ? <span className="tracking-tag">{order.deliveryTracking}</span> : null}
+                  {order.deliveryTracking ? (
+                    <button
+                      className="mini-action"
+                      type="button"
+                      onClick={() => openTracking(order.deliveryTracking)}
+                      disabled={trackingLoading === order.deliveryTracking}
+                    >
+                      {trackingLoading === order.deliveryTracking ? 'Đang tra...' : 'Xem hành trình'}
+                    </button>
+                  ) : null}
                 </div>
+              </div>
 
-                {order.productImage ? (
-                  <div className="customer-order-image-wrap">
-                    <img className="customer-order-image" src={order.productImage} alt="Ảnh sản phẩm" loading="lazy" />
-                  </div>
-                ) : null}
+              <div className="order-meta-grid">
+                <span className="order-code-chip">Mã chi tiết: {order.orderCode || 'Chưa có'}</span>
+                <span className="amount-text">{order.orderAmount || 'Chưa có thành tiền'}</span>
+              </div>
+
+              <div className="order-row muted">
+                <span className={`delivery-pill delivery-${deliveryTone}`}>{order.deliveryStatus || 'Chưa kiểm tra'}</span>
+              </div>
+              <p>{order.addressLine}, {order.ward}, {order.district}, {order.province}</p>
+              <p>{order.variant} · SL {order.quantity}</p>
+              <a className="order-link" href={order.productLink} target="_blank" rel="noreferrer">Mở link sản phẩm</a>
+              <div className="order-row muted">
+                <span>{new Date(order.createdAt).toLocaleString('vi-VN')}</span>
+                <span>@{order.username}</span>
               </div>
             </article>
           );

@@ -29,7 +29,6 @@ export type OrderRecord = {
   deliveryStatus: string;
   deliveryCheckedAt: string;
   deliveryTracking: string;
-  productImage: string;
   processingCookie: string;
   processingAccount: string;
   createdAt: string;
@@ -39,4 +38,5 @@ export type StoreData = {
   users: UserRecord[];
   orders: OrderRecord[];
 };
+
 
