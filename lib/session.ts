@@ -9,6 +9,8 @@ const APP_USERNAME = process.env.APP_USERNAME || 'admin';
 const APP_PASSWORD = process.env.APP_PASSWORD || 'admin123';
 const CUSTOMER_USERNAME = process.env.CUSTOMER_USERNAME || 'khach01';
 const CUSTOMER_PASSWORD = process.env.CUSTOMER_PASSWORD || '123456';
+const CUSTOMER2_USERNAME = process.env.CUSTOMER2_USERNAME || 'khach02';
+const CUSTOMER2_PASSWORD = process.env.CUSTOMER2_PASSWORD || '123456';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change-me-please';
 
 export type SessionPayload = {
@@ -38,6 +40,15 @@ export function getCustomerSeed() {
   return {
     username: CUSTOMER_USERNAME,
     passwordHash: hashPassword(CUSTOMER_PASSWORD),
+    role: 'customer' as const,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+export function getCustomerSeed2() {
+  return {
+    username: CUSTOMER2_USERNAME,
+    passwordHash: hashPassword(CUSTOMER2_PASSWORD),
     role: 'customer' as const,
     createdAt: new Date().toISOString(),
   };

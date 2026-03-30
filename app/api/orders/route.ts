@@ -6,8 +6,12 @@ import { hasAtLeastThreeWords, isValidVietnamPhone } from '@/lib/validators';
 
 export async function GET() {
   const session = await requireSession();
-  const orders = session.role === 'admin' ? await getOrders() : await getOrdersByUsername(session.username);
-  return NextResponse.json({ orders });
+  try {
+    const orders = session.role === 'admin' ? await getOrders() : await getOrdersByUsername(session.username);
+    return NextResponse.json({ orders });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Không tải được danh sách đơn.' }, { status: 503 });
+  }
 }
 
 export async function POST(request: Request) {
@@ -37,22 +41,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Link sản phẩm phải bắt đầu bằng http hoặc https.' }, { status: 400 });
   }
 
-  const order = await createOrder({
-    id: crypto.randomUUID(),
-    username: session.username,
-    recipientName,
-    phone,
-    addressLine,
-    ward,
-    district,
-    province,
-    voucherType: voucherType as '100k' | '80k' | '60k',
-    productLink,
-    variant,
-    quantity,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-  });
+  try {
+    const order = await createOrder({
+      id: crypto.randomUUID(),
+      username: session.username,
+      recipientName,
+      phone,
+      addressLine,
+      ward,
+      district,
+      province,
+      voucherType: voucherType as '100k' | '80k' | '60k',
+      productLink,
+      variant,
+      quantity,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    });
 
-  return NextResponse.json({ ok: true, order });
+    return NextResponse.json({ ok: true, order });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Không gửi được đơn.' }, { status: 503 });
+  }
 }

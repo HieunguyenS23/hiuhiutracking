@@ -4,7 +4,15 @@ import { getOrdersByUsername } from '@/lib/store';
 
 export default async function NewOrderPage() {
   const session = await requireSession();
-  const recentOrders = await getOrdersByUsername(session.username);
+
+  let recentOrders = [] as Awaited<ReturnType<typeof getOrdersByUsername>>;
+  let loadError = '';
+
+  try {
+    recentOrders = await getOrdersByUsername(session.username);
+  } catch (error) {
+    loadError = error instanceof Error ? error.message : 'Không tải được lịch sử đơn.';
+  }
 
   return (
     <div className="page-stack page-stack-spaced">
@@ -22,8 +30,9 @@ export default async function NewOrderPage() {
           </div>
           <span className="chip">{recentOrders.length} đơn</span>
         </div>
+        {loadError ? <div className="inline-error">{loadError}</div> : null}
         <div className="order-list">
-          {recentOrders.length === 0 ? <div className="empty-state">Chưa có đơn nào được gửi.</div> : null}
+          {!loadError && recentOrders.length === 0 ? <div className="empty-state">Chưa có đơn nào được gửi.</div> : null}
           {recentOrders.map((order) => (
             <article className="order-card" key={order.id}>
               <div className="order-row">

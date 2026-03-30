@@ -3,7 +3,15 @@ import { getOrders } from '@/lib/store';
 
 export default async function AdminOrdersPage() {
   await requireAdmin();
-  const orders = await getOrders();
+
+  let orders = [] as Awaited<ReturnType<typeof getOrders>>;
+  let loadError = '';
+
+  try {
+    orders = await getOrders();
+  } catch (error) {
+    loadError = error instanceof Error ? error.message : 'Không tải được danh sách đơn.';
+  }
 
   return (
     <div className="page-stack page-stack-spaced">
@@ -22,6 +30,8 @@ export default async function AdminOrdersPage() {
           <span className="chip">{orders.length} đơn</span>
         </div>
 
+        {loadError ? <div className="inline-error">{loadError}</div> : null}
+
         <div className="sheet-wrap">
           <table className="sheet-table">
             <thead>
@@ -38,7 +48,7 @@ export default async function AdminOrdersPage() {
               </tr>
             </thead>
             <tbody>
-              {orders.length === 0 ? (
+              {!loadError && orders.length === 0 ? (
                 <tr>
                   <td className="sheet-empty" colSpan={9}>Chưa có đơn nào.</td>
                 </tr>

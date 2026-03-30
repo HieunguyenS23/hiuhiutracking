@@ -2,7 +2,7 @@
 import path from 'node:path';
 import { neon } from '@neondatabase/serverless';
 import type { OrderRecord, StoreData, UserRecord } from '@/lib/types';
-import { getAdminSeed, getCustomerSeed } from '@/lib/session';
+import { getAdminSeed, getCustomerSeed, getCustomerSeed2 } from '@/lib/session';
 
 const storeFile = path.join(process.cwd(), 'data', 'store.json');
 const memoryStore = globalThis as typeof globalThis & { __portalStore?: StoreData; __portalDbReady?: boolean };
@@ -13,19 +13,23 @@ const sql = hasDatabase ? neon(databaseUrl) : null;
 function ensureSeedUsers(data: StoreData) {
   const admin = getAdminSeed();
   const customer = getCustomerSeed();
+  const customer2 = getCustomerSeed2();
 
-  if (!data.users.some((item) => item.username === admin.username)) {
-    data.users.unshift(admin);
-  }
-  if (!data.users.some((item) => item.username === customer.username)) {
-    data.users.push(customer);
-  }
+  if (!data.users.some((item) => item.username === admin.username)) data.users.unshift(admin);
+  if (!data.users.some((item) => item.username === customer.username)) data.users.push(customer);
+  if (!data.users.some((item) => item.username === customer2.username)) data.users.push(customer2);
 }
 
 function defaultStore(): StoreData {
   const base: StoreData = { users: [], orders: [] };
   ensureSeedUsers(base);
   return base;
+}
+
+function ensurePersistentOrderStore() {
+  if (!sql && process.env.NODE_ENV === 'production') {
+    throw new Error('Hệ thống chưa cấu hình DATABASE_URL nên chưa thể lưu đơn ổn định giữa khách và admin.');
+  }
 }
 
 async function ensureDatabaseReady() {
@@ -58,6 +62,7 @@ async function ensureDatabaseReady() {
 
   const admin = getAdminSeed();
   const customer = getCustomerSeed();
+  const customer2 = getCustomerSeed2();
 
   await sql`
     INSERT INTO users (username, password_hash, role, created_at)
@@ -68,6 +73,12 @@ async function ensureDatabaseReady() {
   await sql`
     INSERT INTO users (username, password_hash, role, created_at)
     VALUES (${customer.username}, ${customer.passwordHash}, ${customer.role}, ${customer.createdAt})
+    ON CONFLICT (username) DO NOTHING
+  `;
+
+  await sql`
+    INSERT INTO users (username, password_hash, role, created_at)
+    VALUES (${customer2.username}, ${customer2.passwordHash}, ${customer2.role}, ${customer2.createdAt})
     ON CONFLICT (username) DO NOTHING
   `;
 
@@ -167,6 +178,8 @@ export async function createUser(user: UserRecord) {
 }
 
 export async function createOrder(order: OrderRecord) {
+  ensurePersistentOrderStore();
+
   if (sql) {
     await ensureDatabaseReady();
     await sql`
@@ -182,14 +195,15 @@ export async function createOrder(order: OrderRecord) {
     return order;
   }
 
-  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  const store = await readFileStore();
   store.orders.unshift(order);
-  if (process.env.NODE_ENV === 'development') await writeFileStore(store);
-  else memoryStore.__portalStore = store;
+  await writeFileStore(store);
   return order;
 }
 
 export async function getOrders() {
+  ensurePersistentOrderStore();
+
   if (sql) {
     await ensureDatabaseReady();
     const rows = await sql`
@@ -201,11 +215,13 @@ export async function getOrders() {
     return rows.map((row) => mapOrder(row as Record<string, unknown>));
   }
 
-  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  const store = await readFileStore();
   return store.orders;
 }
 
 export async function getOrdersByUsername(username: string) {
+  ensurePersistentOrderStore();
+
   if (sql) {
     await ensureDatabaseReady();
     const rows = await sql`
@@ -218,6 +234,6 @@ export async function getOrdersByUsername(username: string) {
     return rows.map((row) => mapOrder(row as Record<string, unknown>));
   }
 
-  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  const store = await readFileStore();
   return store.orders.filter((item) => item.username === username);
 }

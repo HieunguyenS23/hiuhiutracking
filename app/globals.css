@@ -32,10 +32,11 @@ button, input, select { font: inherit; }
 .auth-heading h1, .hero-card h1, .section-head h2 { margin: 0; line-height: 1.1; }
 .auth-heading p, .hero-card p, .order-card p, .auth-footnote { margin: 0; color: var(--muted); line-height: 1.55; }
 .eyebrow { margin: 0; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: #b78963; font-weight: 700; }
-.auth-tabs, .mobile-tabbar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.auth-tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.mobile-tabbar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .auth-tabs { margin-bottom: 18px; }
-.auth-tabs button, .mobile-tabbar a, .ghost-button, .chip { border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); }
-.auth-tabs button, .mobile-tabbar a { padding: 12px 14px; font-weight: 700; text-align: center; }
+.auth-tabs button, .mobile-tabbar a, .mobile-tabbar button, .ghost-button, .chip { border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); }
+.auth-tabs button, .mobile-tabbar a, .mobile-tabbar button { padding: 12px 14px; font-weight: 700; text-align: center; }
 .auth-tabs .active, .mobile-tabbar .is-active { background: linear-gradient(135deg, #ffd0bb, #fff2e6); color: var(--accent-strong); border-color: rgba(231, 93, 42, 0.25); }
 .form-grid { display: grid; gap: 14px; }
 .form-grid.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -105,4 +106,18 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
   text-align: center;
   color: var(--muted);
   padding: 18px;
+}
+
+.tabbar-logout-form {
+  margin: 0;
+}
+
+.tabbar-logout {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 999px;
+  border: 1px solid #efcbb3;
+  background: #fff2ea;
+  color: #b4451f;
+  font-weight: 700;
 }
