@@ -7,6 +7,8 @@ const COOKIE_NAME = 'order_portal_session';
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 const APP_USERNAME = process.env.APP_USERNAME || 'admin';
 const APP_PASSWORD = process.env.APP_PASSWORD || 'admin123';
+const CUSTOMER_USERNAME = process.env.CUSTOMER_USERNAME || 'khach01';
+const CUSTOMER_PASSWORD = process.env.CUSTOMER_PASSWORD || '123456';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change-me-please';
 
 export type SessionPayload = {
@@ -28,6 +30,15 @@ export function getAdminSeed() {
     username: APP_USERNAME,
     passwordHash: hashPassword(APP_PASSWORD),
     role: 'admin' as const,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+export function getCustomerSeed() {
+  return {
+    username: CUSTOMER_USERNAME,
+    passwordHash: hashPassword(CUSTOMER_PASSWORD),
+    role: 'customer' as const,
     createdAt: new Date().toISOString(),
   };
 }
@@ -89,4 +100,3 @@ export async function clearSessionCookie() {
     maxAge: 0,
   });
 }
-

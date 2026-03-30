@@ -39,8 +39,8 @@ button, input, select { font: inherit; }
 .auth-tabs .active, .mobile-tabbar .is-active { background: linear-gradient(135deg, #ffd0bb, #fff2e6); color: var(--accent-strong); border-color: rgba(231, 93, 42, 0.25); }
 .form-grid { display: grid; gap: 14px; }
 .form-grid.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.form-grid label, .address-combobox { display: grid; gap: 8px; position: relative; }
-.form-grid label span, .address-combobox span:first-child { font-size: 13px; font-weight: 700; }
+.form-grid label { display: grid; gap: 8px; position: relative; }
+.form-grid label span { font-size: 13px; font-weight: 700; }
 input, select { width: 100%; border-radius: var(--radius-md); border: 1px solid var(--line); background: #fff; padding: 14px 16px; min-height: 52px; color: var(--text); }
 input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-color: rgba(255, 122, 69, 0.48); }
 .full-span { grid-column: 1 / -1; }
@@ -67,13 +67,42 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
 .empty-state { padding: 18px; border-radius: 18px; border: 1px dashed var(--line-strong); color: var(--muted); text-align: center; background: rgba(255,255,255,0.55); }
 .muted { color: var(--muted); font-size: 13px; }
 .submit-bar { margin-top: 8px; }
-.combo-shell { position: relative; }
-.combo-shell input { padding-right: 120px; }
-.combo-shell.is-disabled input { background: #f6eee7; color: #b89980; }
-.combo-meta { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--muted); }
-.combo-panel { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 15; background: white; border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 16px 40px rgba(95, 57, 23, 0.12); padding: 8px; max-height: 260px; overflow-y: auto; }
-.combo-option { width: 100%; text-align: left; display: grid; gap: 4px; border: 0; background: #fff8f2; border-radius: 14px; padding: 12px; margin-bottom: 6px; cursor: pointer; }
-.combo-option:last-child { margin-bottom: 0; }
-.combo-option span { font-size: 12px; color: var(--muted); }
-.combo-empty { padding: 12px; font-size: 13px; color: var(--muted); }
 @media (max-width: 640px) { .form-grid.compact { grid-template-columns: 1fr; } .mobile-topbar { padding: 14px 16px; } .hero-card, .phone-card, .auth-card { padding: 18px; border-radius: 24px; } }
+
+.sheet-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.sheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 980px;
+}
+
+.sheet-table th,
+.sheet-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #f1e1d2;
+  vertical-align: top;
+  font-size: 13px;
+}
+
+.sheet-table th {
+  background: #fff3e8;
+  color: #8b6f5a;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.sheet-empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 18px;
+}

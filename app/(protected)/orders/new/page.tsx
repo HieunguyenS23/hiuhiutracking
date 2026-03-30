@@ -11,7 +11,7 @@ export default async function NewOrderPage() {
       <section className="hero-card">
         <p className="eyebrow">Dịch vụ</p>
         <h1>Lên đơn Shopee</h1>
-        <p>Chọn địa chỉ bằng Google Maps, kiểm tra tên và số điện thoại ngay trên form, rồi gửi đơn trực tiếp vào hệ thống.</p>
+        <p>Chọn địa chỉ hành chính cũ bằng dropdown, kiểm tra tên và số điện thoại, rồi gửi đơn trực tiếp vào hệ thống.</p>
       </section>
       <OrderForm />
       <section className="phone-card">

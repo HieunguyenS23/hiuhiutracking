@@ -4,3 +4,5 @@
 .env
 .env.local
 data/store.json
+
+autopee_bundle.js

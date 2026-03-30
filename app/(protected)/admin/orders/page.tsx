@@ -10,8 +10,9 @@ export default async function AdminOrdersPage() {
       <section className="hero-card">
         <p className="eyebrow">Admin</p>
         <h1>Quản lí đơn đặt</h1>
-        <p>Tất cả đơn khách hàng gửi lên đều đổ về đây, có kèm username và đầy đủ địa chỉ đã chọn từ Google Maps.</p>
+        <p>Bên admin hiển thị dạng sheet để lọc và xử lí nhanh theo từng dòng đơn.</p>
       </section>
+
       <section className="phone-card">
         <div className="section-head">
           <div>
@@ -20,24 +21,43 @@ export default async function AdminOrdersPage() {
           </div>
           <span className="chip">{orders.length} đơn</span>
         </div>
-        <div className="order-list">
-          {orders.length === 0 ? <div className="empty-state">Chưa có đơn nào.</div> : null}
-          {orders.map((order) => (
-            <article className="order-card admin-card" key={order.id}>
-              <div className="order-row">
-                <strong>{order.recipientName}</strong>
-                <span className="chip chip-soft">@{order.username}</span>
-              </div>
-              <p><strong>SĐT:</strong> {order.phone}</p>
-              <p><strong>Địa chỉ:</strong> {order.addressLine}, {order.ward}, {order.district}, {order.province}</p>
-              <p><strong>Sản phẩm:</strong> <a href={order.productLink} target="_blank">{order.productLink}</a></p>
-              <p><strong>Phân loại:</strong> {order.variant} · <strong>SL:</strong> {order.quantity}</p>
-              <div className="order-row muted">
-                <span>{order.voucherType.toUpperCase()}</span>
-                <span>{new Date(order.createdAt).toLocaleString('vi-VN')}</span>
-              </div>
-            </article>
-          ))}
+
+        <div className="sheet-wrap">
+          <table className="sheet-table">
+            <thead>
+              <tr>
+                <th>Thời gian</th>
+                <th>Username</th>
+                <th>Người nhận</th>
+                <th>SĐT</th>
+                <th>Địa chỉ</th>
+                <th>Loại mã</th>
+                <th>Sản phẩm</th>
+                <th>Phân loại</th>
+                <th>SL</th>
+              </tr>
+            </thead>
+            <tbody>
+              {orders.length === 0 ? (
+                <tr>
+                  <td className="sheet-empty" colSpan={9}>Chưa có đơn nào.</td>
+                </tr>
+              ) : null}
+              {orders.map((order) => (
+                <tr key={order.id}>
+                  <td>{new Date(order.createdAt).toLocaleString('vi-VN')}</td>
+                  <td>@{order.username}</td>
+                  <td>{order.recipientName}</td>
+                  <td>{order.phone}</td>
+                  <td>{order.addressLine}, {order.ward}, {order.district}, {order.province}</td>
+                  <td>{order.voucherType.toUpperCase()}</td>
+                  <td><a href={order.productLink} target="_blank">Mở link</a></td>
+                  <td>{order.variant}</td>
+                  <td>{order.quantity}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
     </div>
