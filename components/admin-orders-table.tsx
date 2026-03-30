@@ -244,7 +244,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
           <thead>
             <tr>
               <th>Thời gian</th>
-              <th>Mã chi tiết</th>
+              <th className="col-order-code">Mã đơn hàng</th>
               <th>Người nhận</th>
               <th>Check</th>
               <th>Thành tiền</th>
@@ -267,7 +267,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
               return (
                 <tr key={order.id}>
                   <td>{new Date(order.createdAt).toLocaleString('vi-VN')}</td>
-                  <td><span className="order-code-chip">{order.orderCode || 'Chưa có'}</span></td>
+                  <td className="col-order-code"><span className="order-code-chip">{order.orderCode || 'Chưa có'}</span></td>
                   <td>{order.recipientName}</td>
                   <td className="col-check">
                     <select
@@ -349,7 +349,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
               </div>
 
               <div className="detail-grid editable-grid">
-                <div className="detail-item"><span>Mã chi tiết</span><strong>{detailDraft.orderCode || 'Chưa có'}</strong></div>
+                <div className="detail-item"><span>Mã đơn hàng</span><strong>{detailDraft.orderCode || 'Chưa có'}</strong></div>
                 <div className="detail-item"><span>Thành tiền</span><strong>{detailDraft.orderAmount || 'Chưa có'}</strong></div>
                 <div className="detail-item"><span>Username</span><strong>@{detailDraft.username}</strong></div>
 
@@ -404,3 +404,4 @@ export function AdminOrdersTable({ initialOrders }: Props) {
     </>
   );
 }
+

@@ -53,6 +53,50 @@ function pickOrderAmountFromCheckResponse(data: any) {
   return '';
 }
 
+function pickProductNameFromCheckResponse(data: any) {
+  const first = pickFirstOrder(data);
+  const direct =
+    first?.productName ||
+    first?.product_name ||
+    first?.itemName ||
+    first?.item_name ||
+    first?.title ||
+    first?.name ||
+    first?.productTitle ||
+    first?.product_title;
+
+  if (typeof direct === 'string' && direct.trim()) return direct.trim();
+
+  const item = Array.isArray(first?.items) ? first.items[0] : null;
+  const nested = item?.name || item?.title || item?.productName || item?.product_name;
+  if (typeof nested === 'string' && nested.trim()) return nested.trim();
+
+  return '';
+}
+
+async function enrichProductNameByCookie(order: any) {
+  const cookie = normalizeCookie(String(order?.processingCookie || ''));
+  if (!cookie) return order;
+
+  try {
+    const response = await fetch(`${TRACK_API_BASE}/api/check`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cookie }),
+      cache: 'no-store',
+    });
+    if (!response.ok) return order;
+
+    const data = await response.json().catch(() => ({}));
+    const productName = pickProductNameFromCheckResponse(data);
+    if (!productName) return order;
+
+    return { ...order, productName };
+  } catch {
+    return order;
+  }
+}
+
 async function fetchDeliveryStatusByCookie(cookieInput: string) {
   const cookie = normalizeCookie(cookieInput);
   if (!cookie) throw new Error('Thiếu cookie để kiểm tra trạng thái giao hàng.');
@@ -103,7 +147,8 @@ export async function GET() {
   const session = await requireSession();
   try {
     const orders = session.role === 'admin' ? await getOrders() : await getOrdersByUsername(session.username);
-    return NextResponse.json({ orders });
+    const enrichedOrders = await Promise.all(orders.map((order) => enrichProductNameByCookie(order)));
+    return NextResponse.json({ orders: enrichedOrders });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không tải được danh sách đơn.' }, { status: 503 });
   }

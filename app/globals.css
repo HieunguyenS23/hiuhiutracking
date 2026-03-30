@@ -286,12 +286,12 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
 .admin-inline-input {
   width: 100%;
   min-width: 0;
-  min-height: 38px;
+  min-height: 36px;
   border-radius: 10px;
   border: 0;
   background: #fff8f2;
-  padding: 8px 10px;
-  font-size: 13px;
+  padding: 6px 9px;
+  font-size: 12px;
 }
 
 @media (max-width: 900px) {
@@ -302,111 +302,6 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
   .status-select {
     width: 140px;
   }
-}
-
-.col-check {
-  width: 160px;
-}
-
-.col-cookie,
-.col-account {
-  width: 220px;
-}
-
-.sheet-table td {
-  overflow: hidden;
-}
-
-.status-select.status-pending {
-  background: #fff3e6;
-  color: #9b5e1a;
-}
-
-.status-select.status-confirmed {
-  background: #eaf6ff;
-  color: #1f5b96;
-}
-
-.status-select.status-ordered {
-  background: #eafaf0;
-  color: #1f6c3e;
-}
-
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(25, 18, 12, 0.45);
-  display: grid;
-  place-items: center;
-  z-index: 50;
-  padding: 16px;
-}
-
-.modal-card {
-  width: min(720px, 100%);
-  max-height: 90vh;
-  overflow: auto;
-  background: #fff;
-  border: 1px solid var(--line-strong);
-  border-radius: 18px;
-  box-shadow: var(--shadow);
-}
-
-.modal-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--line);
-}
-
-.modal-head h3 {
-  margin: 0;
-  font-size: 22px;
-}
-
-.modal-body {
-  padding: 12px 16px 18px;
-  display: grid;
-  gap: 8px;
-}
-
-.modal-body p {
-  margin: 0;
-  line-height: 1.45;
-}
-
-.modal-head.modern {
-  background: linear-gradient(135deg, #fff1e5, #ffe6d4);
-  border-bottom: 1px solid #f2d1b5;
-}
-
-.modal-head.modern h3 {
-  margin: 2px 0 0;
-  font-size: 28px;
-  color: #3b2717;
-}
-
-.modal-close {
-  background: #fff;
-}
-
-.modal-body.modern {
-  background: linear-gradient(180deg, #fffdfb, #fff6ef);
-}
-
-.modal-status-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
-}
-
-.modal-muted {
-  color: #9b7c63;
-  font-size: 13px;
 }
 
 .detail-grid {
@@ -603,9 +498,13 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
 }
 
 @media (max-width: 900px) {
+  .col-order-code {
+    width: 210px;
+  }
+
   .col-cookie,
   .col-account {
-    width: 190px;
+    width: 145px;
   }
 
   .tracking-cell {
@@ -772,3 +671,7 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
     grid-template-columns: 1fr;
   }
 }
+
+
+
+

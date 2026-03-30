@@ -123,7 +123,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
               </div>
 
               <div className="order-meta-grid">
-                <span className="order-code-chip">Mã chi tiết: {order.orderCode || 'Chưa có'}</span>
+                <span className="order-code-chip">Mã đơn hàng: {order.orderCode || 'Chưa có'}</span>
                 <span className="amount-text">{order.orderAmount || 'Chưa có thành tiền'}</span>
               </div>
 
@@ -131,6 +131,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
                 <span className={`delivery-pill delivery-${deliveryTone}`}>{order.deliveryStatus || 'Chưa kiểm tra'}</span>
               </div>
               <p>{order.addressLine}, {order.ward}, {order.district}, {order.province}</p>
+              <p>{order.productName ? `Tên sản phẩm: ${order.productName}` : 'Tên sản phẩm: Chưa có'}</p>
               <p>{order.variant} · SL {order.quantity}</p>
               <a className="order-link" href={order.productLink} target="_blank" rel="noreferrer">Mở link sản phẩm</a>
               <div className="order-row muted">

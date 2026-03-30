@@ -212,7 +212,7 @@ export function OrderForm() {
           </datalist>
         </label>
 
-        <label className="full-span"><span>Địa chỉ cụ thể</span><input value={addressLine} onChange={(event) => setAddressLine(event.target.value)} placeholder="Số nhà, tên đường, toà nhà..." /></label>
+        <label><span>Địa chỉ cụ thể</span><input value={addressLine} onChange={(event) => setAddressLine(event.target.value)} placeholder="Số nhà, tên đường, toà nhà..." /></label>
 
         <label>
           <span>Loại mã</span>
@@ -220,7 +220,7 @@ export function OrderForm() {
             {voucherOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
           </select>
         </label>
-        <label className="full-span"><span>Link sản phẩm</span><input value={productLink} onChange={(event) => setProductLink(event.target.value)} placeholder="https://shopee.vn/..." /></label>
+        <label><span>Link sản phẩm</span><input value={productLink} onChange={(event) => setProductLink(event.target.value)} placeholder="https://shopee.vn/..." /></label>
         <label><span>Phân loại sản phẩm</span><input value={variant} onChange={(event) => setVariant(event.target.value)} placeholder="Màu đỏ / size M" /></label>
         <label><span>Số lượng</span><input value={quantity} min="1" type="number" onChange={(event) => setQuantity(event.target.value)} /></label>
       </div>
@@ -232,3 +232,4 @@ export function OrderForm() {
     </section>
   );
 }
+
