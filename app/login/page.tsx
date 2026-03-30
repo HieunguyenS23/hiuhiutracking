@@ -9,12 +9,15 @@ export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function submit() {
     setLoading(true);
     setError('');
+    setMessage('');
     const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
+
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -23,6 +26,14 @@ export default function LoginPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Không thể xử lý yêu cầu.');
+
+      if (mode === 'register') {
+        setMessage(data.message || 'Đăng ký thành công. Vui lòng đăng nhập.');
+        setMode('login');
+        return;
+      }
+
+      setMessage('Đăng nhập thành công. Đang chuyển trang...');
       router.replace('/orders/new');
       router.refresh();
     } catch (submissionError) {
@@ -55,6 +66,7 @@ export default function LoginPage() {
             <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Nhập mật khẩu" />
           </label>
         </div>
+        {message ? <div className="inline-success">{message}</div> : null}
         {error ? <div className="inline-error">{error}</div> : null}
         <button className="primary-button" disabled={loading} onClick={submit} type="button">
           {loading ? 'Đang xử lý...' : mode === 'login' ? 'Vào hệ thống' : 'Tạo tài khoản'}

@@ -326,3 +326,102 @@ export async function getOrdersByUsername(username: string) {
   const store = await readFileStore();
   return store.orders.filter((item) => item.username === username);
 }
+
+export async function deleteOrder(orderId: string) {
+  ensurePersistentOrderStore();
+
+  if (sql) {
+    await ensureDatabaseReady();
+    const found = await sql`SELECT id FROM orders WHERE id = ${orderId} LIMIT 1`;
+    if (found.length === 0) throw new Error('Không tìm thấy đơn hàng để xóa.');
+    await sql`DELETE FROM orders WHERE id = ${orderId}`;
+    return { ok: true };
+  }
+
+  const store = await readFileStore();
+  const before = store.orders.length;
+  store.orders = store.orders.filter((item) => item.id !== orderId);
+  if (store.orders.length === before) throw new Error('Không tìm thấy đơn hàng để xóa.');
+  await writeFileStore(store);
+  return { ok: true };
+}
+
+export async function getUsers() {
+  if (sql) {
+    await ensureDatabaseReady();
+    const rows = await sql`SELECT username, password_hash, role, created_at FROM users ORDER BY created_at DESC`;
+    return rows.map((row) => mapUser(row as Record<string, unknown>));
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  return [...store.users].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function updateUserRecord(username: string, payload: { passwordHash?: string; role?: 'admin' | 'customer' }) {
+  if (!username) throw new Error('Thiếu username.');
+
+  if (sql) {
+    await ensureDatabaseReady();
+    const rows = await sql`SELECT username, password_hash, role, created_at FROM users WHERE username = ${username} LIMIT 1`;
+    if (rows.length === 0) throw new Error('Không tìm thấy tài khoản.');
+
+    const current = mapUser(rows[0] as Record<string, unknown>);
+    const nextRole = payload.role ?? current.role;
+    const nextPasswordHash = payload.passwordHash ?? current.passwordHash;
+
+    await sql`
+      UPDATE users
+      SET role = ${nextRole}, password_hash = ${nextPasswordHash}
+      WHERE username = ${username}
+    `;
+
+    return { ...current, role: nextRole, passwordHash: nextPasswordHash };
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  const idx = store.users.findIndex((u) => u.username === username);
+  if (idx < 0) throw new Error('Không tìm thấy tài khoản.');
+
+  store.users[idx] = {
+    ...store.users[idx],
+    role: payload.role ?? store.users[idx].role,
+    passwordHash: payload.passwordHash ?? store.users[idx].passwordHash,
+  };
+
+  if (process.env.NODE_ENV === 'development') await writeFileStore(store);
+  else memoryStore.__portalStore = store;
+
+  return store.users[idx];
+}
+
+export async function deleteUserRecord(username: string) {
+  if (!username) throw new Error('Thiếu username.');
+
+  const adminUsername = getAdminSeed().username;
+  if (username === adminUsername) throw new Error('Không thể xóa tài khoản admin hệ thống.');
+
+  if (sql) {
+    await ensureDatabaseReady();
+    const rows = await sql`SELECT username, role FROM users WHERE username = ${username} LIMIT 1`;
+    if (rows.length === 0) throw new Error('Không tìm thấy tài khoản.');
+    const role = String((rows[0] as any).role || 'customer');
+    if (role === 'admin') throw new Error('Không thể xóa tài khoản admin.');
+
+    await sql`DELETE FROM users WHERE username = ${username}`;
+    return { ok: true };
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  const target = store.users.find((u) => u.username === username);
+  if (!target) throw new Error('Không tìm thấy tài khoản.');
+  if (target.role === 'admin') throw new Error('Không thể xóa tài khoản admin.');
+
+  store.users = store.users.filter((u) => u.username !== username);
+
+  if (process.env.NODE_ENV === 'development') await writeFileStore(store);
+  else memoryStore.__portalStore = store;
+
+  return { ok: true };
+}
+
+

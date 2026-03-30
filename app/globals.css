@@ -612,3 +612,28 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
     max-width: 140px;
   }
 }
+
+.timeline-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.timeline-list li {
+  border: 1px solid #efd9c6;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.timeline-list li strong {
+  color: #7e593f;
+  font-size: 13px;
+}
+
+.timeline-list li p {
+  margin-top: 4px;
+  color: #3d2c1f;
+}

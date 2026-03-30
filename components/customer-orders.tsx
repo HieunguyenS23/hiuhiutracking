@@ -22,9 +22,28 @@ type Props = {
   initialError?: string;
 };
 
+type TrackingResult = {
+  tracking?: string;
+  status?: string;
+  timeline?: Array<{ time?: string; description?: string }>;
+  error?: string;
+};
+
 export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
   const [orders, setOrders] = useState(initialOrders);
   const [error, setError] = useState(initialError);
+  const [message, setMessage] = useState('');
+  const [trackingLoading, setTrackingLoading] = useState('');
+  const [trackingDetail, setTrackingDetail] = useState<{ tracking: string; result: TrackingResult } | null>(null);
+
+  useEffect(() => {
+    if (!message && !error) return;
+    const timer = window.setTimeout(() => {
+      setMessage('');
+      setError('');
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [message, error]);
 
   useEffect(() => {
     let stopped = false;
@@ -36,7 +55,6 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
         if (!response.ok) throw new Error(data.error || 'Không tải được lịch sử đơn.');
         if (!stopped) {
           setOrders(Array.isArray(data.orders) ? data.orders : []);
-          setError('');
         }
       } catch (pollError) {
         if (!stopped) setError(pollError instanceof Error ? pollError.message : 'Không tải được lịch sử đơn.');
@@ -50,6 +68,25 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
     };
   }, []);
 
+  async function openTracking(tracking: string) {
+    setTrackingLoading(tracking);
+    setMessage('');
+    setError('');
+
+    try {
+      const response = await fetch(`/api/tracking?tracking=${encodeURIComponent(tracking)}`, { cache: 'no-store' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Không tra được hành trình vận đơn.');
+
+      setTrackingDetail({ tracking, result: data.result || {} });
+      setMessage('Đã tải hành trình vận đơn thành công.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không tra được hành trình vận đơn.');
+    } finally {
+      setTrackingLoading('');
+    }
+  }
+
   return (
     <section className="phone-card">
       <div className="section-head">
@@ -59,6 +96,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
         </div>
         <span className="chip">{orders.length} đơn</span>
       </div>
+      {message ? <div className="inline-success">{message}</div> : null}
       {error ? <div className="inline-error">{error}</div> : null}
       <div className="order-list">
         {!error && orders.length === 0 ? <div className="empty-state">Chưa có đơn nào được gửi.</div> : null}
@@ -70,7 +108,19 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
                 <strong>{order.recipientName}</strong>
                 <div className="order-status-wrap">
                   <span className={`status-pill status-${order.status}`}>{statusLabel[order.status] || 'Chờ xác nhận'}</span>
-                  {order.deliveryTracking ? <span className="tracking-tag">{order.deliveryTracking}</span> : null}
+                  {order.deliveryTracking ? (
+                    <>
+                      <span className="tracking-tag">{order.deliveryTracking}</span>
+                      <button
+                        className="mini-action"
+                        type="button"
+                        onClick={() => openTracking(order.deliveryTracking)}
+                        disabled={trackingLoading === order.deliveryTracking}
+                      >
+                        {trackingLoading === order.deliveryTracking ? 'Đang tra...' : 'Xem hành trình'}
+                      </button>
+                    </>
+                  ) : null}
                 </div>
               </div>
               <div className="order-row muted">
@@ -87,7 +137,41 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
           );
         })}
       </div>
+
+      {trackingDetail ? (
+        <div className="modal-backdrop" onClick={() => setTrackingDetail(null)}>
+          <div className="modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head modern">
+              <div>
+                <p className="eyebrow">Vận đơn</p>
+                <h3>{trackingDetail.tracking}</h3>
+              </div>
+              <button className="mini-action modal-close" onClick={() => setTrackingDetail(null)} type="button">Đóng</button>
+            </div>
+            <div className="modal-body modern">
+              <div className="detail-item">
+                <span>Trạng thái hiện tại</span>
+                <strong>{trackingDetail.result?.status || trackingDetail.result?.error || 'Chưa có dữ liệu'}</strong>
+              </div>
+              <div className="detail-block">
+                <span>Timeline</span>
+                {Array.isArray(trackingDetail.result?.timeline) && trackingDetail.result.timeline.length > 0 ? (
+                  <ul className="timeline-list">
+                    {trackingDetail.result.timeline.map((item, idx) => (
+                      <li key={`${item.time || ''}-${idx}`}>
+                        <strong>{item.time || '--:--'}</strong>
+                        <p>{item.description || 'Không có mô tả'}</p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>Chưa có timeline chi tiết cho vận đơn này.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
-

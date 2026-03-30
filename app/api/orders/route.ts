@@ -1,7 +1,7 @@
 ﻿import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/session';
-import { createOrder, getOrders, getOrdersByUsername, updateOrder } from '@/lib/store';
+import { createOrder, deleteOrder, getOrders, getOrdersByUsername, updateOrder } from '@/lib/store';
 import type { OrderStatus } from '@/lib/types';
 import { hasAtLeastTwoWords, isValidVietnamPhone } from '@/lib/validators';
 
@@ -216,6 +216,28 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true, order });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không thể cập nhật đơn.' }, { status: 500 });
+  }
+}
+
+
+
+export async function DELETE(request: Request) {
+  const session = await requireSession();
+  if (session.role !== 'admin') {
+    return NextResponse.json({ error: 'Chỉ admin mới được xóa đơn.' }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const orderId = String(searchParams.get('orderId') || '').trim();
+  if (!orderId) {
+    return NextResponse.json({ error: 'Thiếu mã đơn hàng.' }, { status: 400 });
+  }
+
+  try {
+    await deleteOrder(orderId);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Không xóa được đơn.' }, { status: 500 });
   }
 }
 
