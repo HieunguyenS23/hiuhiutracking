@@ -74,6 +74,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
             <tr>
               <th>Thời gian</th>
               <th>Username</th>
+              <th className="col-check">Check</th>
               <th>Người nhận</th>
               <th>SĐT</th>
               <th className="col-address">Địa chỉ</th>
@@ -81,9 +82,8 @@ export function AdminOrdersTable({ initialOrders }: Props) {
               <th>Sản phẩm</th>
               <th>Phân loại</th>
               <th>SL</th>
-              <th>Check</th>
-              <th>Cookie</th>
-              <th>Account</th>
+              <th className="col-cookie">Cookie</th>
+              <th className="col-account">Account</th>
             </tr>
           </thead>
           <tbody>
@@ -96,15 +96,6 @@ export function AdminOrdersTable({ initialOrders }: Props) {
               <tr key={order.id}>
                 <td>{new Date(order.createdAt).toLocaleString('vi-VN')}</td>
                 <td>@{order.username}</td>
-                <td>{order.recipientName}</td>
-                <td>{order.phone}</td>
-                <td className="cell-address" title={`${order.addressLine}, ${order.ward}, ${order.district}, ${order.province}`}>
-                  {order.addressLine}, {order.ward}, {order.district}, {order.province}
-                </td>
-                <td>{order.voucherType.toUpperCase()}</td>
-                <td><a href={order.productLink} target="_blank" rel="noreferrer">Mở link</a></td>
-                <td>{order.variant}</td>
-                <td>{order.quantity}</td>
                 <td>
                   <select
                     className={`status-select status-${order.status}`}
@@ -117,6 +108,15 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                     ))}
                   </select>
                 </td>
+                <td>{order.recipientName}</td>
+                <td>{order.phone}</td>
+                <td className="cell-address" title={`${order.addressLine}, ${order.ward}, ${order.district}, ${order.province}`}>
+                  {order.addressLine}, {order.ward}, {order.district}, {order.province}
+                </td>
+                <td>{order.voucherType.toUpperCase()}</td>
+                <td><a href={order.productLink} target="_blank" rel="noreferrer">Mở link</a></td>
+                <td>{order.variant}</td>
+                <td>{order.quantity}</td>
                 <td>
                   <input
                     className="admin-inline-input"

@@ -257,12 +257,14 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
 }
 
 .status-select {
-  min-width: 145px;
+  width: 100%;
+  min-width: 0;
   min-height: 38px;
   padding: 8px 10px;
   border-radius: 10px;
-  border: 1px solid var(--line);
-  background: #fff;
+  border: 0;
+  background: #fff8f2;
+  font-size: 13px;
 }
 
 .mini-action {
@@ -282,21 +284,35 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
 }
 
 .admin-inline-input {
-  width: 180px;
+  width: 100%;
+  min-width: 0;
   min-height: 38px;
   border-radius: 10px;
-  border: 1px solid var(--line-strong);
-  background: #fff;
+  border: 0;
+  background: #fff8f2;
   padding: 8px 10px;
   font-size: 13px;
 }
 
 @media (max-width: 900px) {
   .admin-inline-input {
-    width: 160px;
+    width: 150px;
   }
 
   .status-select {
-    min-width: 130px;
+    width: 140px;
   }
+}
+
+.col-check {
+  width: 160px;
+}
+
+.col-cookie,
+.col-account {
+  width: 190px;
+}
+
+.sheet-table td {
+  overflow: hidden;
 }
