@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { VoucherType } from '@/lib/types';
 import { locationTree } from '@/lib/locations';
@@ -31,6 +31,15 @@ export function OrderForm() {
   const province = useMemo(() => locationTree.find((item) => item.code === provinceCode) || null, [provinceCode]);
   const district = useMemo(() => province?.districts.find((item) => item.code === districtCode) || null, [province, districtCode]);
   const ward = useMemo(() => district?.wards.find((item) => item.code === wardCode) || null, [district, wardCode]);
+  
+  useEffect(() => {
+    if (!message && !error) return;
+    const timer = window.setTimeout(() => {
+      setMessage('');
+      setError('');
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [message, error]);
 
   async function submitOrder() {
     setLoading(true);
@@ -142,4 +151,6 @@ export function OrderForm() {
     </section>
   );
 }
+
+
 

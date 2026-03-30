@@ -64,11 +64,15 @@ async function ensureDatabaseReady() {
     variant TEXT NOT NULL,
     quantity INTEGER NOT NULL,
     status TEXT NOT NULL,
+    delivery_status TEXT NOT NULL DEFAULT '',
+    delivery_checked_at TEXT NOT NULL DEFAULT '',
     processing_cookie TEXT NOT NULL DEFAULT '',
     processing_account TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`;
 
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_status TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_checked_at TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS processing_cookie TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS processing_account TEXT NOT NULL DEFAULT ''`;
 
@@ -105,6 +109,8 @@ async function readFileStore() {
     parsed.orders = (parsed.orders || []).map((order) => ({
       ...order,
       status: normalizeStatus(order.status),
+      deliveryStatus: String(order.deliveryStatus || ''),
+      deliveryCheckedAt: String(order.deliveryCheckedAt || ''),
       processingCookie: String(order.processingCookie || ''),
       processingAccount: String(order.processingAccount || ''),
     }));
@@ -152,6 +158,8 @@ function mapOrder(row: Record<string, unknown>): OrderRecord {
     variant: String(row.variant),
     quantity: Number(row.quantity),
     status: normalizeStatus(row.status),
+    deliveryStatus: String(row.delivery_status || ''),
+    deliveryCheckedAt: String(row.delivery_checked_at || ''),
     processingCookie: String(row.processing_cookie || ''),
     processingAccount: String(row.processing_account || ''),
     createdAt: new Date(String(row.created_at)).toISOString(),
@@ -188,9 +196,7 @@ export async function createUser(user: UserRecord) {
   }
 
   const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
-  if (store.users.some((item) => item.username === user.username)) {
-    throw new Error('Tên đăng nhập đã tồn tại.');
-  }
+  if (store.users.some((item) => item.username === user.username)) throw new Error('Tên đăng nhập đã tồn tại.');
   store.users.push(user);
   if (process.env.NODE_ENV === 'development') await writeFileStore(store);
   else memoryStore.__portalStore = store;
@@ -205,11 +211,13 @@ export async function createOrder(order: OrderRecord) {
     await sql`
       INSERT INTO orders (
         id, username, recipient_name, phone, address_line, ward, district, province,
-        voucher_type, product_link, variant, quantity, status, processing_cookie, processing_account, created_at
+        voucher_type, product_link, variant, quantity, status, delivery_status, delivery_checked_at,
+        processing_cookie, processing_account, created_at
       ) VALUES (
         ${order.id}, ${order.username}, ${order.recipientName}, ${order.phone}, ${order.addressLine}, ${order.ward},
         ${order.district}, ${order.province}, ${order.voucherType}, ${order.productLink}, ${order.variant},
-        ${order.quantity}, ${order.status}, ${order.processingCookie}, ${order.processingAccount}, ${order.createdAt}
+        ${order.quantity}, ${order.status}, ${order.deliveryStatus}, ${order.deliveryCheckedAt},
+        ${order.processingCookie}, ${order.processingAccount}, ${order.createdAt}
       )
     `;
     return order;
@@ -221,14 +229,15 @@ export async function createOrder(order: OrderRecord) {
   return order;
 }
 
-export async function updateOrder(orderId: string, payload: Partial<Pick<OrderRecord, 'status' | 'processingCookie' | 'processingAccount'>>) {
+export async function updateOrder(orderId: string, payload: Partial<Pick<OrderRecord, 'status' | 'deliveryStatus' | 'deliveryCheckedAt' | 'processingCookie' | 'processingAccount'>>) {
   ensurePersistentOrderStore();
 
   if (sql) {
     await ensureDatabaseReady();
     const rows = await sql`
       SELECT id, username, recipient_name, phone, address_line, ward, district, province,
-             voucher_type, product_link, variant, quantity, status, processing_cookie, processing_account, created_at
+             voucher_type, product_link, variant, quantity, status, delivery_status, delivery_checked_at,
+             processing_cookie, processing_account, created_at
       FROM orders
       WHERE id = ${orderId}
       LIMIT 1
@@ -237,18 +246,29 @@ export async function updateOrder(orderId: string, payload: Partial<Pick<OrderRe
 
     const current = mapOrder(rows[0] as Record<string, unknown>);
     const nextStatus = payload.status ? normalizeStatus(payload.status) : current.status;
+    const nextDeliveryStatus = payload.deliveryStatus ?? current.deliveryStatus;
+    const nextDeliveryCheckedAt = payload.deliveryCheckedAt ?? current.deliveryCheckedAt;
     const nextCookie = payload.processingCookie ?? current.processingCookie;
     const nextAccount = payload.processingAccount ?? current.processingAccount;
 
     await sql`
       UPDATE orders
       SET status = ${nextStatus},
+          delivery_status = ${nextDeliveryStatus},
+          delivery_checked_at = ${nextDeliveryCheckedAt},
           processing_cookie = ${nextCookie},
           processing_account = ${nextAccount}
       WHERE id = ${orderId}
     `;
 
-    return { ...current, status: nextStatus, processingCookie: nextCookie, processingAccount: nextAccount };
+    return {
+      ...current,
+      status: nextStatus,
+      deliveryStatus: nextDeliveryStatus,
+      deliveryCheckedAt: nextDeliveryCheckedAt,
+      processingCookie: nextCookie,
+      processingAccount: nextAccount,
+    };
   }
 
   const store = await readFileStore();
@@ -259,6 +279,8 @@ export async function updateOrder(orderId: string, payload: Partial<Pick<OrderRe
   store.orders[index] = {
     ...current,
     status: payload.status ? normalizeStatus(payload.status) : current.status,
+    deliveryStatus: payload.deliveryStatus ?? current.deliveryStatus,
+    deliveryCheckedAt: payload.deliveryCheckedAt ?? current.deliveryCheckedAt,
     processingCookie: payload.processingCookie ?? current.processingCookie,
     processingAccount: payload.processingAccount ?? current.processingAccount,
   };
@@ -273,7 +295,8 @@ export async function getOrders() {
     await ensureDatabaseReady();
     const rows = await sql`
       SELECT id, username, recipient_name, phone, address_line, ward, district, province,
-             voucher_type, product_link, variant, quantity, status, processing_cookie, processing_account, created_at
+             voucher_type, product_link, variant, quantity, status, delivery_status, delivery_checked_at,
+             processing_cookie, processing_account, created_at
       FROM orders
       ORDER BY created_at DESC
     `;
@@ -291,7 +314,8 @@ export async function getOrdersByUsername(username: string) {
     await ensureDatabaseReady();
     const rows = await sql`
       SELECT id, username, recipient_name, phone, address_line, ward, district, province,
-             voucher_type, product_link, variant, quantity, status, processing_cookie, processing_account, created_at
+             voucher_type, product_link, variant, quantity, status, delivery_status, delivery_checked_at,
+             processing_cookie, processing_account, created_at
       FROM orders
       WHERE username = ${username}
       ORDER BY created_at DESC

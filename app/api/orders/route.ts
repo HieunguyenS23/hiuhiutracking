@@ -6,6 +6,66 @@ import type { OrderStatus } from '@/lib/types';
 import { hasAtLeastTwoWords, isValidVietnamPhone } from '@/lib/validators';
 
 const allowedStatuses: OrderStatus[] = ['pending', 'confirmed', 'ordered'];
+const TRACK_API_BASE = 'https://dodanhvu.dpdns.org';
+
+function normalizeCookie(raw: string) {
+  const value = raw.trim();
+  if (!value) return '';
+  return value.startsWith('SPC_ST=') ? value : `SPC_ST=${value}`;
+}
+
+function pickDeliveryStatusFromCheckResponse(data: any) {
+  const orders = Array.isArray(data?.orders) ? data.orders : [];
+  if (orders.length > 0) {
+    const first = orders[0];
+    if (typeof first?.statusText === 'string' && first.statusText.trim()) return first.statusText.trim();
+  }
+  if (typeof data?.warning === 'string' && data.warning.trim()) return data.warning.trim();
+  return 'Chưa có dữ liệu giao hàng';
+}
+
+async function fetchDeliveryStatusByCookie(cookieInput: string) {
+  const cookie = normalizeCookie(cookieInput);
+  if (!cookie) throw new Error('Thiếu cookie để kiểm tra trạng thái giao hàng.');
+
+  const response = await fetch(`${TRACK_API_BASE}/api/check`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cookie }),
+    cache: 'no-store',
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(String(data?.error || 'Không lấy được trạng thái giao hàng từ API.'));
+  }
+
+  return {
+    status: pickDeliveryStatusFromCheckResponse(data),
+    normalizedCookie: String(data?.cookie || cookie),
+  };
+}
+
+async function refreshCookieByAccount(accountInput: string) {
+  const input = String(accountInput || '').trim();
+  if (!input) throw new Error('Thiếu thông tin account để cập nhật cookie.');
+
+  const response = await fetch(`${TRACK_API_BASE}/api/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ input }),
+    cache: 'no-store',
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(String(data?.error || 'Không cập nhật được cookie mới từ account.'));
+  }
+
+  const cookie = normalizeCookie(String(data?.cookie || ''));
+  if (!cookie) throw new Error('API không trả về cookie hợp lệ.');
+  return cookie;
+}
 
 export async function GET() {
   const session = await requireSession();
@@ -59,6 +119,8 @@ export async function POST(request: Request) {
       variant,
       quantity,
       status: 'pending',
+      deliveryStatus: 'Chưa kiểm tra',
+      deliveryCheckedAt: '',
       processingCookie: '',
       processingAccount: '',
       createdAt: new Date().toISOString(),
@@ -81,6 +143,8 @@ export async function PATCH(request: Request) {
   const statusRaw = String(body.status || '').trim();
   const processingCookie = body.processingCookie === undefined ? undefined : String(body.processingCookie || '').trim();
   const processingAccount = body.processingAccount === undefined ? undefined : String(body.processingAccount || '').trim();
+  const refreshDelivery = Boolean(body.refreshDeliveryStatus);
+  const refreshCookie = Boolean(body.refreshCookieFromAccount);
 
   if (!orderId) {
     return NextResponse.json({ error: 'Thiếu mã đơn hàng.' }, { status: 400 });
@@ -88,6 +152,8 @@ export async function PATCH(request: Request) {
 
   const payload: {
     status?: OrderStatus;
+    deliveryStatus?: string;
+    deliveryCheckedAt?: string;
     processingCookie?: string;
     processingAccount?: string;
   } = {};
@@ -98,14 +164,34 @@ export async function PATCH(request: Request) {
     }
     payload.status = statusRaw as OrderStatus;
   }
-  if (processingCookie !== undefined) payload.processingCookie = processingCookie;
+  if (processingCookie !== undefined) payload.processingCookie = normalizeCookie(processingCookie);
   if (processingAccount !== undefined) payload.processingAccount = processingAccount;
 
-  if (!payload.status && payload.processingCookie === undefined && payload.processingAccount === undefined) {
-    return NextResponse.json({ error: 'Không có dữ liệu cần cập nhật.' }, { status: 400 });
-  }
-
   try {
+    if (refreshCookie) {
+      const account = payload.processingAccount ?? processingAccount ?? '';
+      const newCookie = await refreshCookieByAccount(account);
+      payload.processingCookie = newCookie;
+    }
+
+    if (refreshDelivery) {
+      const cookieForCheck = payload.processingCookie ?? processingCookie ?? '';
+      const delivery = await fetchDeliveryStatusByCookie(cookieForCheck);
+      payload.deliveryStatus = delivery.status;
+      payload.deliveryCheckedAt = new Date().toISOString();
+      payload.processingCookie = delivery.normalizedCookie;
+    }
+
+    if (
+      !payload.status &&
+      payload.processingCookie === undefined &&
+      payload.processingAccount === undefined &&
+      payload.deliveryStatus === undefined &&
+      payload.deliveryCheckedAt === undefined
+    ) {
+      return NextResponse.json({ error: 'Không có dữ liệu cần cập nhật.' }, { status: 400 });
+    }
+
     const order = await updateOrder(orderId, payload);
     return NextResponse.json({ ok: true, order });
   } catch (error) {

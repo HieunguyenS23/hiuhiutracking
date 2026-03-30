@@ -469,3 +469,24 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
     flex-direction: column;
   }
 }
+
+.delivery-cell {
+  display: grid;
+  gap: 6px;
+  min-width: 220px;
+}
+
+.delivery-cell strong {
+  font-size: 14px;
+  color: #2f251d;
+}
+
+.delivery-cell small {
+  color: #9b7c63;
+  font-size: 12px;
+}
+
+.account-cell {
+  display: grid;
+  gap: 6px;
+}

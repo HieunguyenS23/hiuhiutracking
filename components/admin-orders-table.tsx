@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { OrderRecord, OrderStatus } from '@/lib/types';
 
 type Props = {
@@ -19,6 +19,8 @@ const statusLabel: Record<OrderStatus, string> = {
   ordered: 'Đã đặt',
 };
 
+const ONE_HOUR_MS = 60 * 60 * 1000;
+
 export function AdminOrdersTable({ initialOrders }: Props) {
   const [orders, setOrders] = useState(initialOrders);
   const [savingId, setSavingId] = useState('');
@@ -26,10 +28,21 @@ export function AdminOrdersTable({ initialOrders }: Props) {
   const [error, setError] = useState('');
   const [detailOrder, setDetailOrder] = useState<OrderRecord | null>(null);
 
-  async function patchOrder(orderId: string, payload: Partial<Pick<OrderRecord, 'status' | 'processingCookie' | 'processingAccount'>>) {
+  useEffect(() => {
+    if (!message && !error) return;
+    const timer = window.setTimeout(() => {
+      setMessage('');
+      setError('');
+    }, 3000);
+    return () => window.clearTimeout(timer);
+  }, [message, error]);
+
+  async function patchOrder(orderId: string, payload: any, silent = false) {
     setSavingId(orderId);
-    setMessage('');
-    setError('');
+    if (!silent) {
+      setMessage('');
+      setError('');
+    }
 
     try {
       const response = await fetch('/api/orders', {
@@ -43,13 +56,31 @@ export function AdminOrdersTable({ initialOrders }: Props) {
       const updated = data.order as OrderRecord;
       setOrders((prev) => prev.map((item) => (item.id === orderId ? updated : item)));
       if (detailOrder?.id === updated.id) setDetailOrder(updated);
-      setMessage('Đã cập nhật đơn thành công.');
+      if (!silent) setMessage('Đã cập nhật đơn thành công.');
+      return updated;
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : 'Đã có lỗi xảy ra.');
+      if (!silent) setError(updateError instanceof Error ? updateError.message : 'Đã có lỗi xảy ra.');
+      return null;
     } finally {
       setSavingId('');
     }
   }
+
+  useEffect(() => {
+    const runAutoRefresh = () => {
+      orders.forEach((order) => {
+        if (!order.processingCookie) return;
+        const last = order.deliveryCheckedAt ? new Date(order.deliveryCheckedAt).getTime() : 0;
+        if (!last || Date.now() - last >= ONE_HOUR_MS) {
+          patchOrder(order.id, { refreshDeliveryStatus: true, processingCookie: order.processingCookie }, true);
+        }
+      });
+    };
+
+    runAutoRefresh();
+    const timer = window.setInterval(runAutoRefresh, ONE_HOUR_MS);
+    return () => window.clearInterval(timer);
+  }, [orders]);
 
   function setOrderField(orderId: string, field: 'processingCookie' | 'processingAccount', value: string) {
     setOrders((prev) => prev.map((item) => (item.id === orderId ? { ...item, [field]: value } : item)));
@@ -60,6 +91,20 @@ export function AdminOrdersTable({ initialOrders }: Props) {
     const normalized = value.trim();
     if (normalized === (order[field] || '').trim()) return;
     await patchOrder(order.id, { [field]: normalized });
+  }
+
+  async function refreshCookie(order: OrderRecord) {
+    await patchOrder(order.id, {
+      processingAccount: order.processingAccount,
+      refreshCookieFromAccount: true,
+    });
+  }
+
+  async function refreshDeliveryStatus(order: OrderRecord) {
+    await patchOrder(order.id, {
+      processingCookie: order.processingCookie,
+      refreshDeliveryStatus: true,
+    });
   }
 
   const total = useMemo(() => orders.length, [orders.length]);
@@ -83,6 +128,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
             <tr>
               <th>Thời gian</th>
               <th>Check</th>
+              <th>Trạng thái giao hàng</th>
               <th className="col-cookie">Cookie</th>
               <th className="col-account">Account</th>
               <th>Chi tiết</th>
@@ -91,7 +137,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
           <tbody>
             {orders.length === 0 ? (
               <tr>
-                <td className="sheet-empty" colSpan={5}>Chưa có đơn nào.</td>
+                <td className="sheet-empty" colSpan={6}>Chưa có đơn nào.</td>
               </tr>
             ) : null}
             {orders.map((order) => (
@@ -110,6 +156,15 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                   </select>
                 </td>
                 <td>
+                  <div className="delivery-cell">
+                    <strong>{order.deliveryStatus || 'Chưa kiểm tra'}</strong>
+                    <small>{order.deliveryCheckedAt ? new Date(order.deliveryCheckedAt).toLocaleString('vi-VN') : 'Chưa có thời gian'}</small>
+                    <button className="mini-action" disabled={savingId === order.id || !order.processingCookie} onClick={() => refreshDeliveryStatus(order)} type="button">
+                      Cập nhật trạng thái
+                    </button>
+                  </div>
+                </td>
+                <td>
                   <input
                     className="admin-inline-input"
                     value={order.processingCookie || ''}
@@ -120,14 +175,19 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                   />
                 </td>
                 <td>
-                  <input
-                    className="admin-inline-input"
-                    value={order.processingAccount || ''}
-                    disabled={savingId === order.id}
-                    placeholder="Nhập account"
-                    onChange={(event) => setOrderField(order.id, 'processingAccount', event.target.value)}
-                    onBlur={(event) => commitField(order, 'processingAccount', event.target.value)}
-                  />
+                  <div className="account-cell">
+                    <input
+                      className="admin-inline-input"
+                      value={order.processingAccount || ''}
+                      disabled={savingId === order.id}
+                      placeholder="user|pass|SPC_F"
+                      onChange={(event) => setOrderField(order.id, 'processingAccount', event.target.value)}
+                      onBlur={(event) => commitField(order, 'processingAccount', event.target.value)}
+                    />
+                    <button className="mini-action" disabled={savingId === order.id || !order.processingAccount} onClick={() => refreshCookie(order)} type="button">
+                      Cập nhật cookie
+                    </button>
+                  </div>
                 </td>
                 <td>
                   <button className="mini-action" type="button" onClick={() => setDetailOrder(order)}>
@@ -169,6 +229,11 @@ export function AdminOrdersTable({ initialOrders }: Props) {
               <div className="detail-block">
                 <span>Địa chỉ</span>
                 <p>{detailOrder.addressLine}, {detailOrder.ward}, {detailOrder.district}, {detailOrder.province}</p>
+              </div>
+
+              <div className="detail-block">
+                <span>Trạng thái giao hàng</span>
+                <p>{detailOrder.deliveryStatus || 'Chưa kiểm tra'}</p>
               </div>
 
               <div className="detail-block">
