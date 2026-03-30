@@ -8,6 +8,7 @@ export type UserRecord = {
 };
 
 export type VoucherType = '100k' | '80k' | '60k';
+export type OrderStatus = 'pending' | 'confirmed' | 'ordered';
 
 export type OrderRecord = {
   id: string;
@@ -22,7 +23,9 @@ export type OrderRecord = {
   productLink: string;
   variant: string;
   quantity: number;
-  status: 'pending';
+  status: OrderStatus;
+  processingCookie: string;
+  processingAccount: string;
   createdAt: string;
 };
 

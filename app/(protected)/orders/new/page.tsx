@@ -2,6 +2,12 @@
 import { requireSession } from '@/lib/session';
 import { getOrdersByUsername } from '@/lib/store';
 
+const statusLabel: Record<string, string> = {
+  pending: 'Chờ xác nhận',
+  confirmed: 'Đã xác nhận',
+  ordered: 'Đã đặt',
+};
+
 export default async function NewOrderPage() {
   const session = await requireSession();
 
@@ -37,7 +43,7 @@ export default async function NewOrderPage() {
             <article className="order-card" key={order.id}>
               <div className="order-row">
                 <strong>{order.recipientName}</strong>
-                <span className="chip chip-soft">{order.voucherType.toUpperCase()}</span>
+                <span className={`status-pill status-${order.status}`}>{statusLabel[order.status]}</span>
               </div>
               <p>{order.addressLine}, {order.ward}, {order.district}, {order.province}</p>
               <p>{order.variant} · SL {order.quantity}</p>

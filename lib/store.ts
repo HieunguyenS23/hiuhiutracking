@@ -1,7 +1,7 @@
 ﻿import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { neon } from '@neondatabase/serverless';
-import type { OrderRecord, StoreData, UserRecord } from '@/lib/types';
+import type { OrderRecord, OrderStatus, StoreData, UserRecord } from '@/lib/types';
 import { getAdminSeed, getCustomerSeed, getCustomerSeed2 } from '@/lib/session';
 
 const storeFile = path.join(process.cwd(), 'data', 'store.json');
@@ -9,6 +9,13 @@ const memoryStore = globalThis as typeof globalThis & { __portalStore?: StoreDat
 const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
 const hasDatabase = Boolean(databaseUrl);
 const sql = hasDatabase ? neon(databaseUrl) : null;
+
+const allowedStatuses: OrderStatus[] = ['pending', 'confirmed', 'ordered'];
+
+function normalizeStatus(value: unknown): OrderStatus {
+  const raw = String(value || '').toLowerCase() as OrderStatus;
+  return allowedStatuses.includes(raw) ? raw : 'pending';
+}
 
 function ensureSeedUsers(data: StoreData) {
   const admin = getAdminSeed();
@@ -57,8 +64,13 @@ async function ensureDatabaseReady() {
     variant TEXT NOT NULL,
     quantity INTEGER NOT NULL,
     status TEXT NOT NULL,
+    processing_cookie TEXT NOT NULL DEFAULT '',
+    processing_account TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`;
+
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS processing_cookie TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS processing_account TEXT NOT NULL DEFAULT ''`;
 
   const admin = getAdminSeed();
   const customer = getCustomerSeed();
@@ -90,6 +102,12 @@ async function readFileStore() {
     const raw = await fs.readFile(storeFile, 'utf8');
     const parsed = JSON.parse(raw) as StoreData;
     ensureSeedUsers(parsed);
+    parsed.orders = (parsed.orders || []).map((order) => ({
+      ...order,
+      status: normalizeStatus(order.status),
+      processingCookie: String(order.processingCookie || ''),
+      processingAccount: String(order.processingAccount || ''),
+    }));
     return parsed;
   } catch {
     const fresh = defaultStore();
@@ -129,11 +147,13 @@ function mapOrder(row: Record<string, unknown>): OrderRecord {
     ward: String(row.ward),
     district: String(row.district),
     province: String(row.province),
-    voucherType: (String(row.voucher_type) as OrderRecord['voucherType']),
+    voucherType: String(row.voucher_type) as OrderRecord['voucherType'],
     productLink: String(row.product_link),
     variant: String(row.variant),
     quantity: Number(row.quantity),
-    status: 'pending',
+    status: normalizeStatus(row.status),
+    processingCookie: String(row.processing_cookie || ''),
+    processingAccount: String(row.processing_account || ''),
     createdAt: new Date(String(row.created_at)).toISOString(),
   };
 }
@@ -185,11 +205,11 @@ export async function createOrder(order: OrderRecord) {
     await sql`
       INSERT INTO orders (
         id, username, recipient_name, phone, address_line, ward, district, province,
-        voucher_type, product_link, variant, quantity, status, created_at
+        voucher_type, product_link, variant, quantity, status, processing_cookie, processing_account, created_at
       ) VALUES (
         ${order.id}, ${order.username}, ${order.recipientName}, ${order.phone}, ${order.addressLine}, ${order.ward},
         ${order.district}, ${order.province}, ${order.voucherType}, ${order.productLink}, ${order.variant},
-        ${order.quantity}, ${order.status}, ${order.createdAt}
+        ${order.quantity}, ${order.status}, ${order.processingCookie}, ${order.processingAccount}, ${order.createdAt}
       )
     `;
     return order;
@@ -201,6 +221,51 @@ export async function createOrder(order: OrderRecord) {
   return order;
 }
 
+export async function updateOrder(orderId: string, payload: Partial<Pick<OrderRecord, 'status' | 'processingCookie' | 'processingAccount'>>) {
+  ensurePersistentOrderStore();
+
+  if (sql) {
+    await ensureDatabaseReady();
+    const rows = await sql`
+      SELECT id, username, recipient_name, phone, address_line, ward, district, province,
+             voucher_type, product_link, variant, quantity, status, processing_cookie, processing_account, created_at
+      FROM orders
+      WHERE id = ${orderId}
+      LIMIT 1
+    `;
+    if (rows.length === 0) throw new Error('Không tìm thấy đơn hàng.');
+
+    const current = mapOrder(rows[0] as Record<string, unknown>);
+    const nextStatus = payload.status ? normalizeStatus(payload.status) : current.status;
+    const nextCookie = payload.processingCookie ?? current.processingCookie;
+    const nextAccount = payload.processingAccount ?? current.processingAccount;
+
+    await sql`
+      UPDATE orders
+      SET status = ${nextStatus},
+          processing_cookie = ${nextCookie},
+          processing_account = ${nextAccount}
+      WHERE id = ${orderId}
+    `;
+
+    return { ...current, status: nextStatus, processingCookie: nextCookie, processingAccount: nextAccount };
+  }
+
+  const store = await readFileStore();
+  const index = store.orders.findIndex((item) => item.id === orderId);
+  if (index < 0) throw new Error('Không tìm thấy đơn hàng.');
+
+  const current = store.orders[index];
+  store.orders[index] = {
+    ...current,
+    status: payload.status ? normalizeStatus(payload.status) : current.status,
+    processingCookie: payload.processingCookie ?? current.processingCookie,
+    processingAccount: payload.processingAccount ?? current.processingAccount,
+  };
+  await writeFileStore(store);
+  return store.orders[index];
+}
+
 export async function getOrders() {
   ensurePersistentOrderStore();
 
@@ -208,7 +273,7 @@ export async function getOrders() {
     await ensureDatabaseReady();
     const rows = await sql`
       SELECT id, username, recipient_name, phone, address_line, ward, district, province,
-             voucher_type, product_link, variant, quantity, status, created_at
+             voucher_type, product_link, variant, quantity, status, processing_cookie, processing_account, created_at
       FROM orders
       ORDER BY created_at DESC
     `;
@@ -226,7 +291,7 @@ export async function getOrdersByUsername(username: string) {
     await ensureDatabaseReady();
     const rows = await sql`
       SELECT id, username, recipient_name, phone, address_line, ward, district, province,
-             voucher_type, product_link, variant, quantity, status, created_at
+             voucher_type, product_link, variant, quantity, status, processing_cookie, processing_account, created_at
       FROM orders
       WHERE username = ${username}
       ORDER BY created_at DESC

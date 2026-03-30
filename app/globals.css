@@ -225,3 +225,58 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
 .profile-inline {
   width: fit-content;
 }
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.status-pending {
+  background: #fff3e6;
+  border-color: #ffd5ad;
+  color: #9b5e1a;
+}
+
+.status-confirmed {
+  background: #eaf6ff;
+  border-color: #b7dcff;
+  color: #1f5b96;
+}
+
+.status-ordered {
+  background: #eafaf0;
+  border-color: #bfe8ce;
+  color: #1f6c3e;
+}
+
+.status-select {
+  min-width: 145px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.mini-action {
+  min-height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: #fff7f0;
+  color: #7b4f2f;
+  font-weight: 700;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.mini-action:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
