@@ -143,23 +143,49 @@ export function AdminOrdersTable({ initialOrders }: Props) {
       {detailOrder ? (
         <div className="modal-backdrop" onClick={() => setDetailOrder(null)}>
           <div className="modal-card" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-head">
-              <h3>Chi tiết đơn hàng</h3>
-              <button className="mini-action" onClick={() => setDetailOrder(null)} type="button">Đóng</button>
+            <div className="modal-head modern">
+              <div>
+                <p className="eyebrow">Đơn hàng</p>
+                <h3>Chi tiết #{detailOrder.id.slice(0, 8)}</h3>
+              </div>
+              <button className="mini-action modal-close" onClick={() => setDetailOrder(null)} type="button">Đóng</button>
             </div>
-            <div className="modal-body">
-              <p><strong>Trạng thái:</strong> <span className={`status-pill status-${detailOrder.status}`}>{statusLabel[detailOrder.status]}</span></p>
-              <p><strong>Username:</strong> @{detailOrder.username}</p>
-              <p><strong>Người nhận:</strong> {detailOrder.recipientName}</p>
-              <p><strong>SĐT:</strong> {detailOrder.phone}</p>
-              <p><strong>Địa chỉ:</strong> {detailOrder.addressLine}, {detailOrder.ward}, {detailOrder.district}, {detailOrder.province}</p>
-              <p><strong>Loại mã:</strong> {detailOrder.voucherType.toUpperCase()}</p>
-              <p><strong>Sản phẩm:</strong> <a href={detailOrder.productLink} target="_blank" rel="noreferrer">Mở link</a></p>
-              <p><strong>Phân loại:</strong> {detailOrder.variant}</p>
-              <p><strong>Số lượng:</strong> {detailOrder.quantity}</p>
-              <p><strong>Cookie xử lí:</strong> {detailOrder.processingCookie || '(trống)'}</p>
-              <p><strong>Account xử lí:</strong> {detailOrder.processingAccount || '(trống)'}</p>
-              <p><strong>Thời gian tạo:</strong> {new Date(detailOrder.createdAt).toLocaleString('vi-VN')}</p>
+
+            <div className="modal-body modern">
+              <div className="modal-status-row">
+                <span className={`status-pill status-${detailOrder.status}`}>{statusLabel[detailOrder.status]}</span>
+                <span className="modal-muted">{new Date(detailOrder.createdAt).toLocaleString('vi-VN')}</span>
+              </div>
+
+              <div className="detail-grid">
+                <div className="detail-item"><span>Username</span><strong>@{detailOrder.username}</strong></div>
+                <div className="detail-item"><span>Người nhận</span><strong>{detailOrder.recipientName}</strong></div>
+                <div className="detail-item"><span>SĐT</span><strong>{detailOrder.phone}</strong></div>
+                <div className="detail-item"><span>Loại mã</span><strong>{detailOrder.voucherType.toUpperCase()}</strong></div>
+                <div className="detail-item"><span>Phân loại</span><strong>{detailOrder.variant}</strong></div>
+                <div className="detail-item"><span>Số lượng</span><strong>{detailOrder.quantity}</strong></div>
+              </div>
+
+              <div className="detail-block">
+                <span>Địa chỉ</span>
+                <p>{detailOrder.addressLine}, {detailOrder.ward}, {detailOrder.district}, {detailOrder.province}</p>
+              </div>
+
+              <div className="detail-block">
+                <span>Sản phẩm</span>
+                <a className="order-link" href={detailOrder.productLink} target="_blank" rel="noreferrer">Mở link sản phẩm</a>
+              </div>
+
+              <div className="detail-grid">
+                <div className="detail-item wide">
+                  <span>Cookie xử lí</span>
+                  <p>{detailOrder.processingCookie || '(trống)'}</p>
+                </div>
+                <div className="detail-item wide">
+                  <span>Account xử lí</span>
+                  <p>{detailOrder.processingAccount || '(trống)'}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
