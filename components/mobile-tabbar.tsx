@@ -23,10 +23,13 @@ export function MobileTabbar({ isAdmin, username }: Props) {
         </div>
       </div>
 
-      <nav className="mobile-tabbar">
+      <nav className={`mobile-tabbar ${isAdmin ? 'mobile-tabbar-admin' : ''}`}>
         <Link className={pathname.startsWith('/orders') && !pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/new">Lên đơn</Link>
         {isAdmin ? (
-          <Link className={pathname.startsWith('/admin') ? 'is-active' : ''} href="/admin/orders">Quản lí đơn</Link>
+          <>
+            <Link className={pathname.startsWith('/admin/orders') ? 'is-active' : ''} href="/admin/orders">Quản lí đơn</Link>
+            <Link className={pathname.startsWith('/admin/users') ? 'is-active' : ''} href="/admin/users">Tài khoản</Link>
+          </>
         ) : (
           <Link className={pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/history">Lịch sử</Link>
         )}

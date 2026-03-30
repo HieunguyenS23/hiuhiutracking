@@ -1,7 +1,7 @@
 ﻿'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import type { OrderRecord, OrderStatus } from '@/lib/types';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { OrderRecord, OrderStatus, VoucherType } from '@/lib/types';
 
 type Props = {
   initialOrders: OrderRecord[];
@@ -11,6 +11,12 @@ const statusOptions: { value: OrderStatus; label: string }[] = [
   { value: 'pending', label: 'Chờ xác nhận' },
   { value: 'confirmed', label: 'Đã xác nhận' },
   { value: 'ordered', label: 'Đã đặt' },
+];
+
+const voucherOptions: { value: VoucherType; label: string }[] = [
+  { value: '100k', label: 'Mã 100k' },
+  { value: '80k', label: 'Mã 80k' },
+  { value: '60k', label: 'Mã 60k' },
 ];
 
 const statusLabel: Record<OrderStatus, string> = {
@@ -35,6 +41,10 @@ export function AdminOrdersTable({ initialOrders }: Props) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [detailOrder, setDetailOrder] = useState<OrderRecord | null>(null);
+  const [detailDraft, setDetailDraft] = useState<OrderRecord | null>(null);
+  const [detailSaving, setDetailSaving] = useState(false);
+  const ordersRef = useRef<OrderRecord[]>(initialOrders);
+  const batchRunningRef = useRef(false);
 
   useEffect(() => {
     if (!message && !error) return;
@@ -63,7 +73,10 @@ export function AdminOrdersTable({ initialOrders }: Props) {
 
       const updated = data.order as OrderRecord;
       setOrders((prev) => prev.map((item) => (item.id === orderId ? updated : item)));
-      if (detailOrder?.id === updated.id) setDetailOrder(updated);
+      if (detailOrder?.id === updated.id) {
+        setDetailOrder(updated);
+        setDetailDraft(updated);
+      }
       if (!silent) setMessage(successText || 'Đã cập nhật đơn thành công.');
       return updated;
     } catch (updateError) {
@@ -88,7 +101,10 @@ export function AdminOrdersTable({ initialOrders }: Props) {
       if (!response.ok) throw new Error(data.error || 'Không xóa được đơn.');
       setOrders((prev) => prev.filter((item) => item.id !== order.id));
       setMessage('Đã xóa đơn thành công.');
-      if (detailOrder?.id === order.id) setDetailOrder(null);
+      if (detailOrder?.id === order.id) {
+        setDetailOrder(null);
+        setDetailDraft(null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không xóa được đơn.');
     } finally {
@@ -97,24 +113,64 @@ export function AdminOrdersTable({ initialOrders }: Props) {
   }
 
   useEffect(() => {
-    const runAutoRefresh = () => {
-      orders.forEach((order) => {
-        if (!order.processingCookie) return;
-        const last = order.deliveryCheckedAt ? new Date(order.deliveryCheckedAt).getTime() : 0;
-        if (!last || Date.now() - last >= ONE_HOUR_MS) {
-          patchOrder(order.id, { refreshDeliveryStatus: true, processingCookie: order.processingCookie }, undefined, true);
+    ordersRef.current = orders;
+  }, [orders]);
+
+  useEffect(() => {
+    const runHourlyBatch = async () => {
+      if (batchRunningRef.current) return;
+      batchRunningRef.current = true;
+
+      try {
+        for (const order of ordersRef.current) {
+          let current = order;
+
+          if ((order.processingAccount || '').trim()) {
+            const updated = await patchOrder(
+              order.id,
+              {
+                processingAccount: order.processingAccount,
+                refreshCookieFromAccount: true,
+              },
+              undefined,
+              true
+            );
+            if (updated) current = updated;
+          }
+
+          const cookieForCheck = (current.processingCookie || '').trim();
+          if (cookieForCheck) {
+            await patchOrder(
+              order.id,
+              {
+                processingCookie: cookieForCheck,
+                refreshDeliveryStatus: true,
+              },
+              undefined,
+              true
+            );
+          }
         }
-      });
+      } finally {
+        batchRunningRef.current = false;
+      }
     };
 
-    runAutoRefresh();
-    const timer = window.setInterval(runAutoRefresh, ONE_HOUR_MS);
+    runHourlyBatch();
+    const timer = window.setInterval(() => {
+      runHourlyBatch();
+    }, ONE_HOUR_MS);
+
     return () => window.clearInterval(timer);
-  }, [orders]);
+  }, []);
 
   function setOrderField(orderId: string, field: 'processingCookie' | 'processingAccount', value: string) {
     setOrders((prev) => prev.map((item) => (item.id === orderId ? { ...item, [field]: value } : item)));
-    if (detailOrder?.id === orderId) setDetailOrder({ ...detailOrder, [field]: value });
+    if (detailOrder?.id === orderId) {
+      const updated = { ...detailOrder, [field]: value };
+      setDetailOrder(updated);
+      setDetailDraft(updated);
+    }
   }
 
   async function commitField(order: OrderRecord, field: 'processingCookie' | 'processingAccount', value: string) {
@@ -137,6 +193,37 @@ export function AdminOrdersTable({ initialOrders }: Props) {
     }, 'Đã cập nhật trạng thái giao hàng.');
   }
 
+  function openDetail(order: OrderRecord) {
+    setDetailOrder(order);
+    setDetailDraft(order);
+  }
+
+  async function saveDetailEdits() {
+    if (!detailOrder || !detailDraft) return;
+    setDetailSaving(true);
+    const updated = await patchOrder(
+      detailOrder.id,
+      {
+        recipientName: detailDraft.recipientName,
+        phone: detailDraft.phone,
+        addressLine: detailDraft.addressLine,
+        ward: detailDraft.ward,
+        district: detailDraft.district,
+        province: detailDraft.province,
+        voucherType: detailDraft.voucherType,
+        productLink: detailDraft.productLink,
+        variant: detailDraft.variant,
+        quantity: detailDraft.quantity,
+      },
+      'Đã lưu chỉnh sửa đơn hàng.'
+    );
+    if (updated) {
+      setDetailOrder(updated);
+      setDetailDraft(updated);
+    }
+    setDetailSaving(false);
+  }
+
   const total = useMemo(() => orders.length, [orders.length]);
 
   return (
@@ -157,8 +244,10 @@ export function AdminOrdersTable({ initialOrders }: Props) {
           <thead>
             <tr>
               <th>Thời gian</th>
+              <th>Mã chi tiết</th>
               <th>Người nhận</th>
               <th>Check</th>
+              <th>Thành tiền</th>
               <th>Trạng thái giao hàng</th>
               <th>Mã vận đơn</th>
               <th className="col-cookie">Cookie</th>
@@ -169,7 +258,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
           <tbody>
             {orders.length === 0 ? (
               <tr>
-                <td className="sheet-empty" colSpan={8}>Chưa có đơn nào.</td>
+                <td className="sheet-empty" colSpan={10}>Chưa có đơn nào.</td>
               </tr>
             ) : null}
             {orders.map((order) => {
@@ -178,6 +267,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
               return (
                 <tr key={order.id}>
                   <td>{new Date(order.createdAt).toLocaleString('vi-VN')}</td>
+                  <td><span className="order-code-chip">{order.orderCode || 'Chưa có'}</span></td>
                   <td>{order.recipientName}</td>
                   <td className="col-check">
                     <select
@@ -191,6 +281,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                       ))}
                     </select>
                   </td>
+                  <td><strong className="amount-text">{order.orderAmount || 'Chưa có'}</strong></td>
                   <td>
                     <div className="delivery-cell">
                       <span className={`delivery-pill delivery-${tone}`}>{deliveryStatus}</span>
@@ -224,7 +315,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                     <div className="icon-actions">
                       <button className="icon-action-btn" title="Cập nhật cookie" aria-label="Cập nhật cookie" disabled={savingId === order.id || !order.processingAccount} onClick={() => refreshCookie(order)} type="button">↻</button>
                       <button className="icon-action-btn" title="Cập nhật trạng thái giao hàng" aria-label="Cập nhật trạng thái giao hàng" disabled={savingId === order.id || !order.processingCookie} onClick={() => refreshDeliveryStatus(order)} type="button">⌛</button>
-                      <button className="icon-action-btn" title="Xem chi tiết" aria-label="Xem chi tiết" onClick={() => setDetailOrder(order)} type="button">ⓘ</button>
+                      <button className="icon-action-btn" title="Xem chi tiết" aria-label="Xem chi tiết" onClick={() => openDetail(order)} type="button">ⓘ</button>
                       <button className="icon-action-btn" title="Xóa đơn" aria-label="Xóa đơn" onClick={() => removeOrder(order)} disabled={savingId === order.id} type="button">🗑</button>
                     </div>
                   </td>
@@ -235,7 +326,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
         </table>
       </div>
 
-      {detailOrder ? (
+      {detailOrder && detailDraft ? (
         <div className="modal-backdrop" onClick={() => setDetailOrder(null)}>
           <div className="modal-card" onClick={(event) => event.stopPropagation()}>
             <div className="modal-head modern">
@@ -243,47 +334,67 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                 <p className="eyebrow">Đơn hàng</p>
                 <h3>Chi tiết #{detailOrder.id.slice(0, 8)}</h3>
               </div>
-              <button className="mini-action modal-close" onClick={() => setDetailOrder(null)} type="button">Đóng</button>
+              <div className="modal-actions">
+                <button className="primary-button compact" onClick={saveDetailEdits} disabled={detailSaving} type="button">
+                  {detailSaving ? 'Đang lưu...' : 'Lưu chỉnh sửa'}
+                </button>
+                <button className="mini-action modal-close" onClick={() => setDetailOrder(null)} type="button">Đóng</button>
+              </div>
             </div>
 
             <div className="modal-body modern">
               <div className="modal-status-row">
-                <span className={`status-pill status-${detailOrder.status}`}>{statusLabel[detailOrder.status]}</span>
-                <span className="modal-muted">{new Date(detailOrder.createdAt).toLocaleString('vi-VN')}</span>
+                <span className={`status-pill status-${detailDraft.status}`}>{statusLabel[detailDraft.status]}</span>
+                <span className="modal-muted">{new Date(detailDraft.createdAt).toLocaleString('vi-VN')}</span>
               </div>
+
+              <div className="detail-grid editable-grid">
+                <div className="detail-item"><span>Mã chi tiết</span><strong>{detailDraft.orderCode || 'Chưa có'}</strong></div>
+                <div className="detail-item"><span>Thành tiền</span><strong>{detailDraft.orderAmount || 'Chưa có'}</strong></div>
+                <div className="detail-item"><span>Username</span><strong>@{detailDraft.username}</strong></div>
+
+                <label className="detail-item edit-field"><span>Người nhận</span><input value={detailDraft.recipientName} onChange={(e) => setDetailDraft({ ...detailDraft, recipientName: e.target.value })} /></label>
+                <label className="detail-item edit-field"><span>SĐT</span><input value={detailDraft.phone} placeholder="Để trống = ảo" onChange={(e) => setDetailDraft({ ...detailDraft, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} /></label>
+                <label className="detail-item edit-field"><span>Loại mã</span>
+                  <select value={detailDraft.voucherType} onChange={(e) => setDetailDraft({ ...detailDraft, voucherType: e.target.value as VoucherType })}>
+                    {voucherOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                  </select>
+                </label>
+
+                <label className="detail-item edit-field"><span>Phường/Xã</span><input value={detailDraft.ward} onChange={(e) => setDetailDraft({ ...detailDraft, ward: e.target.value })} /></label>
+                <label className="detail-item edit-field"><span>Quận/Huyện</span><input value={detailDraft.district} onChange={(e) => setDetailDraft({ ...detailDraft, district: e.target.value })} /></label>
+                <label className="detail-item edit-field"><span>Tỉnh/Thành</span><input value={detailDraft.province} onChange={(e) => setDetailDraft({ ...detailDraft, province: e.target.value })} /></label>
+                <label className="detail-item edit-field"><span>Số lượng</span><input min={1} type="number" value={detailDraft.quantity} onChange={(e) => setDetailDraft({ ...detailDraft, quantity: Number(e.target.value || 1) })} /></label>
+              </div>
+
+              <label className="detail-block edit-field">
+                <span>Địa chỉ cụ thể</span>
+                <input value={detailDraft.addressLine} onChange={(e) => setDetailDraft({ ...detailDraft, addressLine: e.target.value })} />
+              </label>
+
+              <label className="detail-block edit-field">
+                <span>Link sản phẩm</span>
+                <input value={detailDraft.productLink} onChange={(e) => setDetailDraft({ ...detailDraft, productLink: e.target.value })} />
+              </label>
+
+              <label className="detail-block edit-field">
+                <span>Phân loại sản phẩm</span>
+                <input value={detailDraft.variant} onChange={(e) => setDetailDraft({ ...detailDraft, variant: e.target.value })} />
+              </label>
 
               <div className="detail-grid">
-                <div className="detail-item"><span>Username</span><strong>@{detailOrder.username}</strong></div>
-                <div className="detail-item"><span>Người nhận</span><strong>{detailOrder.recipientName}</strong></div>
-                <div className="detail-item"><span>SĐT</span><strong>{detailOrder.phone || 'ảo'}</strong></div>
-                <div className="detail-item"><span>Loại mã</span><strong>{detailOrder.voucherType.toUpperCase()}</strong></div>
-                <div className="detail-item"><span>Phân loại</span><strong>{detailOrder.variant}</strong></div>
-                <div className="detail-item"><span>Số lượng</span><strong>{detailOrder.quantity}</strong></div>
-              </div>
-
-              <div className="detail-block">
-                <span>Địa chỉ</span>
-                <p>{detailOrder.addressLine}, {detailOrder.ward}, {detailOrder.district}, {detailOrder.province}</p>
-              </div>
-
-              <div className="detail-grid">
-                <div className="detail-item"><span>Trạng thái giao hàng</span><strong>{detailOrder.deliveryStatus || 'Chưa kiểm tra'}</strong></div>
-                <div className="detail-item"><span>Mã vận đơn</span><strong>{detailOrder.deliveryTracking || 'Chưa có'}</strong></div>
-              </div>
-
-              <div className="detail-block">
-                <span>Sản phẩm</span>
-                <a className="order-link" href={detailOrder.productLink} target="_blank" rel="noreferrer">Mở link sản phẩm</a>
+                <div className="detail-item"><span>Trạng thái giao hàng</span><strong>{detailDraft.deliveryStatus || 'Chưa kiểm tra'}</strong></div>
+                <div className="detail-item"><span>Mã vận đơn</span><strong>{detailDraft.deliveryTracking || 'Chưa có'}</strong></div>
               </div>
 
               <div className="detail-grid">
                 <div className="detail-item wide">
                   <span>Cookie xử lí</span>
-                  <p>{detailOrder.processingCookie || '(trống)'}</p>
+                  <p>{detailDraft.processingCookie || '(trống)'}</p>
                 </div>
                 <div className="detail-item wide">
                   <span>Account xử lí</span>
-                  <p>{detailOrder.processingAccount || '(trống)'}</p>
+                  <p>{detailDraft.processingAccount || '(trống)'}</p>
                 </div>
               </div>
             </div>

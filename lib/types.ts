@@ -24,9 +24,12 @@ export type OrderRecord = {
   variant: string;
   quantity: number;
   status: OrderStatus;
+  orderCode: string;
+  orderAmount: string;
   deliveryStatus: string;
   deliveryCheckedAt: string;
   deliveryTracking: string;
+  productImage: string;
   processingCookie: string;
   processingAccount: string;
   createdAt: string;
@@ -36,3 +39,4 @@ export type StoreData = {
   users: UserRecord[];
   orders: OrderRecord[];
 };
+

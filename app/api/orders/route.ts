@@ -2,10 +2,11 @@
 import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/session';
 import { createOrder, deleteOrder, getOrders, getOrdersByUsername, updateOrder } from '@/lib/store';
-import type { OrderStatus } from '@/lib/types';
+import type { OrderStatus, VoucherType } from '@/lib/types';
 import { hasAtLeastTwoWords, isValidVietnamPhone } from '@/lib/validators';
 
 const allowedStatuses: OrderStatus[] = ['pending', 'confirmed', 'ordered'];
+const allowedVoucherTypes: VoucherType[] = ['100k', '80k', '60k'];
 const TRACK_API_BASE = 'https://dodanhvu.dpdns.org';
 
 function normalizeCookie(raw: string) {
@@ -14,28 +15,61 @@ function normalizeCookie(raw: string) {
   return value.startsWith('SPC_ST=') ? value : `SPC_ST=${value}`;
 }
 
-function pickDeliveryStatusFromCheckResponse(data: any) {
+function pickFirstOrder(data: any) {
   const orders = Array.isArray(data?.orders) ? data.orders : [];
-  if (orders.length > 0) {
-    const first = orders[0];
-    if (typeof first?.statusText === 'string' && first.statusText.trim()) return first.statusText.trim();
-  }
+  return orders.length > 0 ? orders[0] : null;
+}
+
+function pickDeliveryStatusFromCheckResponse(data: any) {
+  const first = pickFirstOrder(data);
+  if (typeof first?.statusText === 'string' && first.statusText.trim()) return first.statusText.trim();
+  if (typeof first?.status === 'string' && first.status.trim()) return first.status.trim();
   if (typeof data?.warning === 'string' && data.warning.trim()) return data.warning.trim();
   return 'Chưa có dữ liệu giao hàng';
 }
 
 function pickTrackingCodeFromCheckResponse(data: any) {
-  const orders = Array.isArray(data?.orders) ? data.orders : [];
-  if (orders.length > 0) {
-    const first = orders[0];
-    const tracking =
-      first?.trackingCode ||
-      first?.tracking_code ||
-      first?.trackingNumber ||
-      first?.tracking_number ||
-      first?.tracking;
-    if (typeof tracking === 'string' && tracking.trim()) return tracking.trim();
+  const first = pickFirstOrder(data);
+  const tracking = first?.trackingCode || first?.tracking_code || first?.trackingNumber || first?.tracking_number || first?.tracking;
+  if (typeof tracking === 'string' && tracking.trim()) return tracking.trim();
+  return '';
+}
+
+function pickOrderCodeFromCheckResponse(data: any) {
+  const first = pickFirstOrder(data);
+  const code = first?.orderId || first?.order_id || first?.id || first?.orderSN || first?.order_sn;
+  if (typeof code === 'number') return String(code);
+  if (typeof code === 'string' && code.trim()) return code.trim();
+  return '';
+}
+
+function pickOrderAmountFromCheckResponse(data: any) {
+  const first = pickFirstOrder(data);
+  const raw = first?.total || first?.totalText || first?.amount || first?.orderTotal || first?.payAmount;
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return `${raw.toLocaleString('vi-VN')}đ`;
   }
+  if (typeof raw === 'string' && raw.trim()) return raw.trim();
+  return '';
+}
+
+function pickProductImageFromCheckResponse(data: any) {
+  const first = pickFirstOrder(data);
+  const direct =
+    first?.productImage ||
+    first?.product_image ||
+    first?.image ||
+    first?.imageUrl ||
+    first?.image_url ||
+    first?.item_image ||
+    first?.itemImage;
+
+  if (typeof direct === 'string' && direct.trim()) return direct.trim();
+
+  const item = Array.isArray(first?.items) ? first.items[0] : null;
+  const nested = item?.image || item?.imageUrl || item?.image_url || item?.thumbnail;
+  if (typeof nested === 'string' && nested.trim()) return nested.trim();
+
   return '';
 }
 
@@ -58,6 +92,9 @@ async function fetchDeliveryStatusByCookie(cookieInput: string) {
   return {
     status: pickDeliveryStatusFromCheckResponse(data),
     tracking: pickTrackingCodeFromCheckResponse(data),
+    orderCode: pickOrderCodeFromCheckResponse(data),
+    orderAmount: pickOrderAmountFromCheckResponse(data),
+    productImage: pickProductImageFromCheckResponse(data),
     normalizedCookie: String(data?.cookie || cookie),
   };
 }
@@ -116,6 +153,9 @@ export async function POST(request: Request) {
   if (phone && !isValidVietnamPhone(phone)) {
     return NextResponse.json({ error: 'Số điện thoại phải đúng 10 chữ số hoặc để trống.' }, { status: 400 });
   }
+  if (!allowedVoucherTypes.includes(voucherType as VoucherType)) {
+    return NextResponse.json({ error: 'Loại mã không hợp lệ.' }, { status: 400 });
+  }
   if (!/^https?:\/\//.test(productLink)) {
     return NextResponse.json({ error: 'Link sản phẩm phải bắt đầu bằng http hoặc https.' }, { status: 400 });
   }
@@ -130,14 +170,17 @@ export async function POST(request: Request) {
       ward,
       district,
       province,
-      voucherType: voucherType as '100k' | '80k' | '60k',
+      voucherType: voucherType as VoucherType,
       productLink,
       variant,
       quantity,
       status: 'pending',
+      orderCode: '',
+      orderAmount: '',
       deliveryStatus: 'Chưa kiểm tra',
       deliveryCheckedAt: '',
       deliveryTracking: '',
+      productImage: '',
       processingCookie: '',
       processingAccount: '',
       createdAt: new Date().toISOString(),
@@ -158,6 +201,18 @@ export async function PATCH(request: Request) {
   const body = await request.json();
   const orderId = String(body.orderId || '').trim();
   const statusRaw = String(body.status || '').trim();
+
+  const recipientName = body.recipientName === undefined ? undefined : String(body.recipientName || '').trim();
+  const phone = body.phone === undefined ? undefined : String(body.phone || '').trim();
+  const addressLine = body.addressLine === undefined ? undefined : String(body.addressLine || '').trim();
+  const ward = body.ward === undefined ? undefined : String(body.ward || '').trim();
+  const district = body.district === undefined ? undefined : String(body.district || '').trim();
+  const province = body.province === undefined ? undefined : String(body.province || '').trim();
+  const voucherType = body.voucherType === undefined ? undefined : String(body.voucherType || '').trim();
+  const productLink = body.productLink === undefined ? undefined : String(body.productLink || '').trim();
+  const variant = body.variant === undefined ? undefined : String(body.variant || '').trim();
+  const quantity = body.quantity === undefined ? undefined : Number(body.quantity || 0);
+
   const processingCookie = body.processingCookie === undefined ? undefined : String(body.processingCookie || '').trim();
   const processingAccount = body.processingAccount === undefined ? undefined : String(body.processingAccount || '').trim();
   const refreshDelivery = Boolean(body.refreshDeliveryStatus);
@@ -169,9 +224,22 @@ export async function PATCH(request: Request) {
 
   const payload: {
     status?: OrderStatus;
+    recipientName?: string;
+    phone?: string;
+    addressLine?: string;
+    ward?: string;
+    district?: string;
+    province?: string;
+    voucherType?: VoucherType;
+    productLink?: string;
+    variant?: string;
+    quantity?: number;
+    orderCode?: string;
+    orderAmount?: string;
     deliveryStatus?: string;
     deliveryCheckedAt?: string;
     deliveryTracking?: string;
+    productImage?: string;
     processingCookie?: string;
     processingAccount?: string;
   } = {};
@@ -182,6 +250,64 @@ export async function PATCH(request: Request) {
     }
     payload.status = statusRaw as OrderStatus;
   }
+
+  if (recipientName !== undefined) {
+    if (!recipientName || !hasAtLeastTwoWords(recipientName)) {
+      return NextResponse.json({ error: 'Tên người nhận phải có ít nhất 2 từ.' }, { status: 400 });
+    }
+    payload.recipientName = recipientName;
+  }
+
+  if (phone !== undefined) {
+    if (phone && !isValidVietnamPhone(phone)) {
+      return NextResponse.json({ error: 'Số điện thoại phải đúng 10 chữ số hoặc để trống.' }, { status: 400 });
+    }
+    payload.phone = phone;
+  }
+
+  if (addressLine !== undefined) {
+    if (!addressLine) return NextResponse.json({ error: 'Địa chỉ cụ thể không được để trống.' }, { status: 400 });
+    payload.addressLine = addressLine;
+  }
+  if (ward !== undefined) {
+    if (!ward) return NextResponse.json({ error: 'Phường/Xã không được để trống.' }, { status: 400 });
+    payload.ward = ward;
+  }
+  if (district !== undefined) {
+    if (!district) return NextResponse.json({ error: 'Quận/Huyện không được để trống.' }, { status: 400 });
+    payload.district = district;
+  }
+  if (province !== undefined) {
+    if (!province) return NextResponse.json({ error: 'Tỉnh/Thành không được để trống.' }, { status: 400 });
+    payload.province = province;
+  }
+
+  if (voucherType !== undefined) {
+    if (!allowedVoucherTypes.includes(voucherType as VoucherType)) {
+      return NextResponse.json({ error: 'Loại mã không hợp lệ.' }, { status: 400 });
+    }
+    payload.voucherType = voucherType as VoucherType;
+  }
+
+  if (productLink !== undefined) {
+    if (!/^https?:\/\//.test(productLink)) {
+      return NextResponse.json({ error: 'Link sản phẩm phải bắt đầu bằng http hoặc https.' }, { status: 400 });
+    }
+    payload.productLink = productLink;
+  }
+
+  if (variant !== undefined) {
+    if (!variant) return NextResponse.json({ error: 'Phân loại sản phẩm không được để trống.' }, { status: 400 });
+    payload.variant = variant;
+  }
+
+  if (quantity !== undefined) {
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      return NextResponse.json({ error: 'Số lượng phải là số nguyên >= 1.' }, { status: 400 });
+    }
+    payload.quantity = quantity;
+  }
+
   if (processingCookie !== undefined) payload.processingCookie = normalizeCookie(processingCookie);
   if (processingAccount !== undefined) payload.processingAccount = processingAccount;
 
@@ -197,17 +323,33 @@ export async function PATCH(request: Request) {
       const delivery = await fetchDeliveryStatusByCookie(cookieForCheck);
       payload.deliveryStatus = delivery.status;
       payload.deliveryTracking = delivery.tracking;
+      payload.orderCode = delivery.orderCode;
+      payload.orderAmount = delivery.orderAmount;
+      payload.productImage = delivery.productImage;
       payload.deliveryCheckedAt = new Date().toISOString();
       payload.processingCookie = delivery.normalizedCookie;
     }
 
     if (
       !payload.status &&
+      payload.recipientName === undefined &&
+      payload.phone === undefined &&
+      payload.addressLine === undefined &&
+      payload.ward === undefined &&
+      payload.district === undefined &&
+      payload.province === undefined &&
+      payload.voucherType === undefined &&
+      payload.productLink === undefined &&
+      payload.variant === undefined &&
+      payload.quantity === undefined &&
       payload.processingCookie === undefined &&
       payload.processingAccount === undefined &&
       payload.deliveryStatus === undefined &&
       payload.deliveryCheckedAt === undefined &&
-      payload.deliveryTracking === undefined
+      payload.deliveryTracking === undefined &&
+      payload.orderCode === undefined &&
+      payload.orderAmount === undefined &&
+      payload.productImage === undefined
     ) {
       return NextResponse.json({ error: 'Không có dữ liệu cần cập nhật.' }, { status: 400 });
     }
@@ -218,8 +360,6 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không thể cập nhật đơn.' }, { status: 500 });
   }
 }
-
-
 
 export async function DELETE(request: Request) {
   const session = await requireSession();
@@ -240,4 +380,3 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không xóa được đơn.' }, { status: 500 });
   }
 }
-
