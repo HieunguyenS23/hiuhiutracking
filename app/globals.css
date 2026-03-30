@@ -55,8 +55,8 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
 .auth-footnote { margin-top: 12px; font-size: 12px; }
 .app-frame { width: min(100%, var(--container)); margin: 0 auto; }
 .app-frame-admin { width: min(100%, 1380px); }
-.mobile-topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 14px; padding: 14px 18px; background: rgba(255, 252, 248, 0.95); border: 1px solid rgba(220, 194, 171, 0.75); border-radius: 20px; position: sticky; top: 14px; backdrop-filter: blur(14px); z-index: 10; }
-.mobile-tabbar { width: 100%; margin-bottom: 12px; padding: 10px; background: rgba(255, 252, 248, 0.92); border: 1px solid rgba(220, 194, 171, 0.85); border-radius: 24px; box-shadow: 0 10px 24px rgba(95, 57, 23, 0.08); }
+.mobile-topbar { margin-bottom: 14px; padding: 12px 14px; background: rgba(255, 252, 248, 0.95); border: 1px solid rgba(220, 194, 171, 0.75); border-radius: 20px; position: sticky; top: 14px; backdrop-filter: blur(14px); z-index: 10; }
+.mobile-tabbar { width: 100%; margin-bottom: 10px; padding: 10px; background: rgba(255, 252, 248, 0.92); border: 1px solid rgba(220, 194, 171, 0.85); border-radius: 24px; box-shadow: 0 10px 24px rgba(95, 57, 23, 0.08); }
 .hero-card, .phone-card { padding: 20px; }
 .order-form-card { padding-bottom: 28px; }
 .section-head, .order-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -216,3 +216,12 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
 }
 
 
+
+.combined-topbar {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-inline {
+  width: fit-content;
+}

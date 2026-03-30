@@ -14,7 +14,7 @@ export function MobileTabbar({ isAdmin, username }: Props) {
   const profileInitial = (username[0] || 'U').toUpperCase();
 
   return (
-    <>
+    <header className="mobile-topbar combined-topbar">
       <nav className="mobile-tabbar">
         <Link className={pathname.startsWith('/orders') ? 'is-active' : ''} href="/orders/new">Lên đơn</Link>
         {isAdmin ? <Link className={pathname.startsWith('/admin') ? 'is-active' : ''} href="/admin/orders">Quản lí đơn</Link> : null}
@@ -23,15 +23,13 @@ export function MobileTabbar({ isAdmin, username }: Props) {
         </form>
       </nav>
 
-      <header className="mobile-topbar">
-        <div className="profile-card">
-          <div className="profile-avatar">{profileInitial}</div>
-          <div className="profile-meta">
-            <p className="eyebrow">{roleLabel}</p>
-            <strong>@{username}</strong>
-          </div>
+      <div className="profile-card profile-inline">
+        <div className="profile-avatar">{profileInitial}</div>
+        <div className="profile-meta">
+          <p className="eyebrow">{roleLabel}</p>
+          <strong>@{username}</strong>
         </div>
-      </header>
-    </>
+      </div>
+    </header>
   );
 }
