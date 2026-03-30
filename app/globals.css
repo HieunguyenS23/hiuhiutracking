@@ -490,3 +490,125 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
   display: grid;
   gap: 6px;
 }
+
+.icon-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.icon-action-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid #e4c6af;
+  background: #fff4ea;
+  color: #8f4f22;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.icon-action-btn:hover {
+  border-color: #d89563;
+  background: #ffe6d5;
+}
+
+.icon-action-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.delivery-pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.delivery-pending {
+  background: #eef6ff;
+  border-color: #bdd6ff;
+  color: #2361ad;
+}
+
+.delivery-shipping {
+  background: #e9fbff;
+  border-color: #a9e5f1;
+  color: #0c6c85;
+}
+
+.delivery-delivered {
+  background: #e8fff2;
+  border-color: #9de4be;
+  color: #0f8a49;
+}
+
+.delivery-failed {
+  background: #fff1f1;
+  border-color: #f1b2b2;
+  color: #c23838;
+}
+
+.tracking-cell {
+  display: inline-block;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #63422c;
+  font-weight: 700;
+}
+
+.order-status-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.tracking-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  max-width: 180px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid #bdd6ff;
+  background: #eef6ff;
+  color: #2361ad;
+  font-size: 12px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sheet-table td:last-child,
+.sheet-table th:last-child {
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .col-cookie,
+  .col-account {
+    width: 190px;
+  }
+
+  .tracking-cell {
+    max-width: 140px;
+  }
+}

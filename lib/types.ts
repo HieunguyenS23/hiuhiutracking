@@ -26,6 +26,7 @@ export type OrderRecord = {
   status: OrderStatus;
   deliveryStatus: string;
   deliveryCheckedAt: string;
+  deliveryTracking: string;
   processingCookie: string;
   processingAccount: string;
   createdAt: string;

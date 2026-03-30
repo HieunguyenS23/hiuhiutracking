@@ -24,6 +24,21 @@ function pickDeliveryStatusFromCheckResponse(data: any) {
   return 'Chưa có dữ liệu giao hàng';
 }
 
+function pickTrackingCodeFromCheckResponse(data: any) {
+  const orders = Array.isArray(data?.orders) ? data.orders : [];
+  if (orders.length > 0) {
+    const first = orders[0];
+    const tracking =
+      first?.trackingCode ||
+      first?.tracking_code ||
+      first?.trackingNumber ||
+      first?.tracking_number ||
+      first?.tracking;
+    if (typeof tracking === 'string' && tracking.trim()) return tracking.trim();
+  }
+  return '';
+}
+
 async function fetchDeliveryStatusByCookie(cookieInput: string) {
   const cookie = normalizeCookie(cookieInput);
   if (!cookie) throw new Error('Thiếu cookie để kiểm tra trạng thái giao hàng.');
@@ -42,6 +57,7 @@ async function fetchDeliveryStatusByCookie(cookieInput: string) {
 
   return {
     status: pickDeliveryStatusFromCheckResponse(data),
+    tracking: pickTrackingCodeFromCheckResponse(data),
     normalizedCookie: String(data?.cookie || cookie),
   };
 }
@@ -121,6 +137,7 @@ export async function POST(request: Request) {
       status: 'pending',
       deliveryStatus: 'Chưa kiểm tra',
       deliveryCheckedAt: '',
+      deliveryTracking: '',
       processingCookie: '',
       processingAccount: '',
       createdAt: new Date().toISOString(),
@@ -154,6 +171,7 @@ export async function PATCH(request: Request) {
     status?: OrderStatus;
     deliveryStatus?: string;
     deliveryCheckedAt?: string;
+    deliveryTracking?: string;
     processingCookie?: string;
     processingAccount?: string;
   } = {};
@@ -178,6 +196,7 @@ export async function PATCH(request: Request) {
       const cookieForCheck = payload.processingCookie ?? processingCookie ?? '';
       const delivery = await fetchDeliveryStatusByCookie(cookieForCheck);
       payload.deliveryStatus = delivery.status;
+      payload.deliveryTracking = delivery.tracking;
       payload.deliveryCheckedAt = new Date().toISOString();
       payload.processingCookie = delivery.normalizedCookie;
     }
@@ -187,7 +206,8 @@ export async function PATCH(request: Request) {
       payload.processingCookie === undefined &&
       payload.processingAccount === undefined &&
       payload.deliveryStatus === undefined &&
-      payload.deliveryCheckedAt === undefined
+      payload.deliveryCheckedAt === undefined &&
+      payload.deliveryTracking === undefined
     ) {
       return NextResponse.json({ error: 'Không có dữ liệu cần cập nhật.' }, { status: 400 });
     }

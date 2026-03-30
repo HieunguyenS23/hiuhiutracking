@@ -21,6 +21,14 @@ const statusLabel: Record<OrderStatus, string> = {
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
+function detectDeliveryTone(raw: string) {
+  const value = raw.toLowerCase();
+  if (value.includes('giao hàng thành công') || value.includes('đã giao') || value.includes('da giao')) return 'delivered';
+  if (value.includes('hủy') || value.includes('huy') || value.includes('trả') || value.includes('tra hang')) return 'failed';
+  if (value.includes('đang giao') || value.includes('dang giao') || value.includes('đang vận chuyển') || value.includes('van chuyen')) return 'shipping';
+  return 'pending';
+}
+
 export function AdminOrdersTable({ initialOrders }: Props) {
   const [orders, setOrders] = useState(initialOrders);
   const [savingId, setSavingId] = useState('');
@@ -129,53 +137,56 @@ export function AdminOrdersTable({ initialOrders }: Props) {
               <th>Thời gian</th>
               <th>Check</th>
               <th>Trạng thái giao hàng</th>
+              <th>Mã vận đơn</th>
               <th className="col-cookie">Cookie</th>
               <th className="col-account">Account</th>
-              <th>Chi tiết</th>
+              <th>Tác vụ</th>
             </tr>
           </thead>
           <tbody>
             {orders.length === 0 ? (
               <tr>
-                <td className="sheet-empty" colSpan={6}>Chưa có đơn nào.</td>
+                <td className="sheet-empty" colSpan={7}>Chưa có đơn nào.</td>
               </tr>
             ) : null}
-            {orders.map((order) => (
-              <tr key={order.id}>
-                <td>{new Date(order.createdAt).toLocaleString('vi-VN')}</td>
-                <td className="col-check">
-                  <select
-                    className={`status-select status-${order.status}`}
-                    value={order.status}
-                    disabled={savingId === order.id}
-                    onChange={(event) => patchOrder(order.id, { status: event.target.value as OrderStatus })}
-                  >
-                    {statusOptions.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </td>
-                <td>
-                  <div className="delivery-cell">
-                    <strong>{order.deliveryStatus || 'Chưa kiểm tra'}</strong>
-                    <small>{order.deliveryCheckedAt ? new Date(order.deliveryCheckedAt).toLocaleString('vi-VN') : 'Chưa có thời gian'}</small>
-                    <button className="mini-action" disabled={savingId === order.id || !order.processingCookie} onClick={() => refreshDeliveryStatus(order)} type="button">
-                      Cập nhật trạng thái
-                    </button>
-                  </div>
-                </td>
-                <td>
-                  <input
-                    className="admin-inline-input"
-                    value={order.processingCookie || ''}
-                    disabled={savingId === order.id}
-                    placeholder="Nhập cookie"
-                    onChange={(event) => setOrderField(order.id, 'processingCookie', event.target.value)}
-                    onBlur={(event) => commitField(order, 'processingCookie', event.target.value)}
-                  />
-                </td>
-                <td>
-                  <div className="account-cell">
+            {orders.map((order) => {
+              const deliveryStatus = order.deliveryStatus || 'Chưa kiểm tra';
+              const tone = detectDeliveryTone(deliveryStatus);
+              return (
+                <tr key={order.id}>
+                  <td>{new Date(order.createdAt).toLocaleString('vi-VN')}</td>
+                  <td className="col-check">
+                    <select
+                      className={`status-select status-${order.status}`}
+                      value={order.status}
+                      disabled={savingId === order.id}
+                      onChange={(event) => patchOrder(order.id, { status: event.target.value as OrderStatus })}
+                    >
+                      {statusOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <div className="delivery-cell">
+                      <span className={`delivery-pill delivery-${tone}`}>{deliveryStatus}</span>
+                      <small>{order.deliveryCheckedAt ? new Date(order.deliveryCheckedAt).toLocaleString('vi-VN') : 'Chưa có thời gian'}</small>
+                    </div>
+                  </td>
+                  <td>
+                    <span className="tracking-cell">{order.deliveryTracking || 'Chưa có'}</span>
+                  </td>
+                  <td>
+                    <input
+                      className="admin-inline-input"
+                      value={order.processingCookie || ''}
+                      disabled={savingId === order.id}
+                      placeholder="Nhập cookie"
+                      onChange={(event) => setOrderField(order.id, 'processingCookie', event.target.value)}
+                      onBlur={(event) => commitField(order, 'processingCookie', event.target.value)}
+                    />
+                  </td>
+                  <td>
                     <input
                       className="admin-inline-input"
                       value={order.processingAccount || ''}
@@ -184,18 +195,43 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                       onChange={(event) => setOrderField(order.id, 'processingAccount', event.target.value)}
                       onBlur={(event) => commitField(order, 'processingAccount', event.target.value)}
                     />
-                    <button className="mini-action" disabled={savingId === order.id || !order.processingAccount} onClick={() => refreshCookie(order)} type="button">
-                      Cập nhật cookie
-                    </button>
-                  </div>
-                </td>
-                <td>
-                  <button className="mini-action" type="button" onClick={() => setDetailOrder(order)}>
-                    Xem chi tiết
-                  </button>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td>
+                    <div className="icon-actions">
+                      <button
+                        className="icon-action-btn"
+                        title="Cập nhật cookie"
+                        aria-label="Cập nhật cookie"
+                        disabled={savingId === order.id || !order.processingAccount}
+                        onClick={() => refreshCookie(order)}
+                        type="button"
+                      >
+                        ↻
+                      </button>
+                      <button
+                        className="icon-action-btn"
+                        title="Cập nhật trạng thái giao hàng"
+                        aria-label="Cập nhật trạng thái giao hàng"
+                        disabled={savingId === order.id || !order.processingCookie}
+                        onClick={() => refreshDeliveryStatus(order)}
+                        type="button"
+                      >
+                        ⌛
+                      </button>
+                      <button
+                        className="icon-action-btn"
+                        title="Xem chi tiết"
+                        aria-label="Xem chi tiết"
+                        onClick={() => setDetailOrder(order)}
+                        type="button"
+                      >
+                        ⓘ
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -231,9 +267,9 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                 <p>{detailOrder.addressLine}, {detailOrder.ward}, {detailOrder.district}, {detailOrder.province}</p>
               </div>
 
-              <div className="detail-block">
-                <span>Trạng thái giao hàng</span>
-                <p>{detailOrder.deliveryStatus || 'Chưa kiểm tra'}</p>
+              <div className="detail-grid">
+                <div className="detail-item"><span>Trạng thái giao hàng</span><strong>{detailOrder.deliveryStatus || 'Chưa kiểm tra'}</strong></div>
+                <div className="detail-item"><span>Mã vận đơn</span><strong>{detailOrder.deliveryTracking || 'Chưa có'}</strong></div>
               </div>
 
               <div className="detail-block">
