@@ -38,6 +38,35 @@ type TrackingResult = {
   error?: string;
 };
 
+function toTimelineEpoch(raw: string) {
+  const text = String(raw || '').trim();
+  if (!text) return Number.NEGATIVE_INFINITY;
+
+  if (/^\d+$/.test(text)) {
+    const n = Number(text);
+    if (Number.isFinite(n)) {
+      if (n > 1_000_000_000_000) return n;
+      if (n > 1_000_000_000) return n * 1000;
+    }
+  }
+
+  const direct = Date.parse(text);
+  if (Number.isFinite(direct)) return direct;
+
+  const m = text.match(/^(\d{1,2}):(\d{2})(?:\:(\d{2}))?\s+(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) {
+    const hour = Number(m[1]);
+    const minute = Number(m[2]);
+    const second = Number(m[3] || 0);
+    const day = Number(m[4]);
+    const month = Number(m[5]) - 1;
+    const year = Number(m[6]);
+    return new Date(year, month, day, hour, minute, second).getTime();
+  }
+
+  return Number.NEGATIVE_INFINITY;
+}
+
 function normalizeTimeline(result?: TrackingResult | null) {
   if (!result) return [] as TrackingTimelineItem[];
 
@@ -64,7 +93,9 @@ function normalizeTimeline(result?: TrackingResult | null) {
       })
       .filter(Boolean) as TrackingTimelineItem[];
 
-    if (mapped.length > 0) return mapped;
+    if (mapped.length > 0) {
+      return [...mapped].sort((a, b) => toTimelineEpoch(b.time || '') - toTimelineEpoch(a.time || ''));
+    }
   }
 
   return [] as TrackingTimelineItem[];
@@ -122,11 +153,19 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Không tra được hành trình vận đơn.');
 
+      const result = data.result || {};
+      const currentStatus = String(result?.status || result?.latest?.desc || '').trim();
+
       setTrackingDetail({
         tracking,
         productName: order.productName || 'Chưa có',
-        result: data.result || {},
+        result,
       });
+
+      if (currentStatus) {
+        setOrders((prev) => prev.map((item) => (item.id === order.id ? { ...item, deliveryStatus: currentStatus } : item)));
+      }
+
       setMessage('Đã tải hành trình vận đơn thành công.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không tra được hành trình vận đơn.');
@@ -238,6 +277,3 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
     </section>
   );
 }
-
-
-
