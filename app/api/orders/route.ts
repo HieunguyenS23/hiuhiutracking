@@ -53,22 +53,9 @@ function pickOrderAmountFromCheckResponse(data: any) {
   return '';
 }
 
-function pickMatchedOrderFromCheckResponse(data: any, order: any) {
+function pickMatchedOrderFromCheckResponse(data: any) {
   const orders = Array.isArray(data?.orders) ? data.orders : [];
   if (orders.length === 0) return null;
-
-  const byOrderId = String(order?.orderCode || '').trim();
-  if (byOrderId) {
-    const found = orders.find((item: any) => String(item?.orderId || item?.order_id || item?.id || '').trim() === byOrderId);
-    if (found) return found;
-  }
-
-  const byTracking = String(order?.deliveryTracking || '').trim();
-  if (byTracking) {
-    const found = orders.find((item: any) => String(item?.tracking || item?.trackingCode || item?.tracking_number || '').trim() === byTracking);
-    if (found) return found;
-  }
-
   return orders[0];
 }
 
@@ -79,7 +66,7 @@ function pickProductNameFromOrderItem(item: any) {
 }
 
 function pickProductNameFromCheckResponse(data: any, order: any) {
-  const matchedOrder = pickMatchedOrderFromCheckResponse(data, order);
+  const matchedOrder = pickMatchedOrderFromCheckResponse(data);
   if (!matchedOrder) return '';
 
   const products = Array.isArray(matchedOrder?.products) ? matchedOrder.products : [];
@@ -198,7 +185,7 @@ export async function POST(request: Request) {
   const variant = String(body.variant || '').trim();
   const quantity = Number(body.quantity || 0);
 
-  if (!recipientName || !addressLine || !ward || !district || !province || !voucherType || !productLink || !variant || quantity < 1) {
+  if (!recipientName || !addressLine || !ward || !district || !province || !voucherType || !productLink || quantity < 1) {
     return NextResponse.json({ error: 'Vui lòng điền đủ thông tin đơn hàng.' }, { status: 400 });
   }
   if (!hasAtLeastTwoWords(recipientName)) {
@@ -349,7 +336,6 @@ export async function PATCH(request: Request) {
   }
 
   if (variant !== undefined) {
-    if (!variant) return NextResponse.json({ error: 'Phân loại sản phẩm không được để trống.' }, { status: 400 });
     payload.variant = variant;
   }
 
@@ -430,4 +416,6 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không xóa được đơn.' }, { status: 500 });
   }
 }
+
+
 

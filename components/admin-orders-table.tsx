@@ -29,7 +29,7 @@ const ONE_HOUR_MS = 60 * 60 * 1000;
 
 function detectDeliveryTone(raw: string) {
   const value = raw.toLowerCase();
-  if (value.includes('giao hàng thành công') || value.includes('đã giao') || value.includes('da giao')) return 'delivered';
+  if (value.includes('giao hàng thành công') || value.includes('đã giao') || value.includes('da giao') || value.includes('order delivered')) return 'delivered';
   if (value.includes('hủy') || value.includes('huy') || value.includes('trả') || value.includes('tra hang')) return 'failed';
   if (value.includes('đang giao') || value.includes('dang giao') || value.includes('đang vận chuyển') || value.includes('van chuyen')) return 'shipping';
   return 'pending';
@@ -352,6 +352,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                 <div className="detail-item"><span>Mã đơn hàng</span><strong>{detailDraft.orderCode || 'Chưa có'}</strong></div>
                 <div className="detail-item"><span>Thành tiền</span><strong>{detailDraft.orderAmount || 'Chưa có'}</strong></div>
                 <div className="detail-item"><span>Username</span><strong>@{detailDraft.username}</strong></div>
+                <div className="detail-item"><span>Tên sản phẩm</span><strong>{detailDraft.productName || 'Chưa có'}</strong></div>
 
                 <label className="detail-item edit-field"><span>Người nhận</span><input value={detailDraft.recipientName} onChange={(e) => setDetailDraft({ ...detailDraft, recipientName: e.target.value })} /></label>
                 <label className="detail-item edit-field"><span>SĐT</span><input value={detailDraft.phone} placeholder="Để trống = ảo" onChange={(e) => setDetailDraft({ ...detailDraft, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })} /></label>
@@ -404,4 +405,5 @@ export function AdminOrdersTable({ initialOrders }: Props) {
     </>
   );
 }
+
 

@@ -11,7 +11,7 @@ const statusLabel: Record<string, string> = {
 
 function detectDeliveryTone(raw: string) {
   const value = raw.toLowerCase();
-  if (value.includes('giao hàng thành công') || value.includes('đã giao') || value.includes('da giao')) return 'delivered';
+  if (value.includes('giao hàng thành công') || value.includes('đã giao') || value.includes('da giao') || value.includes('order delivered')) return 'delivered';
   if (value.includes('hủy') || value.includes('huy') || value.includes('trả') || value.includes('tra hang')) return 'failed';
   if (value.includes('đang giao') || value.includes('dang giao') || value.includes('đang vận chuyển') || value.includes('van chuyen')) return 'shipping';
   return 'pending';
@@ -107,7 +107,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
               <div className="order-row order-top-row">
                 <strong>{order.recipientName}</strong>
                 <div className="order-status-wrap">
-                  <span className={`status-pill status-${order.status}`}>{statusLabel[order.status] || 'Chờ xác nhận'}</span>
+                  <span className="muted">Admin:</span><span className={`status-pill status-${order.status}`}>{statusLabel[order.status] || 'Chờ xác nhận'}</span>
                   {order.deliveryTracking ? <span className="tracking-tag">{order.deliveryTracking}</span> : null}
                   {order.deliveryTracking ? (
                     <button
@@ -128,11 +128,11 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
               </div>
 
               <div className="order-row muted">
-                <span className={`delivery-pill delivery-${deliveryTone}`}>{order.deliveryStatus || 'Chưa kiểm tra'}</span>
+                <span className="muted">Trạng thái giao hàng:</span><span className={`delivery-pill delivery-${deliveryTone}`}>{order.deliveryStatus || 'Chưa kiểm tra'}</span>
               </div>
               <p>{order.addressLine}, {order.ward}, {order.district}, {order.province}</p>
               <p>{order.productName ? `Tên sản phẩm: ${order.productName}` : 'Tên sản phẩm: Chưa có'}</p>
-              <p>{order.variant} · SL {order.quantity}</p>
+              <p>{order.variant ? `${order.variant} · SL ${order.quantity}` : `SL ${order.quantity}`}</p>
               <a className="order-link" href={order.productLink} target="_blank" rel="noreferrer">Mở link sản phẩm</a>
               <div className="order-row muted">
                 <span>{new Date(order.createdAt).toLocaleString('vi-VN')}</span>
@@ -180,3 +180,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
     </section>
   );
 }
+
+
+
+

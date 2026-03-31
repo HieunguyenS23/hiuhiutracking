@@ -103,10 +103,55 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
   z-index: 1;
 }
 
-.sheet-empty {
-  text-align: center;
-  color: var(--muted);
-  padding: 18px;
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(42, 27, 15, 0.45);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.modal-card {
+  width: min(920px, 100%);
+  max-height: min(86vh, 920px);
+  overflow: auto;
+  border-radius: 22px;
+  background: #fff9f3;
+  border: 1px solid #e7cdb8;
+  box-shadow: 0 24px 56px rgba(78, 43, 18, 0.24);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #f1dcc9;
+  position: sticky;
+  top: 0;
+  background: #fff9f3;
+  z-index: 1;
+}
+
+.modal-head h3 {
+  margin: 0;
+  line-height: 1.2;
+}
+
+.modal-body {
+  padding: 16px 18px 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.modal-muted {
+  color: #987458;
+  font-size: 12px;
 }
 
 .tabbar-logout-form {
@@ -446,9 +491,10 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
 }
 
 .delivery-delivered {
-  background: #e8fff2;
-  border-color: #9de4be;
-  color: #0f8a49;
+  background: #0f8a49;
+  border-color: #0b6a36;
+  color: #ffffff;
+  font-weight: 800;
 }
 
 .delivery-failed {
@@ -576,11 +622,8 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
   font-weight: 800;
 }
 
-@media (max-width: 760px) {
-  .mobile-tabbar-admin {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
+
+
 
 .modal-actions {
   display: inline-flex;
@@ -657,6 +700,23 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
 }
 
 @media (max-width: 760px) {
+  .modal-card {
+    border-radius: 18px;
+    max-height: 90vh;
+  }
+
+  .modal-head {
+    padding: 14px 14px;
+  }
+
+  .modal-body {
+    padding: 14px 14px 16px;
+  }
+
+  .mobile-tabbar-admin {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .customer-order-layout {
     grid-template-columns: 1fr;
   }
