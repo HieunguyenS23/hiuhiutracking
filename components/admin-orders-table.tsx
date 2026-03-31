@@ -43,6 +43,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
   const [detailOrder, setDetailOrder] = useState<OrderRecord | null>(null);
   const [detailDraft, setDetailDraft] = useState<OrderRecord | null>(null);
   const [detailSaving, setDetailSaving] = useState(false);
+  const [modalActionLoading, setModalActionLoading] = useState('');
   const ordersRef = useRef<OrderRecord[]>(initialOrders);
   const batchRunningRef = useRef(false);
 
@@ -164,21 +165,6 @@ export function AdminOrdersTable({ initialOrders }: Props) {
     return () => window.clearInterval(timer);
   }, []);
 
-  function setOrderField(orderId: string, field: 'processingCookie' | 'processingAccount', value: string) {
-    setOrders((prev) => prev.map((item) => (item.id === orderId ? { ...item, [field]: value } : item)));
-    if (detailOrder?.id === orderId) {
-      const updated = { ...detailOrder, [field]: value };
-      setDetailOrder(updated);
-      setDetailDraft(updated);
-    }
-  }
-
-  async function commitField(order: OrderRecord, field: 'processingCookie' | 'processingAccount', value: string) {
-    const normalized = value.trim();
-    if (normalized === (order[field] || '').trim()) return;
-    await patchOrder(order.id, { [field]: normalized }, 'Đã cập nhật thông tin xử lí.');
-  }
-
   async function refreshCookie(order: OrderRecord) {
     await patchOrder(order.id, {
       processingAccount: order.processingAccount,
@@ -214,6 +200,8 @@ export function AdminOrdersTable({ initialOrders }: Props) {
         productLink: detailDraft.productLink,
         variant: detailDraft.variant,
         quantity: detailDraft.quantity,
+        processingCookie: detailDraft.processingCookie,
+        processingAccount: detailDraft.processingAccount,
       },
       'Đã lưu chỉnh sửa đơn hàng.'
     );
@@ -222,6 +210,31 @@ export function AdminOrdersTable({ initialOrders }: Props) {
       setDetailDraft(updated);
     }
     setDetailSaving(false);
+  }
+
+  async function runModalAction(type: 'cookie' | 'status') {
+    if (!detailDraft) return;
+    setModalActionLoading(type);
+
+    const payload =
+      type === 'cookie'
+        ? {
+            processingAccount: detailDraft.processingAccount,
+            refreshCookieFromAccount: true,
+          }
+        : {
+            processingCookie: detailDraft.processingCookie,
+            refreshDeliveryStatus: true,
+          };
+
+    const successText = type === 'cookie' ? 'Đã cập nhật cookie mới thành công.' : 'Đã cập nhật trạng thái giao hàng.';
+    const updated = await patchOrder(detailDraft.id, payload, successText);
+
+    if (updated) {
+      setDetailOrder(updated);
+      setDetailDraft(updated);
+    }
+    setModalActionLoading('');
   }
 
   const total = useMemo(() => orders.length, [orders.length]);
@@ -243,22 +256,19 @@ export function AdminOrdersTable({ initialOrders }: Props) {
         <table className="sheet-table">
           <thead>
             <tr>
-              <th>Thời gian</th>
               <th className="col-order-code">Mã đơn hàng</th>
               <th>Người nhận</th>
               <th>Check</th>
               <th>Thành tiền</th>
-              <th>Trạng thái giao hàng</th>
+              <th className="col-delivery">Trạng thái giao hàng</th>
               <th>Mã vận đơn</th>
-              <th className="col-cookie">Cookie</th>
-              <th className="col-account">Account</th>
               <th>Tác vụ</th>
             </tr>
           </thead>
           <tbody>
             {orders.length === 0 ? (
               <tr>
-                <td className="sheet-empty" colSpan={10}>Chưa có đơn nào.</td>
+                <td className="sheet-empty" colSpan={7}>Chưa có đơn nào.</td>
               </tr>
             ) : null}
             {orders.map((order) => {
@@ -266,7 +276,6 @@ export function AdminOrdersTable({ initialOrders }: Props) {
               const tone = detectDeliveryTone(deliveryStatus);
               return (
                 <tr key={order.id}>
-                  <td>{new Date(order.createdAt).toLocaleString('vi-VN')}</td>
                   <td className="col-order-code"><span className="order-code-chip">{order.orderCode || 'Chưa có'}</span></td>
                   <td>{order.recipientName}</td>
                   <td className="col-check">
@@ -282,7 +291,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                     </select>
                   </td>
                   <td><strong className="amount-text">{order.orderAmount || 'Chưa có'}</strong></td>
-                  <td>
+                  <td className="col-delivery">
                     <div className="delivery-cell">
                       <span className={`delivery-pill delivery-${tone}`}>{deliveryStatus}</span>
                       <small>{order.deliveryCheckedAt ? new Date(order.deliveryCheckedAt).toLocaleString('vi-VN') : 'Chưa có thời gian'}</small>
@@ -290,26 +299,6 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                   </td>
                   <td>
                     <span className="tracking-cell">{order.deliveryTracking || 'Chưa có'}</span>
-                  </td>
-                  <td>
-                    <input
-                      className="admin-inline-input"
-                      value={order.processingCookie || ''}
-                      disabled={savingId === order.id}
-                      placeholder="Nhập cookie"
-                      onChange={(event) => setOrderField(order.id, 'processingCookie', event.target.value)}
-                      onBlur={(event) => commitField(order, 'processingCookie', event.target.value)}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="admin-inline-input"
-                      value={order.processingAccount || ''}
-                      disabled={savingId === order.id}
-                      placeholder="user|pass|SPC_F"
-                      onChange={(event) => setOrderField(order.id, 'processingAccount', event.target.value)}
-                      onBlur={(event) => commitField(order, 'processingAccount', event.target.value)}
-                    />
                   </td>
                   <td>
                     <div className="icon-actions">
@@ -388,15 +377,24 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                 <div className="detail-item"><span>Mã vận đơn</span><strong>{detailDraft.deliveryTracking || 'Chưa có'}</strong></div>
               </div>
 
-              <div className="detail-grid">
-                <div className="detail-item wide">
+              <div className="detail-grid editable-grid">
+                <label className="detail-item edit-field">
                   <span>Cookie xử lí</span>
-                  <p>{detailDraft.processingCookie || '(trống)'}</p>
-                </div>
-                <div className="detail-item wide">
+                  <input value={detailDraft.processingCookie || ''} placeholder="SPC_ST=..." onChange={(e) => setDetailDraft({ ...detailDraft, processingCookie: e.target.value })} />
+                </label>
+                <label className="detail-item edit-field">
                   <span>Account xử lí</span>
-                  <p>{detailDraft.processingAccount || '(trống)'}</p>
-                </div>
+                  <input value={detailDraft.processingAccount || ''} placeholder="user|pass|SPC_F" onChange={(e) => setDetailDraft({ ...detailDraft, processingAccount: e.target.value })} />
+                </label>
+              </div>
+
+              <div className="modal-actions">
+                <button className="mini-action" onClick={() => runModalAction('cookie')} disabled={modalActionLoading === 'cookie' || !detailDraft.processingAccount} type="button">
+                  {modalActionLoading === 'cookie' ? 'Đang cập nhật...' : 'Cập nhật cookie'}
+                </button>
+                <button className="mini-action" onClick={() => runModalAction('status')} disabled={modalActionLoading === 'status' || !detailDraft.processingCookie} type="button">
+                  {modalActionLoading === 'status' ? 'Đang cập nhật...' : 'Cập nhật trạng thái giao'}
+                </button>
               </div>
             </div>
           </div>
@@ -405,5 +403,3 @@ export function AdminOrdersTable({ initialOrders }: Props) {
     </>
   );
 }
-
-

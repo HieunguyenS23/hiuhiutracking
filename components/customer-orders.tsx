@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { OrderRecord } from '@/lib/types';
 
 const statusLabel: Record<string, string> = {
@@ -12,7 +12,7 @@ const statusLabel: Record<string, string> = {
 function detectDeliveryTone(raw: string) {
   const value = raw.toLowerCase();
   if (value.includes('giao hàng thành công') || value.includes('đã giao') || value.includes('da giao') || value.includes('order delivered')) return 'delivered';
-  if (value.includes('hủy') || value.includes('huy') || value.includes('trả') || value.includes('tra hang')) return 'failed';
+  if (value.includes('hủy') || value.includes('huy') || value.includes('trả') || value.includes('tra hang') || value.includes('không thành công')) return 'failed';
   if (value.includes('đang giao') || value.includes('dang giao') || value.includes('đang vận chuyển') || value.includes('van chuyen')) return 'shipping';
   return 'pending';
 }
@@ -22,19 +22,53 @@ type Props = {
   initialError?: string;
 };
 
+type TrackingTimelineItem = {
+  time?: string;
+  title?: string;
+  description?: string;
+};
+
 type TrackingResult = {
   tracking?: string;
   status?: string;
-  timeline?: Array<{ time?: string; description?: string }>;
+  timeline?: TrackingTimelineItem[];
   error?: string;
 };
+
+function normalizeTimeline(result?: TrackingResult | null) {
+  if (!result) return [] as TrackingTimelineItem[];
+
+  const sources = [
+    result.timeline,
+    (result as any).histories,
+    (result as any).history,
+    (result as any).events,
+  ];
+
+  for (const source of sources) {
+    if (!Array.isArray(source)) continue;
+    const mapped = source
+      .map((item: any) => {
+        const time = String(item?.time || item?.datetime || item?.updatedAt || item?.timestamp || '').trim();
+        const title = String(item?.title || item?.status || item?.description || item?.desc || '').trim();
+        const description = String(item?.detail || item?.location || item?.address || item?.note || '').trim();
+        if (!time && !title && !description) return null;
+        return { time, title: title || description || 'Cập nhật trạng thái', description };
+      })
+      .filter(Boolean) as TrackingTimelineItem[];
+
+    if (mapped.length > 0) return mapped;
+  }
+
+  return [] as TrackingTimelineItem[];
+}
 
 export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
   const [orders, setOrders] = useState(initialOrders);
   const [error, setError] = useState(initialError);
   const [message, setMessage] = useState('');
   const [trackingLoading, setTrackingLoading] = useState('');
-  const [trackingDetail, setTrackingDetail] = useState<{ tracking: string; result: TrackingResult } | null>(null);
+  const [trackingDetail, setTrackingDetail] = useState<{ tracking: string; productName: string; result: TrackingResult } | null>(null);
 
   useEffect(() => {
     if (!message && !error) return;
@@ -68,7 +102,10 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
     };
   }, []);
 
-  async function openTracking(tracking: string) {
+  async function openTracking(order: OrderRecord) {
+    const tracking = order.deliveryTracking || '';
+    if (!tracking) return;
+
     setTrackingLoading(tracking);
     setMessage('');
     setError('');
@@ -78,7 +115,11 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Không tra được hành trình vận đơn.');
 
-      setTrackingDetail({ tracking, result: data.result || {} });
+      setTrackingDetail({
+        tracking,
+        productName: order.productName || 'Chưa có',
+        result: data.result || {},
+      });
       setMessage('Đã tải hành trình vận đơn thành công.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không tra được hành trình vận đơn.');
@@ -86,6 +127,8 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
       setTrackingLoading('');
     }
   }
+
+  const timelineItems = useMemo(() => normalizeTimeline(trackingDetail?.result), [trackingDetail]);
 
   return (
     <section className="phone-card">
@@ -107,13 +150,13 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
               <div className="order-row order-top-row">
                 <strong>{order.recipientName}</strong>
                 <div className="order-status-wrap">
-                  <span className="muted">Admin:</span><span className={`status-pill status-${order.status}`}>{statusLabel[order.status] || 'Chờ xác nhận'}</span>
+                  <span className={`order-code-chip order-chip-admin status-${order.status}`}>Admin: {statusLabel[order.status] || 'Chờ xác nhận'}</span>
                   {order.deliveryTracking ? <span className="tracking-tag">{order.deliveryTracking}</span> : null}
                   {order.deliveryTracking ? (
                     <button
                       className="mini-action"
                       type="button"
-                      onClick={() => openTracking(order.deliveryTracking)}
+                      onClick={() => openTracking(order)}
                       disabled={trackingLoading === order.deliveryTracking}
                     >
                       {trackingLoading === order.deliveryTracking ? 'Đang tra...' : 'Xem hành trình'}
@@ -128,10 +171,10 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
               </div>
 
               <div className="order-row muted">
-                <span className="muted">Trạng thái giao hàng:</span><span className={`delivery-pill delivery-${deliveryTone}`}>{order.deliveryStatus || 'Chưa kiểm tra'}</span>
+                <span className={`order-code-chip order-chip-delivery delivery-${deliveryTone}`}>Trạng thái giao hàng: {order.deliveryStatus || 'Chưa kiểm tra'}</span>
               </div>
               <p>{order.addressLine}, {order.ward}, {order.district}, {order.province}</p>
-              <p>{order.productName ? `Tên sản phẩm: ${order.productName}` : 'Tên sản phẩm: Chưa có'}</p>
+              <p>{order.productName || 'Chưa có'}</p>
               <p>{order.variant ? `${order.variant} · SL ${order.quantity}` : `SL ${order.quantity}`}</p>
               <a className="order-link" href={order.productLink} target="_blank" rel="noreferrer">Mở link sản phẩm</a>
               <div className="order-row muted">
@@ -155,17 +198,22 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
             </div>
             <div className="modal-body modern">
               <div className="detail-item">
+                <span>Tên sản phẩm</span>
+                <strong>{trackingDetail.productName || 'Chưa có'}</strong>
+              </div>
+              <div className="detail-item">
                 <span>Trạng thái hiện tại</span>
                 <strong>{trackingDetail.result?.status || trackingDetail.result?.error || 'Chưa có dữ liệu'}</strong>
               </div>
               <div className="detail-block">
-                <span>Timeline</span>
-                {Array.isArray(trackingDetail.result?.timeline) && trackingDetail.result.timeline.length > 0 ? (
-                  <ul className="timeline-list">
-                    {trackingDetail.result.timeline.map((item, idx) => (
+                <span>Lịch sử giao hàng ({timelineItems.length})</span>
+                {timelineItems.length > 0 ? (
+                  <ul className="timeline-list timeline-rich">
+                    {timelineItems.map((item, idx) => (
                       <li key={`${item.time || ''}-${idx}`}>
                         <strong>{item.time || '--:--'}</strong>
-                        <p>{item.description || 'Không có mô tả'}</p>
+                        <p className="timeline-title">{item.title || 'Cập nhật trạng thái'}</p>
+                        {item.description ? <p>{item.description}</p> : null}
                       </li>
                     ))}
                   </ul>
@@ -180,7 +228,3 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
     </section>
   );
 }
-
-
-
-
