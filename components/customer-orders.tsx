@@ -26,6 +26,9 @@ type TrackingTimelineItem = {
   time?: string;
   title?: string;
   description?: string;
+  currentLoc?: string;
+  nextLoc?: string;
+  reason?: string;
 };
 
 type TrackingResult = {
@@ -43,6 +46,7 @@ function normalizeTimeline(result?: TrackingResult | null) {
     (result as any).histories,
     (result as any).history,
     (result as any).events,
+    (result as any).records,
   ];
 
   for (const source of sources) {
@@ -53,7 +57,10 @@ function normalizeTimeline(result?: TrackingResult | null) {
         const title = String(item?.title || item?.status || item?.description || item?.desc || '').trim();
         const description = String(item?.detail || item?.location || item?.address || item?.note || '').trim();
         if (!time && !title && !description) return null;
-        return { time, title: title || description || 'Cập nhật trạng thái', description };
+        const currentLoc = String(item?.currentLoc || item?.current_location || '').trim();
+        const nextLoc = String(item?.nextLoc || item?.next_location || '').trim();
+        const reason = String(item?.reason || '').trim();
+        return { time, title: title || description || 'Cập nhật trạng thái', description, currentLoc, nextLoc, reason };
       })
       .filter(Boolean) as TrackingTimelineItem[];
 
@@ -214,6 +221,9 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
                         <strong>{item.time || '--:--'}</strong>
                         <p className="timeline-title">{item.title || 'Cập nhật trạng thái'}</p>
                         {item.description ? <p>{item.description}</p> : null}
+                        {item.currentLoc ? <p><strong>Từ:</strong> {item.currentLoc}</p> : null}
+                        {item.nextLoc ? <p><strong>Đến:</strong> {item.nextLoc}</p> : null}
+                        {item.reason ? <p><strong>Lý do:</strong> {item.reason}</p> : null}
                       </li>
                     ))}
                   </ul>
@@ -228,3 +238,6 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
     </section>
   );
 }
+
+
+
