@@ -133,6 +133,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
       }
     };
 
+    load();
     const timer = window.setInterval(load, 20000);
     return () => {
       stopped = true;

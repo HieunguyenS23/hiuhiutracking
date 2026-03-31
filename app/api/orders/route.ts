@@ -212,6 +212,24 @@ async function fetchDeliveryStatusByCookie(cookieInput: string) {
   };
 }
 
+async function syncDeliveryStatusOnRead(order: any) {
+  const tracking = String(order?.deliveryTracking || '').trim();
+  if (!tracking) return order;
+
+  const latestStatus = await fetchCurrentStatusByTracking(tracking);
+  if (!latestStatus || latestStatus === String(order?.deliveryStatus || '').trim()) return order;
+
+  try {
+    const updated = await updateOrder(String(order.id), {
+      deliveryStatus: latestStatus,
+      deliveryCheckedAt: new Date().toISOString(),
+      deliveryTracking: tracking,
+    });
+    return updated;
+  } catch {
+    return { ...order, deliveryStatus: latestStatus };
+  }
+}
 async function refreshCookieByAccount(accountInput: string) {
   const input = String(accountInput || '').trim();
   if (!input) throw new Error('Thiếu thông tin account để cập nhật cookie.');
@@ -237,7 +255,8 @@ export async function GET() {
   const session = await requireSession();
   try {
     const orders = session.role === 'admin' ? await getOrders() : await getOrdersByUsername(session.username);
-    return NextResponse.json({ orders });
+    const synced = await Promise.all(orders.map((order) => syncDeliveryStatusOnRead(order)));
+    return NextResponse.json({ orders: synced });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không tải được danh sách đơn.' }, { status: 503 });
   }
@@ -492,4 +511,6 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không xóa được đơn.' }, { status: 500 });
   }
 }
+
+
 
