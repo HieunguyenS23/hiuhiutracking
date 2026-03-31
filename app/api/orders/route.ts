@@ -123,18 +123,14 @@ function pickOrderAmountFromCheckResponse(data: any) {
   return '';
 }
 
-function pickMatchedOrderFromCheckResponse(data: any) {
-  return pickFirstOrder(data);
-}
-
 function pickProductNameFromOrderItem(item: any) {
   const value = item?.name || item?.title || item?.productName || item?.product_name;
   if (typeof value === 'string' && value.trim()) return value.trim();
   return '';
 }
 
-function pickProductNameFromCheckResponse(data: any, order: any) {
-  const matchedOrder = pickMatchedOrderFromCheckResponse(data);
+function pickProductNameFromCheckResponse(data: any) {
+  const matchedOrder = pickFirstOrder(data);
   if (!matchedOrder) return '';
 
   const products = Array.isArray(matchedOrder?.products) ? matchedOrder.products : [];
@@ -142,11 +138,8 @@ function pickProductNameFromCheckResponse(data: any, order: any) {
     .map((item: any) => pickProductNameFromOrderItem(item))
     .filter((name: string) => Boolean(name));
 
-  if (productNames.length > 0) {
-    return productNames.join(' | ');
-  }
+  if (productNames.length > 0) return productNames.join(' | ');
 
-  // Fallback an toàn nếu API thay đổi format
   const direct =
     matchedOrder?.productName ||
     matchedOrder?.product_name ||
@@ -157,29 +150,6 @@ function pickProductNameFromCheckResponse(data: any, order: any) {
 
   if (typeof direct === 'string' && direct.trim()) return direct.trim();
   return '';
-}
-
-async function enrichProductNameByCookie(order: any) {
-  const cookie = normalizeCookie(String(order?.processingCookie || ''));
-  if (!cookie) return order;
-
-  try {
-    const response = await fetch(`${TRACK_API_BASE}/api/check`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cookie }),
-      cache: 'no-store',
-    });
-    if (!response.ok) return order;
-
-    const data = await response.json().catch(() => ({}));
-    const productName = pickProductNameFromCheckResponse(data, order);
-    if (!productName) return order;
-
-    return { ...order, productName };
-  } catch {
-    return order;
-  }
 }
 
 async function fetchDeliveryStatusByCookie(cookieInput: string) {
@@ -203,6 +173,7 @@ async function fetchDeliveryStatusByCookie(cookieInput: string) {
     tracking: pickTrackingCodeFromCheckResponse(data),
     orderCode: pickOrderCodeFromCheckResponse(data),
     orderAmount: pickOrderAmountFromCheckResponse(data),
+    productName: pickProductNameFromCheckResponse(data),
     normalizedCookie: String(data?.cookie || cookie),
   };
 }
@@ -232,8 +203,7 @@ export async function GET() {
   const session = await requireSession();
   try {
     const orders = session.role === 'admin' ? await getOrders() : await getOrdersByUsername(session.username);
-    const enrichedOrders = await Promise.all(orders.map((order) => enrichProductNameByCookie(order)));
-    return NextResponse.json({ orders: enrichedOrders });
+    return NextResponse.json({ orders });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không tải được danh sách đơn.' }, { status: 503 });
   }
@@ -291,6 +261,7 @@ export async function POST(request: Request) {
       deliveryTracking: '',
       processingCookie: '',
       processingAccount: '',
+      productName: '',
       createdAt: new Date().toISOString(),
     });
 
@@ -349,6 +320,7 @@ export async function PATCH(request: Request) {
     deliveryTracking?: string;
     processingCookie?: string;
     processingAccount?: string;
+    productName?: string;
   } = {};
 
   if (statusRaw) {
@@ -431,6 +403,7 @@ export async function PATCH(request: Request) {
       payload.deliveryTracking = delivery.tracking;
       payload.orderCode = delivery.orderCode;
       payload.orderAmount = delivery.orderAmount;
+      if (delivery.productName) payload.productName = delivery.productName;
       payload.deliveryCheckedAt = new Date().toISOString();
       payload.processingCookie = delivery.normalizedCookie;
     }
@@ -453,7 +426,8 @@ export async function PATCH(request: Request) {
       payload.deliveryCheckedAt === undefined &&
       payload.deliveryTracking === undefined &&
       payload.orderCode === undefined &&
-      payload.orderAmount === undefined
+      payload.orderAmount === undefined &&
+      payload.productName === undefined
     ) {
       return NextResponse.json({ error: 'Không có dữ liệu cần cập nhật.' }, { status: 400 });
     }
@@ -484,7 +458,3 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không xóa được đơn.' }, { status: 500 });
   }
 }
-
-
-
-
