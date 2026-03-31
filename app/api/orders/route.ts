@@ -15,9 +15,79 @@ function normalizeCookie(raw: string) {
   return value.startsWith('SPC_ST=') ? value : `SPC_ST=${value}`;
 }
 
+function toEpochMs(raw: any) {
+  if (raw === null || raw === undefined) return Number.POSITIVE_INFINITY;
+
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    if (raw > 1_000_000_000_000) return raw;
+    if (raw > 1_000_000_000) return raw * 1000;
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const text = String(raw).trim();
+  if (!text) return Number.POSITIVE_INFINITY;
+
+  if (/^\d+$/.test(text)) {
+    const n = Number(text);
+    if (Number.isFinite(n)) {
+      if (n > 1_000_000_000_000) return n;
+      if (n > 1_000_000_000) return n * 1000;
+    }
+  }
+
+  const direct = Date.parse(text);
+  if (Number.isFinite(direct)) return direct;
+
+  const m = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (m) {
+    const day = Number(m[1]);
+    const month = Number(m[2]) - 1;
+    const year = Number(m[3]);
+    const hour = Number(m[4] || 0);
+    const minute = Number(m[5] || 0);
+    const second = Number(m[6] || 0);
+    return new Date(year, month, day, hour, minute, second).getTime();
+  }
+
+  return Number.POSITIVE_INFINITY;
+}
+
 function pickFirstOrder(data: any) {
   const orders = Array.isArray(data?.orders) ? data.orders : [];
-  return orders.length > 0 ? orders[0] : null;
+  if (orders.length === 0) return null;
+
+  let chosen = orders[0];
+  let chosenTs = toEpochMs(
+    chosen?.createTime ??
+      chosen?.create_time ??
+      chosen?.orderCreateTime ??
+      chosen?.order_create_time ??
+      chosen?.ctime ??
+      chosen?.createdAt ??
+      chosen?.created_at ??
+      chosen?.time
+  );
+
+  for (let i = 1; i < orders.length; i += 1) {
+    const item = orders[i];
+    const ts = toEpochMs(
+      item?.createTime ??
+        item?.create_time ??
+        item?.orderCreateTime ??
+        item?.order_create_time ??
+        item?.ctime ??
+        item?.createdAt ??
+        item?.created_at ??
+        item?.time
+    );
+
+    if (ts < chosenTs) {
+      chosen = item;
+      chosenTs = ts;
+    }
+  }
+
+  return chosen;
 }
 
 function pickDeliveryStatusFromCheckResponse(data: any) {
@@ -54,9 +124,7 @@ function pickOrderAmountFromCheckResponse(data: any) {
 }
 
 function pickMatchedOrderFromCheckResponse(data: any) {
-  const orders = Array.isArray(data?.orders) ? data.orders : [];
-  if (orders.length === 0) return null;
-  return orders[0];
+  return pickFirstOrder(data);
 }
 
 function pickProductNameFromOrderItem(item: any) {
@@ -416,6 +484,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không xóa được đơn.' }, { status: 500 });
   }
 }
+
 
 
 
