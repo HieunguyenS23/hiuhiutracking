@@ -830,3 +830,155 @@ input:focus, select:focus { outline: 2px solid rgba(255, 122, 69, 0.22); border-
   color: #2d1f4b;
   font-weight: 700;
 }
+
+/* Mobile typography compact tuning */
+@media (max-width: 900px) {
+  .hero-card, .phone-card, .auth-card {
+    padding: 16px;
+  }
+
+  .section-head {
+    margin-bottom: 12px;
+  }
+
+  .section-head h2 {
+    font-size: 24px;
+    line-height: 1.12;
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+  }
+
+  .order-list {
+    gap: 10px;
+  }
+
+  .order-card {
+    padding: 12px;
+    border-radius: 16px;
+    gap: 8px;
+  }
+
+  .order-card p {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .order-top-row strong {
+    font-size: 20px;
+    line-height: 1.2;
+  }
+
+  .order-code-chip,
+  .tracking-tag,
+  .chip,
+  .status-pill,
+  .delivery-pill,
+  .order-chip-admin,
+  .order-chip-delivery {
+    min-height: 28px;
+    padding: 0 9px;
+    font-size: 11px;
+    line-height: 1.1;
+  }
+
+  .mini-action {
+    min-height: 34px;
+    font-size: 12px;
+    padding: 0 10px;
+  }
+
+  .order-link {
+    font-size: 15px;
+  }
+
+  .amount-text {
+    font-size: 20px;
+    line-height: 1.15;
+  }
+
+  .muted,
+  .order-row.muted {
+    font-size: 12px;
+  }
+
+  .modal-head h3 {
+    font-size: 24px;
+  }
+
+  .modal-body {
+    gap: 10px;
+  }
+
+  .detail-item strong {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 640px) {
+  .auth-shell, .app-shell {
+    padding: 14px 10px 124px;
+  }
+
+  .hero-card, .phone-card, .auth-card {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .section-head h2 {
+    font-size: 22px;
+  }
+
+  .order-top-row strong {
+    font-size: 18px;
+  }
+
+  .order-card p {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .order-status-wrap {
+    gap: 6px;
+  }
+
+  .order-code-chip,
+  .tracking-tag,
+  .chip,
+  .status-pill,
+  .delivery-pill,
+  .order-chip-admin,
+  .order-chip-delivery {
+    font-size: 10.5px;
+    min-height: 26px;
+    padding: 0 8px;
+  }
+
+  .mini-action {
+    min-height: 32px;
+    font-size: 11px;
+    padding: 0 9px;
+  }
+
+  .amount-text {
+    font-size: 18px;
+  }
+
+  .order-link {
+    font-size: 14px;
+  }
+
+  .modal-card {
+    border-radius: 14px;
+  }
+
+  .modal-head {
+    padding: 12px;
+  }
+
+  .modal-body {
+    padding: 12px;
+  }
+}
