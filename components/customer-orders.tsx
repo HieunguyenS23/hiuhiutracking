@@ -149,12 +149,12 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
     setError('');
 
     try {
-      const response = await fetch(`/api/tracking?tracking=${encodeURIComponent(tracking)}`, { cache: 'no-store' });
+      const response = await fetch(`/api/tracking?tracking=${encodeURIComponent(tracking)}&orderId=${encodeURIComponent(order.id)}`, { cache: 'no-store' });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Không tra được hành trình vận đơn.');
 
       const result = data.result || {};
-      const currentStatus = String(result?.status || result?.latest?.desc || '').trim();
+      const currentStatus = String(data?.currentStatus || result?.status || result?.latest?.desc || '').trim();
 
       setTrackingDetail({
         tracking,

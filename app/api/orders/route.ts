@@ -152,6 +152,37 @@ function pickProductNameFromCheckResponse(data: any) {
   return '';
 }
 
+
+async function fetchCurrentStatusByTracking(tracking: string) {
+  const trackingValue = String(tracking || '').trim();
+  if (!trackingValue) return '';
+
+  try {
+    const response = await fetch(`${TRACK_API_BASE}/api/spx`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trackings: [trackingValue] }),
+      cache: 'no-store',
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) return '';
+
+    const result = Array.isArray(data?.results)
+      ? data.results.find((item: any) => String(item?.tracking || '').trim() === trackingValue) || data.results[0]
+      : null;
+
+    const status = String(result?.status || result?.latest?.desc || '').trim();
+    if (status) return status;
+
+    const records = Array.isArray(result?.records) ? result.records : [];
+    const fallback = String(records[0]?.desc || records[0]?.status || '').trim();
+    return fallback;
+  } catch {
+    return '';
+  }
+}
+
 async function fetchDeliveryStatusByCookie(cookieInput: string) {
   const cookie = normalizeCookie(cookieInput);
   if (!cookie) throw new Error('Thiếu cookie để kiểm tra trạng thái giao hàng.');
@@ -168,9 +199,12 @@ async function fetchDeliveryStatusByCookie(cookieInput: string) {
     throw new Error(String(data?.error || 'Không lấy được trạng thái giao hàng từ API.'));
   }
 
+  const tracking = pickTrackingCodeFromCheckResponse(data);
+  const detailedStatus = await fetchCurrentStatusByTracking(tracking);
+
   return {
-    status: pickDeliveryStatusFromCheckResponse(data),
-    tracking: pickTrackingCodeFromCheckResponse(data),
+    status: detailedStatus || pickDeliveryStatusFromCheckResponse(data),
+    tracking,
     orderCode: pickOrderCodeFromCheckResponse(data),
     orderAmount: pickOrderAmountFromCheckResponse(data),
     productName: pickProductNameFromCheckResponse(data),
@@ -458,3 +492,4 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không xóa được đơn.' }, { status: 500 });
   }
 }
+
