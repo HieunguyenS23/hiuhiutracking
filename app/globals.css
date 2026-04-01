@@ -815,6 +815,12 @@ input:focus, select:focus { outline: 2px solid rgba(15, 142, 122, 0.2); border-c
   align-items: center;
 }
 
+.account-password-line {
+  font-size: 12px;
+  color: #36557e;
+  word-break: break-word;
+}
+
 .order-card-rich {
   border: 1px solid #efd8c3;
   background: linear-gradient(160deg, #fff8f2 0%, #fff4ea 100%);
@@ -1021,7 +1027,7 @@ input:focus, select:focus { outline: 2px solid rgba(15, 142, 122, 0.2); border-c
 
 .app-frame-admin .sheet-table th:nth-child(1),
 .app-frame-admin .sheet-table td:nth-child(1) {
-  width: 180px;
+  width: 120px;
 }
 
 .app-frame-admin .sheet-table th:nth-child(2),
@@ -1041,17 +1047,37 @@ input:focus, select:focus { outline: 2px solid rgba(15, 142, 122, 0.2); border-c
 
 .app-frame-admin .sheet-table th:nth-child(5),
 .app-frame-admin .sheet-table td:nth-child(5) {
-  width: 320px;
+  width: 130px;
 }
 
 .app-frame-admin .sheet-table th:nth-child(6),
 .app-frame-admin .sheet-table td:nth-child(6) {
-  width: 180px;
+  width: 360px;
 }
 
 .app-frame-admin .sheet-table th:nth-child(7),
 .app-frame-admin .sheet-table td:nth-child(7) {
-  width: 170px;
+  width: 190px;
+}
+
+.app-frame-admin .sheet-table th:nth-child(8),
+.app-frame-admin .sheet-table td:nth-child(8) {
+  width: 130px;
+}
+
+.app-frame-admin .sheet-table td:nth-child(5) .amount-text {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.app-frame-admin .sheet-table td:nth-child(6) .delivery-pill {
+  font-size: 15px;
+  padding: 6px 12px;
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .timeline-rich li {

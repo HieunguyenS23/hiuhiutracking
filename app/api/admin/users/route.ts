@@ -35,7 +35,7 @@ export async function GET(request: Request) {
       const unreadBySender = await getUnreadMessageCountBySender(session.username);
       return NextResponse.json({
         users: users.map((u) => ({
-          ...sanitizeUser(u),
+          ...sanitizeUser(u, true),
           unreadCount: Number(unreadBySender[u.username] || 0),
         })),
       });
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       role,
       createdAt: new Date().toISOString(),
     });
-    return NextResponse.json({ ok: true, user: sanitizeUser(user) });
+    return NextResponse.json({ ok: true, user: sanitizeUser(user, true) });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không tạo được tài khoản.' }, { status: 500 });
   }
@@ -148,7 +148,7 @@ export async function PATCH(request: Request) {
     const profile = await getUserProfile(targetUsername);
     if (!user) throw new Error('Không tìm thấy tài khoản sau cập nhật.');
 
-    return NextResponse.json({ ok: true, user: sanitizeUser(user), profile });
+    return NextResponse.json({ ok: true, user: sanitizeUser(user, true), profile });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không cập nhật được tài khoản.' }, { status: 500 });
   }

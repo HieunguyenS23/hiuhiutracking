@@ -61,7 +61,6 @@ export function AdminUsersManager({ initialUsers }: Props) {
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState<'admin' | 'customer'>('customer');
-  const [showPassword, setShowPassword] = useState(false);
 
   const total = useMemo(() => users.length, [users.length]);
 
@@ -87,7 +86,6 @@ export function AdminUsersManager({ initialUsers }: Props) {
       setDetail(null);
       return;
     }
-    setShowPassword(false);
 
     let stopped = false;
     const load = async () => {
@@ -222,6 +220,8 @@ export function AdminUsersManager({ initialUsers }: Props) {
       if (!response.ok) throw new Error(data.error || 'Không cập nhật được mật khẩu.');
       setMessage('Đã đổi mật khẩu.');
       showToast('Đã đổi mật khẩu.', 'success');
+      setDetail((prev) => (prev ? { ...prev, user: { ...prev.user, passwordPlain: pass.trim() } } : prev));
+      setUsers((prev) => prev.map((u) => (u.username === selectedUsername ? { ...u, passwordPlain: pass.trim() } : u)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không cập nhật được mật khẩu.');
       showToast(err instanceof Error ? err.message : 'Không cập nhật được mật khẩu.', 'error');
@@ -352,6 +352,7 @@ export function AdminUsersManager({ initialUsers }: Props) {
                     ) : null}
                   </strong>
                   <span>{user.role} · {new Date(user.createdAt).toLocaleDateString('vi-VN')}</span>
+                  <span className="account-password-line">MK: {user.passwordPlain || 'Chưa lưu'}</span>
                 </button>
               ))}
             </div>
@@ -385,17 +386,7 @@ export function AdminUsersManager({ initialUsers }: Props) {
                 <div className="form-grid compact">
                   <label>
                     <span>Mật khẩu hiện tại</span>
-                    <div className="inline-with-action">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={detail.user.passwordPlain || 'Chưa lưu'}
-                        readOnly
-                        className="readonly-input"
-                      />
-                      <button className="mini-action" type="button" onClick={() => setShowPassword((prev) => !prev)}>
-                        {showPassword ? 'Ẩn' : 'Hiện'}
-                      </button>
-                    </div>
+                    <input type="text" value={detail.user.passwordPlain || 'Chưa lưu'} readOnly className="readonly-input" />
                   </label>
                   <label>
                     <span>Tên đăng ký</span>
