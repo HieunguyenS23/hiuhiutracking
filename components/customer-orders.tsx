@@ -179,7 +179,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
   const timelineItems = useMemo(() => normalizeTimeline(trackingDetail?.result), [trackingDetail]);
 
   return (
-    <section className="phone-card">
+    <section className="phone-card ui-polish-history">
       <div className="section-head">
         <div>
           <p className="eyebrow">Lịch sử đơn hàng</p>
@@ -227,6 +227,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
                 </div>
               ) : null}
               <p>{order.addressLine}, {order.ward}, {order.district}, {order.province}</p>
+              {!isCanceled ? <p className="product-name-line">{order.productName || 'Tên sản phẩm sẽ được admin cập nhật'}</p> : null}
               <p>{order.variant ? `${order.variant} · SL ${order.quantity}` : `SL ${order.quantity}`}</p>
               <a className="order-link" href={order.productLink} target="_blank" rel="noreferrer">Mở link sản phẩm</a>
               <div className="order-row muted">
@@ -240,27 +241,34 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
 
       {trackingDetail ? (
         <div className="modal-backdrop" onClick={() => setTrackingDetail(null)}>
-          <div className="modal-card" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-head modern">
+          <div className="modal-card modal-card-clean tracking-modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head modern modal-head-clean">
               <div>
                 <p className="eyebrow">Vận đơn</p>
                 <h3>{trackingDetail.tracking}</h3>
               </div>
               <button className="mini-action modal-close" onClick={() => setTrackingDetail(null)} type="button">Đóng</button>
             </div>
-            <div className="modal-body modern">
-              <div className="detail-item">
-                <span>Tên sản phẩm</span>
-                <strong>{trackingDetail.productName || 'Chưa có'}</strong>
+            <div className="modal-body modern modal-body-clean">
+              <div className="tracking-summary-grid">
+                <div className="tracking-summary-item">
+                  <span>Tên sản phẩm</span>
+                  <strong>{trackingDetail.productName || 'Chưa có'}</strong>
+                </div>
+                <div className="tracking-summary-item">
+                  <span>Trạng thái hiện tại</span>
+                  <strong>{trackingDetail.result?.status || trackingDetail.result?.error || 'Chưa có dữ liệu'}</strong>
+                </div>
+                <div className="tracking-summary-item">
+                  <span>Số mốc hành trình</span>
+                  <strong>{timelineItems.length}</strong>
+                </div>
               </div>
-              <div className="detail-item">
-                <span>Trạng thái hiện tại</span>
-                <strong>{trackingDetail.result?.status || trackingDetail.result?.error || 'Chưa có dữ liệu'}</strong>
-              </div>
-              <div className="detail-block">
-                <span>Lịch sử giao hàng ({timelineItems.length})</span>
+
+              <div className="detail-block tracking-timeline-block">
+                <span>Lịch sử giao hàng</span>
                 {timelineItems.length > 0 ? (
-                  <ul className="timeline-list timeline-rich">
+                  <ul className="timeline-list timeline-rich timeline-clean">
                     {timelineItems.map((item, idx) => (
                       <li key={`${item.time || ''}-${idx}`}>
                         <strong>{item.time || '--:--'}</strong>

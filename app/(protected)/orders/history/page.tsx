@@ -1,6 +1,6 @@
 ﻿import { CustomerOrders } from '@/components/customer-orders';
 import { requireSession } from '@/lib/session';
-import { getOrdersByUsername } from '@/lib/store';
+import { getOrders, getOrdersByUsername } from '@/lib/store';
 
 export default async function OrderHistoryPage() {
   const session = await requireSession();
@@ -9,9 +9,9 @@ export default async function OrderHistoryPage() {
   let loadError = '';
 
   try {
-    recentOrders = await getOrdersByUsername(session.username);
+    recentOrders = session.role === 'admin' ? await getOrders() : await getOrdersByUsername(session.username);
   } catch (error) {
-    loadError = error instanceof Error ? error.message : 'Không tải được lịch sử đơn.';
+    loadError = error instanceof Error ? error.message : 'Không t?i du?c l?ch s? don.';
   }
 
   return (
@@ -20,3 +20,4 @@ export default async function OrderHistoryPage() {
     </div>
   );
 }
+

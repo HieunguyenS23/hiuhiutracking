@@ -40,6 +40,8 @@ function createDefaultProfile(username: string): UserProfileRecord {
     address: '',
     bio: '',
     avatarColor: pickColorByUsername(username),
+    avatarImage: '',
+    lastSeenAnnouncementsAt: '',
     updatedAt: new Date().toISOString(),
   };
 }
@@ -130,8 +132,12 @@ async function ensureDatabaseReady() {
     address TEXT NOT NULL DEFAULT '',
     bio TEXT NOT NULL DEFAULT '',
     avatar_color TEXT NOT NULL DEFAULT '',
+    avatar_image TEXT NOT NULL DEFAULT '',
+    last_seen_announcements_at TEXT NOT NULL DEFAULT '',
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`;
+  await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS avatar_image TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS last_seen_announcements_at TEXT NOT NULL DEFAULT ''`;
 
   await sql`CREATE TABLE IF NOT EXISTS admin_announcements (
     id TEXT PRIMARY KEY,
@@ -177,8 +183,8 @@ async function ensureDatabaseReady() {
   for (const username of seededUsers) {
     const profile = createDefaultProfile(username);
     await sql`
-      INSERT INTO user_profiles (username, display_name, phone, address, bio, avatar_color, updated_at)
-      VALUES (${username}, ${profile.displayName}, ${profile.phone}, ${profile.address}, ${profile.bio}, ${profile.avatarColor}, ${profile.updatedAt})
+      INSERT INTO user_profiles (username, display_name, phone, address, bio, avatar_color, avatar_image, last_seen_announcements_at, updated_at)
+      VALUES (${username}, ${profile.displayName}, ${profile.phone}, ${profile.address}, ${profile.bio}, ${profile.avatarColor}, ${profile.avatarImage}, ${profile.lastSeenAnnouncementsAt}, ${profile.updatedAt})
       ON CONFLICT (username) DO NOTHING
     `;
   }
@@ -211,6 +217,8 @@ async function readFileStore() {
       address: String(profile.address || ''),
       bio: String(profile.bio || ''),
       avatarColor: String(profile.avatarColor || pickColorByUsername(String(profile.username || ''))),
+      avatarImage: String(profile.avatarImage || ''),
+      lastSeenAnnouncementsAt: String(profile.lastSeenAnnouncementsAt || ''),
       updatedAt: String(profile.updatedAt || new Date().toISOString()),
     })).filter((profile) => Boolean(profile.username));
     parsed.announcements = (parsed.announcements || []).map((item) => ({
@@ -293,6 +301,8 @@ function mapProfile(row: Record<string, unknown>): UserProfileRecord {
     address: String(row.address || ''),
     bio: String(row.bio || ''),
     avatarColor: String(row.avatar_color || pickColorByUsername(String(row.username || ''))),
+    avatarImage: String(row.avatar_image || ''),
+    lastSeenAnnouncementsAt: String(row.last_seen_announcements_at || ''),
     updatedAt: new Date(String(row.updated_at || Date.now())).toISOString(),
   };
 }
@@ -346,8 +356,8 @@ export async function createUser(user: UserRecord) {
     `;
     const profile = createDefaultProfile(user.username);
     await sql`
-      INSERT INTO user_profiles (username, display_name, phone, address, bio, avatar_color, updated_at)
-      VALUES (${profile.username}, ${profile.displayName}, ${profile.phone}, ${profile.address}, ${profile.bio}, ${profile.avatarColor}, ${profile.updatedAt})
+      INSERT INTO user_profiles (username, display_name, phone, address, bio, avatar_color, avatar_image, last_seen_announcements_at, updated_at)
+      VALUES (${profile.username}, ${profile.displayName}, ${profile.phone}, ${profile.address}, ${profile.bio}, ${profile.avatarColor}, ${profile.avatarImage}, ${profile.lastSeenAnnouncementsAt}, ${profile.updatedAt})
       ON CONFLICT (username) DO NOTHING
     `;
     return user;
@@ -659,7 +669,7 @@ export async function getUserProfile(username: string) {
   if (sql) {
     await ensureDatabaseReady();
     const rows = await sql`
-      SELECT username, display_name, phone, address, bio, avatar_color, updated_at
+      SELECT username, display_name, phone, address, bio, avatar_color, avatar_image, last_seen_announcements_at, updated_at
       FROM user_profiles
       WHERE username = ${username}
       LIMIT 1
@@ -671,8 +681,8 @@ export async function getUserProfile(username: string) {
 
     const fallback = createDefaultProfile(username);
     await sql`
-      INSERT INTO user_profiles (username, display_name, phone, address, bio, avatar_color, updated_at)
-      VALUES (${fallback.username}, ${fallback.displayName}, ${fallback.phone}, ${fallback.address}, ${fallback.bio}, ${fallback.avatarColor}, ${fallback.updatedAt})
+      INSERT INTO user_profiles (username, display_name, phone, address, bio, avatar_color, avatar_image, last_seen_announcements_at, updated_at)
+      VALUES (${fallback.username}, ${fallback.displayName}, ${fallback.phone}, ${fallback.address}, ${fallback.bio}, ${fallback.avatarColor}, ${fallback.avatarImage}, ${fallback.lastSeenAnnouncementsAt}, ${fallback.updatedAt})
     `;
     return fallback;
   }
@@ -690,7 +700,7 @@ export async function getUserProfile(username: string) {
 
 export async function updateUserProfile(
   username: string,
-  payload: Partial<Pick<UserProfileRecord, 'displayName' | 'phone' | 'address' | 'bio' | 'avatarColor'>>
+  payload: Partial<Pick<UserProfileRecord, 'displayName' | 'phone' | 'address' | 'bio' | 'avatarColor' | 'avatarImage' | 'lastSeenAnnouncementsAt'>>
 ) {
   if (!username) throw new Error('Thiếu username.');
 
@@ -702,6 +712,9 @@ export async function updateUserProfile(
     address: payload.address === undefined ? current.address : String(payload.address || '').trim(),
     bio: payload.bio === undefined ? current.bio : String(payload.bio || '').trim(),
     avatarColor: payload.avatarColor === undefined ? current.avatarColor : String(payload.avatarColor || '').trim(),
+    avatarImage: payload.avatarImage === undefined ? current.avatarImage : String(payload.avatarImage || '').trim(),
+    lastSeenAnnouncementsAt:
+      payload.lastSeenAnnouncementsAt === undefined ? current.lastSeenAnnouncementsAt : String(payload.lastSeenAnnouncementsAt || '').trim(),
     updatedAt: new Date().toISOString(),
   };
 
@@ -711,14 +724,16 @@ export async function updateUserProfile(
   if (sql) {
     await ensureDatabaseReady();
     await sql`
-      INSERT INTO user_profiles (username, display_name, phone, address, bio, avatar_color, updated_at)
-      VALUES (${next.username}, ${next.displayName}, ${next.phone}, ${next.address}, ${next.bio}, ${next.avatarColor}, ${next.updatedAt})
+      INSERT INTO user_profiles (username, display_name, phone, address, bio, avatar_color, avatar_image, last_seen_announcements_at, updated_at)
+      VALUES (${next.username}, ${next.displayName}, ${next.phone}, ${next.address}, ${next.bio}, ${next.avatarColor}, ${next.avatarImage}, ${next.lastSeenAnnouncementsAt}, ${next.updatedAt})
       ON CONFLICT (username) DO UPDATE
       SET display_name = EXCLUDED.display_name,
           phone = EXCLUDED.phone,
           address = EXCLUDED.address,
           bio = EXCLUDED.bio,
           avatar_color = EXCLUDED.avatar_color,
+          avatar_image = EXCLUDED.avatar_image,
+          last_seen_announcements_at = EXCLUDED.last_seen_announcements_at,
           updated_at = EXCLUDED.updated_at
     `;
     return next;
@@ -764,6 +779,105 @@ export async function createAnnouncement(record: AnnouncementRecord) {
   if (process.env.NODE_ENV === 'development') await writeFileStore(store);
   else memoryStore.__portalStore = store;
   return record;
+}
+
+export async function deleteAnnouncement(announcementId: string) {
+  if (!announcementId) throw new Error('Thiếu mã thông báo.');
+
+  if (sql) {
+    await ensureDatabaseReady();
+    await sql`DELETE FROM admin_announcements WHERE id = ${announcementId}`;
+    return { ok: true };
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  store.announcements = store.announcements.filter((item) => item.id !== announcementId);
+  if (process.env.NODE_ENV === 'development') await writeFileStore(store);
+  else memoryStore.__portalStore = store;
+  return { ok: true };
+}
+
+export async function markAnnouncementsSeen(username: string) {
+  if (!username) return { ok: true };
+  const now = new Date().toISOString();
+  await updateUserProfile(username, { lastSeenAnnouncementsAt: now });
+  return { ok: true };
+}
+
+export async function getUnreadAnnouncementsCount(username: string) {
+  if (!username) return 0;
+  const profile = await getUserProfile(username);
+  const lastSeen = profile.lastSeenAnnouncementsAt || '';
+
+  if (sql) {
+    await ensureDatabaseReady();
+    if (!lastSeen) {
+      const rows = await sql`
+        SELECT COUNT(*)::int AS total
+        FROM admin_announcements
+        WHERE created_by <> ${username}
+      `;
+      return Number((rows[0] as Record<string, unknown>)?.total || 0);
+    }
+
+    const rows = await sql`
+      SELECT COUNT(*)::int AS total
+      FROM admin_announcements
+      WHERE created_by <> ${username}
+        AND created_at > ${lastSeen}::timestamptz
+    `;
+    return Number((rows[0] as Record<string, unknown>)?.total || 0);
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  return store.announcements.filter((item) => item.createdBy !== username && (!lastSeen || item.createdAt > lastSeen)).length;
+}
+
+export async function renameUsername(oldUsername: string, newUsername: string) {
+  const from = String(oldUsername || '').trim().toLowerCase();
+  const to = String(newUsername || '').trim().toLowerCase();
+  if (!from || !to) throw new Error('Thiếu username.');
+  if (from === to) return { ok: true };
+
+  if (sql) {
+    await ensureDatabaseReady();
+    const existing = await sql`SELECT username FROM users WHERE username = ${to} LIMIT 1`;
+    if (existing.length > 0) throw new Error('Username mới đã tồn tại.');
+
+    await sql`UPDATE users SET username = ${to} WHERE username = ${from}`;
+    await sql`UPDATE user_profiles SET username = ${to}, display_name = CASE WHEN display_name = ${from} THEN ${to} ELSE display_name END WHERE username = ${from}`;
+    await sql`UPDATE orders SET username = ${to} WHERE username = ${from}`;
+    await sql`UPDATE admin_user_messages SET from_username = ${to} WHERE from_username = ${from}`;
+    await sql`UPDATE admin_user_messages SET to_username = ${to} WHERE to_username = ${from}`;
+    await sql`UPDATE admin_announcements SET created_by = ${to} WHERE created_by = ${from}`;
+    return { ok: true };
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  if (store.users.some((item) => item.username === to)) throw new Error('Username mới đã tồn tại.');
+
+  store.users = store.users.map((item) => (item.username === from ? { ...item, username: to } : item));
+  store.profiles = store.profiles.map((item) =>
+    item.username === from
+      ? {
+          ...item,
+          username: to,
+          displayName: item.displayName === from ? to : item.displayName,
+          updatedAt: new Date().toISOString(),
+        }
+      : item
+  );
+  store.orders = store.orders.map((item) => (item.username === from ? { ...item, username: to } : item));
+  store.messages = store.messages.map((item) => ({
+    ...item,
+    from: item.from === from ? to : item.from,
+    to: item.to === from ? to : item.to,
+  }));
+  store.announcements = store.announcements.map((item) => (item.createdBy === from ? { ...item, createdBy: to } : item));
+
+  if (process.env.NODE_ENV === 'development') await writeFileStore(store);
+  else memoryStore.__portalStore = store;
+  return { ok: true };
 }
 
 export async function getMessages(options: { username: string; role: 'admin' | 'customer'; target?: string }) {

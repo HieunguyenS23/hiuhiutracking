@@ -9,22 +9,35 @@ type Props = {
   username: string;
 };
 
+type UnreadPayload = {
+  unreadMessages: number;
+  unreadAnnouncements: number;
+  total: number;
+};
+
 export function MobileTabbar({ isAdmin, username }: Props) {
   const pathname = usePathname();
-  const [unread, setUnread] = useState(0);
-  const roleLabel = isAdmin ? 'Admin' : 'Khách hàng';
+  const [unread, setUnread] = useState<UnreadPayload>({ unreadMessages: 0, unreadAnnouncements: 0, total: 0 });
+  const roleLabel = isAdmin ? 'Admin' : 'Khach hang';
   const profileInitial = (username[0] || 'U').toUpperCase();
 
   useEffect(() => {
     let stopped = false;
+
     const loadUnread = async () => {
       try {
-        const response = await fetch('/api/messages/unread-count', { cache: 'no-store' });
+        const response = await fetch('/api/notifications/unread-count', { cache: 'no-store' });
         const data = await response.json();
         if (!response.ok) return;
-        if (!stopped) setUnread(Number(data.unread || 0));
+        if (!stopped) {
+          setUnread({
+            unreadMessages: Number(data.unreadMessages || 0),
+            unreadAnnouncements: Number(data.unreadAnnouncements || 0),
+            total: Number(data.total || 0),
+          });
+        }
       } catch {
-        if (!stopped) setUnread(0);
+        if (!stopped) setUnread({ unreadMessages: 0, unreadAnnouncements: 0, total: 0 });
       }
     };
 
@@ -38,37 +51,45 @@ export function MobileTabbar({ isAdmin, username }: Props) {
 
   return (
     <header className="mobile-topbar combined-topbar">
-      <div className="profile-card profile-inline">
-        <div className="profile-avatar">{profileInitial}</div>
-        <div className="profile-meta">
-          <p className="eyebrow">{roleLabel}</p>
-          <strong>@{username}</strong>
+      <div className="profile-row">
+        <div className="profile-card profile-inline">
+          <div className="profile-avatar">{profileInitial}</div>
+          <div className="profile-meta">
+            <p className="eyebrow">{roleLabel}</p>
+            <strong>@{username}</strong>
+          </div>
         </div>
+        <form action="/api/auth/logout" method="post" className="logout-inline-form">
+          <button className="logout-inline-btn" type="submit">Dang xuat</button>
+        </form>
       </div>
 
       <nav className={`mobile-tabbar ${isAdmin ? 'mobile-tabbar-admin' : ''}`}>
-        <Link className={pathname.startsWith('/orders') && !pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/new">Lên đơn</Link>
+        <Link className={pathname.startsWith('/orders') && !pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/new">Len don</Link>
         {isAdmin ? (
           <>
-            <Link className={pathname.startsWith('/admin/orders') ? 'is-active' : ''} href="/admin/orders">Quản lí đơn</Link>
-            <Link className={pathname.startsWith('/admin/users') ? 'is-active' : ''} href="/admin/users">Tài khoản</Link>
+            <Link className={pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/history">Lich su</Link>
+            <Link className={`tab-link-with-badge ${pathname.startsWith('/admin/orders') ? 'is-active' : ''}`} href="/admin/orders">
+              Quan li don
+            </Link>
+            <Link className={`tab-link-with-badge ${pathname.startsWith('/admin/users') ? 'is-active' : ''}`} href="/admin/users">
+              Tai khoan
+              {unread.unreadMessages > 0 ? <span className="tab-badge">{unread.unreadMessages > 99 ? '99+' : unread.unreadMessages}</span> : null}
+            </Link>
             <Link className={`tab-link-with-badge ${pathname.startsWith('/hub') ? 'is-active' : ''}`} href="/hub">
-              Trung tâm
-              {unread > 0 ? <span className="tab-badge">{unread > 99 ? '99+' : unread}</span> : null}
+              Trung tam
+              {unread.unreadAnnouncements > 0 ? <span className="tab-badge">{unread.unreadAnnouncements > 99 ? '99+' : unread.unreadAnnouncements}</span> : null}
             </Link>
           </>
         ) : (
           <>
-            <Link className={pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/history">Lịch sử</Link>
+            <Link className={pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/history">Lich su</Link>
             <Link className={`tab-link-with-badge ${pathname.startsWith('/hub') ? 'is-active' : ''}`} href="/hub">
-              Trung tâm
-              {unread > 0 ? <span className="tab-badge">{unread > 99 ? '99+' : unread}</span> : null}
+              Trung tam
+              {unread.total > 0 ? <span className="tab-badge">{unread.total > 99 ? '99+' : unread.total}</span> : null}
             </Link>
           </>
         )}
-        <form action="/api/auth/logout" method="post" className="tabbar-logout-form">
-          <button className="tabbar-logout" type="submit">Đăng xuất</button>
-        </form>
       </nav>
     </header>
   );

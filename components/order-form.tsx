@@ -157,14 +157,15 @@ export function OrderForm() {
   }
 
   return (
-    <section className="phone-card order-form-card">
+    <section className="phone-card order-form-card ui-polish-order-form">
       <div className="section-head">
         <div>
           <p className="eyebrow">Lên đơn</p>
           <h2>Điền thông tin đặt hàng</h2>
         </div>
+        <span className="chip chip-soft">Form mới</span>
       </div>
-      <div className="form-grid compact">
+      <div className="form-grid compact order-form-grid-modern">
         <label><span>Tên người nhận</span><input value={recipientName} onChange={(event) => setRecipientName(event.target.value)} placeholder="Nguyễn Văn A" /></label>
         <label><span>Số điện thoại</span><input value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="09xxxxxxxx (có thể để trống)" /></label>
 

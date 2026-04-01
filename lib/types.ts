@@ -14,6 +14,8 @@ export type UserProfileRecord = {
   address: string;
   bio: string;
   avatarColor: string;
+  avatarImage: string;
+  lastSeenAnnouncementsAt: string;
   updatedAt: string;
 };
 

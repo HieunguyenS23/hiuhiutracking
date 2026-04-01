@@ -16,7 +16,7 @@ export default async function AdminOrdersPage() {
 
   return (
     <div className="page-stack page-stack-spaced">
-      <section className="phone-card">
+      <section className="phone-card ui-polish-admin-orders">
         {loadError ? <div className="inline-error">{loadError}</div> : null}
         {!loadError ? <AdminOrdersTable initialOrders={orders} /> : null}
       </section>
