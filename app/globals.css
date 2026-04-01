@@ -2011,12 +2011,32 @@ input:focus, select:focus { outline: 2px solid rgba(15, 142, 122, 0.2); border-c
 
 .announcements-customer-stack {
   display: grid;
+  grid-template-columns: 1fr;
   gap: 14px;
+  width: 100%;
+  max-width: 860px;
 }
 
-.announcements-chat-card {
-  max-width: 760px;
+.announcements-customer-stack > * {
   width: 100%;
+}
+
+.announcements-notice-card,
+.announcements-chat-card {
+  max-width: 100%;
+  width: 100%;
+}
+
+.customer-announcement-list {
+  max-height: 260px;
+  min-height: 180px;
+  overflow: auto;
+}
+
+.customer-chat-list {
+  max-height: 300px;
+  min-height: 190px;
+  overflow: auto;
 }
 
 @media (max-width: 760px) {
@@ -2034,8 +2054,14 @@ input:focus, select:focus { outline: 2px solid rgba(15, 142, 122, 0.2); border-c
     grid-column: span 1;
   }
 
-  .announcements-chat-card {
-    max-width: none;
+  .customer-announcement-list {
+    max-height: 220px;
+    min-height: 150px;
+  }
+
+  .customer-chat-list {
+    max-height: 250px;
+    min-height: 160px;
   }
 }
 

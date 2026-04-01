@@ -231,11 +231,11 @@ export function AnnouncementsCenter({ isAdmin, username }: Props) {
         </article>
       ) : (
         <div className="announcements-customer-stack">
-          <article className="hub-card hub-announcements">
+          <article className="hub-card hub-announcements announcements-notice-card">
             <div className="hub-card-head">
               <h3>Thông báo chung từ Admin</h3>
             </div>
-            <div className="announcement-list">
+            <div className="announcement-list customer-announcement-list">
               {announcements.length === 0 ? <div className="empty-state">Hiện chưa có thông báo chung nào từ Admin.</div> : null}
               {announcements.map((item) => (
                 <article key={item.id} className="announcement-item">
@@ -249,11 +249,11 @@ export function AnnouncementsCenter({ isAdmin, username }: Props) {
             </div>
           </article>
 
-          <article className="hub-card announcements-chat-card">
+          <article className="hub-card announcements-chat-card customer-chat-card">
             <div className="hub-card-head">
               <h3>Chat với Admin</h3>
             </div>
-            <div className="chat-list" ref={chatListRef}>
+            <div className="chat-list customer-chat-list" ref={chatListRef}>
               {messages.length === 0 ? <div className="empty-state">Chưa có cuộc trò chuyện nào.</div> : null}
               {messages.map((item) => {
                 const own = item.from === username;
