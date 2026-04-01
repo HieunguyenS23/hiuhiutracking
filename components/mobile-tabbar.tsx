@@ -18,7 +18,7 @@ type UnreadPayload = {
 export function MobileTabbar({ isAdmin, username }: Props) {
   const pathname = usePathname();
   const [unread, setUnread] = useState<UnreadPayload>({ unreadMessages: 0, unreadAnnouncements: 0, total: 0 });
-  const roleLabel = isAdmin ? 'Admin' : 'Khach hang';
+  const roleLabel = isAdmin ? 'Admin' : 'Khách hàng';
   const profileInitial = (username[0] || 'U').toUpperCase();
 
   useEffect(() => {
@@ -60,33 +60,43 @@ export function MobileTabbar({ isAdmin, username }: Props) {
           </div>
         </div>
         <form action="/api/auth/logout" method="post" className="logout-inline-form">
-          <button className="logout-inline-btn" type="submit">Dang xuat</button>
+          <button className="logout-inline-btn" type="submit">Đăng xuất</button>
         </form>
       </div>
 
       <nav className={`mobile-tabbar ${isAdmin ? 'mobile-tabbar-admin' : ''}`}>
-        <Link className={pathname.startsWith('/orders') && !pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/new">Len don</Link>
+        <Link className={pathname.startsWith('/orders') && !pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/new">Lên đơn</Link>
         {isAdmin ? (
           <>
-            <Link className={pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/history">Lich su</Link>
+            <Link className={pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/history">Lịch sử</Link>
             <Link className={`tab-link-with-badge ${pathname.startsWith('/admin/orders') ? 'is-active' : ''}`} href="/admin/orders">
-              Quan li don
+              Quản lí đơn
             </Link>
             <Link className={`tab-link-with-badge ${pathname.startsWith('/admin/users') ? 'is-active' : ''}`} href="/admin/users">
-              Tai khoan
+              Tài khoản
               {unread.unreadMessages > 0 ? <span className="tab-badge">{unread.unreadMessages > 99 ? '99+' : unread.unreadMessages}</span> : null}
             </Link>
-            <Link className={`tab-link-with-badge ${pathname.startsWith('/hub') ? 'is-active' : ''}`} href="/hub">
-              Trung tam
+            <Link className={pathname.startsWith('/admin/vouchers') ? 'is-active' : ''} href="/admin/vouchers">
+              Voucher
+            </Link>
+            <Link className={pathname.startsWith('/profile') ? 'is-active' : ''} href="/profile">
+              Hồ sơ
+            </Link>
+            <Link className={`tab-link-with-badge ${pathname.startsWith('/announcements') ? 'is-active' : ''}`} href="/announcements">
+              Thông báo
               {unread.unreadAnnouncements > 0 ? <span className="tab-badge">{unread.unreadAnnouncements > 99 ? '99+' : unread.unreadAnnouncements}</span> : null}
             </Link>
           </>
         ) : (
           <>
-            <Link className={pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/history">Lich su</Link>
-            <Link className={`tab-link-with-badge ${pathname.startsWith('/hub') ? 'is-active' : ''}`} href="/hub">
-              Trung tam
-              {unread.total > 0 ? <span className="tab-badge">{unread.total > 99 ? '99+' : unread.total}</span> : null}
+            <Link className={pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/history">Lịch sử</Link>
+            <Link className={`tab-link-with-badge ${pathname.startsWith('/profile') ? 'is-active' : ''}`} href="/profile">
+              Hồ sơ
+              {unread.unreadMessages > 0 ? <span className="tab-badge">{unread.unreadMessages > 99 ? '99+' : unread.unreadMessages}</span> : null}
+            </Link>
+            <Link className={`tab-link-with-badge ${pathname.startsWith('/announcements') ? 'is-active' : ''}`} href="/announcements">
+              Thông báo
+              {unread.unreadAnnouncements > 0 ? <span className="tab-badge">{unread.unreadAnnouncements > 99 ? '99+' : unread.unreadAnnouncements}</span> : null}
             </Link>
           </>
         )}

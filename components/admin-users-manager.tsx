@@ -6,13 +6,16 @@ type UserRow = {
   username: string;
   role: 'admin' | 'customer';
   createdAt: string;
+  unreadCount?: number;
 };
 
 type Profile = {
   username: string;
-  displayName: string;
   phone: string;
-  address: string;
+  email: string;
+  zaloNumber: string;
+  bankAccount: string;
+  bankName: string;
   bio: string;
   avatarImage: string;
 };
@@ -66,6 +69,14 @@ export function AdminUsersManager({ initialUsers }: Props) {
   }, [message, error]);
 
   useEffect(() => {
+    refreshUsers().catch(() => {});
+    const timer = window.setInterval(() => {
+      refreshUsers().catch(() => {});
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
     if (!selectedUsername) {
       setDetail(null);
       return;
@@ -76,7 +87,7 @@ export function AdminUsersManager({ initialUsers }: Props) {
       try {
         const response = await fetch(`/api/admin/users?username=${encodeURIComponent(selectedUsername)}`, { cache: 'no-store' });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Khong tai duoc ho so tai khoan.');
+        if (!response.ok) throw new Error(data.error || 'Không tải được hồ sơ tài khoản.');
         if (!stopped) setDetail({ user: data.user, profile: data.profile, messages: Array.isArray(data.messages) ? data.messages : [] });
 
         await fetch('/api/messages', {
@@ -84,8 +95,9 @@ export function AdminUsersManager({ initialUsers }: Props) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ from: selectedUsername }),
         });
+        refreshUsers(selectedUsername).catch(() => {});
       } catch (loadError) {
-        if (!stopped) setError(loadError instanceof Error ? loadError.message : 'Khong tai duoc ho so tai khoan.');
+        if (!stopped) setError(loadError instanceof Error ? loadError.message : 'Không tải được hồ sơ tài khoản.');
       }
     };
 
@@ -100,7 +112,7 @@ export function AdminUsersManager({ initialUsers }: Props) {
   async function refreshUsers(nextSelected?: string) {
     const response = await fetch('/api/admin/users', { cache: 'no-store' });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Khong tai duoc danh sach tai khoan.');
+    if (!response.ok) throw new Error(data.error || 'Không tải được danh sách tài khoản.');
     const list = Array.isArray(data.users) ? data.users : [];
     setUsers(list);
 
@@ -119,8 +131,8 @@ export function AdminUsersManager({ initialUsers }: Props) {
     setMessage('');
     setError('');
     try {
-      if (!isValidUsername(newUsername)) throw new Error('Username phai tu 5 ky tu, chi gom chu thuong khong dau, so hoac gach duoi.');
-      if (newPassword.length < 6) throw new Error('Mat khau phai tu 6 ky tu.');
+      if (!isValidUsername(newUsername)) throw new Error('Username phải từ 5 ký tự, chỉ gồm chữ thường không dấu, số hoặc gạch dưới.');
+      if (newPassword.length < 6) throw new Error('Mật khẩu phải từ 6 ký tự.');
 
       const response = await fetch('/api/admin/users', {
         method: 'POST',
@@ -128,14 +140,14 @@ export function AdminUsersManager({ initialUsers }: Props) {
         body: JSON.stringify({ username: newUsername, password: newPassword, role: newRole }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Khong tao duoc tai khoan.');
-      setMessage('Da tao tai khoan thanh cong.');
+      if (!response.ok) throw new Error(data.error || 'Không tạo được tài khoản.');
+      setMessage('Đã tạo tài khoản thành công.');
       setNewUsername('');
       setNewPassword('');
       setNewRole('customer');
       await refreshUsers(data?.user?.username);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Khong tao duoc tai khoan.');
+      setError(err instanceof Error ? err.message : 'Không tạo được tài khoản.');
     } finally {
       setLoading(false);
     }
@@ -148,29 +160,28 @@ export function AdminUsersManager({ initialUsers }: Props) {
     setError('');
 
     try {
-      if (!isValidUsername(detail.user.username)) throw new Error('Username phai tu 5 ky tu, chi gom chu thuong khong dau, so hoac gach duoi.');
-
       const response = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: selectedUsername,
-          nextUsername: detail.user.username,
           role: detail.user.role,
-          displayName: detail.profile.displayName,
           phone: detail.profile.phone,
-          address: detail.profile.address,
+          email: detail.profile.email,
+          zaloNumber: detail.profile.zaloNumber,
+          bankAccount: detail.profile.bankAccount,
+          bankName: detail.profile.bankName,
           bio: detail.profile.bio,
           avatarImage: detail.profile.avatarImage,
         }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Khong cap nhat duoc tai khoan.');
+      if (!response.ok) throw new Error(data.error || 'Không cập nhật được tài khoản.');
 
-      setMessage('Da cap nhat ho so tai khoan.');
+      setMessage('Đã cập nhật hồ sơ tài khoản.');
       await refreshUsers(data?.user?.username || detail.user.username);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Khong cap nhat duoc tai khoan.');
+      setError(err instanceof Error ? err.message : 'Không cập nhật được tài khoản.');
     } finally {
       setLoading(false);
     }
@@ -178,47 +189,46 @@ export function AdminUsersManager({ initialUsers }: Props) {
 
   async function setPasswordForDetail() {
     if (!detail) return;
-    const pass = prompt('Nhap mat khau moi (>= 6 ky tu):', '');
+    const pass = prompt('Nhập mật khẩu mới (>= 6 ký tự):', '');
     if (pass === null) return;
 
     setLoading(true);
     setMessage('');
     setError('');
     try {
-      if (pass.trim().length < 6) throw new Error('Mat khau phai tu 6 ky tu.');
+      if (pass.trim().length < 6) throw new Error('Mật khẩu phải từ 6 ký tự.');
 
       const response = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: selectedUsername,
-          nextUsername: detail.user.username,
           password: pass.trim(),
         }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Khong cap nhat duoc mat khau.');
-      setMessage('Da doi mat khau.');
+      if (!response.ok) throw new Error(data.error || 'Không cập nhật được mật khẩu.');
+      setMessage('Đã đổi mật khẩu.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Khong cap nhat duoc mat khau.');
+      setError(err instanceof Error ? err.message : 'Không cập nhật được mật khẩu.');
     } finally {
       setLoading(false);
     }
   }
 
   async function removeUser(username: string) {
-    if (!confirm(`Xoa tai khoan @${username}?`)) return;
+    if (!confirm(`Xóa tài khoản @${username}?`)) return;
     setLoading(true);
     setMessage('');
     setError('');
     try {
       const response = await fetch(`/api/admin/users?username=${encodeURIComponent(username)}`, { method: 'DELETE' });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Khong xoa duoc tai khoan.');
-      setMessage('Da xoa tai khoan thanh cong.');
+      if (!response.ok) throw new Error(data.error || 'Không xóa được tài khoản.');
+      setMessage('Đã xóa tài khoản thành công.');
       await refreshUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Khong xoa duoc tai khoan.');
+      setError(err instanceof Error ? err.message : 'Không xóa được tài khoản.');
     } finally {
       setLoading(false);
     }
@@ -236,11 +246,11 @@ export function AdminUsersManager({ initialUsers }: Props) {
         body: JSON.stringify({ to: detail.user.username, content: chatInput.trim() }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Khong gui duoc tin nhan.');
+      if (!response.ok) throw new Error(data.error || 'Không gửi được tin nhắn.');
       setChatInput('');
-      setMessage('Da gui tin nhan cho khach hang.');
+      setMessage('Đã gửi tin nhắn cho khách hàng.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Khong gui duoc tin nhan.');
+      setError(err instanceof Error ? err.message : 'Không gửi được tin nhắn.');
     } finally {
       setLoading(false);
     }
@@ -250,7 +260,7 @@ export function AdminUsersManager({ initialUsers }: Props) {
     const file = event.target.files?.[0];
     if (!file || !detail) return;
     if (!file.type.startsWith('image/')) {
-      setError('Vui long chon file anh hop le.');
+      setError('Vui lòng chọn file ảnh hợp lệ.');
       return;
     }
 
@@ -267,9 +277,9 @@ export function AdminUsersManager({ initialUsers }: Props) {
       <div className="section-head">
         <div>
           <p className="eyebrow">Admin</p>
-          <h2>Quan li tai khoan</h2>
+          <h2>Quản lí tài khoản</h2>
         </div>
-        <span className="chip">{total} tai khoan</span>
+        <span className="chip">{total} tài khoản</span>
       </div>
 
       {message ? <div className="inline-success">{message}</div> : null}
@@ -278,23 +288,23 @@ export function AdminUsersManager({ initialUsers }: Props) {
       <div className="users-manager-grid">
         <aside className="users-sidebar">
           <div className="hub-card">
-            <h3>Tao tai khoan moi</h3>
+            <h3>Tạo tài khoản mới</h3>
             <div className="form-grid">
               <label><span>Username</span><input value={newUsername} onChange={(e) => setNewUsername(e.target.value.toLowerCase())} placeholder="vd: khach_hang1" /></label>
-              <label><span>Mat khau</span><input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="toi thieu 6 ky tu" /></label>
+              <label><span>Mật khẩu</span><input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="tối thiểu 6 ký tự" /></label>
               <label>
-                <span>Role</span>
+                <span>Vai trò</span>
                 <select value={newRole} onChange={(e) => setNewRole(e.target.value === 'admin' ? 'admin' : 'customer')}>
                   <option value="customer">customer</option>
                   <option value="admin">admin</option>
                 </select>
               </label>
-              <button className="primary-button" disabled={loading} onClick={addUser} type="button">Them tai khoan</button>
+              <button className="primary-button" disabled={loading} onClick={addUser} type="button">Thêm tài khoản</button>
             </div>
           </div>
 
           <div className="hub-card">
-            <h3>Danh sach tai khoan</h3>
+            <h3>Danh sách tài khoản</h3>
             <div className="account-list">
               {users.map((user) => (
                 <button
@@ -303,7 +313,12 @@ export function AdminUsersManager({ initialUsers }: Props) {
                   type="button"
                   onClick={() => setSelectedUsername(user.username)}
                 >
-                  <strong>@{user.username}</strong>
+                  <strong className="account-name-row">
+                    <span>@{user.username}</span>
+                    {Number(user.unreadCount || 0) > 0 ? (
+                      <span className="account-unread-badge">{user.unreadCount! > 99 ? '99+' : user.unreadCount}</span>
+                    ) : null}
+                  </strong>
                   <span>{user.role} · {new Date(user.createdAt).toLocaleDateString('vi-VN')}</span>
                 </button>
               ))}
@@ -313,15 +328,15 @@ export function AdminUsersManager({ initialUsers }: Props) {
 
         <div className="users-detail">
           {!detail ? (
-            <div className="empty-state">Chon mot tai khoan de xem ho so.</div>
+            <div className="empty-state">Chọn một tài khoản để xem hồ sơ.</div>
           ) : (
             <>
               <article className="hub-card">
                 <div className="hub-card-head">
-                  <h3>Ho so tai khoan @{selectedUsername}</h3>
+                  <h3>Hồ sơ tài khoản @{selectedUsername}</h3>
                   <div className="modal-actions">
-                    <button className="mini-action" type="button" onClick={setPasswordForDetail} disabled={loading}>Doi mat khau</button>
-                    <button className="mini-action" type="button" onClick={() => removeUser(selectedUsername)} disabled={loading || detail.user.role === 'admin'}>Xoa tai khoan</button>
+                    <button className="mini-action" type="button" onClick={setPasswordForDetail} disabled={loading}>Đổi mật khẩu</button>
+                    <button className="mini-action" type="button" onClick={() => removeUser(selectedUsername)} disabled={loading || detail.user.role === 'admin'}>Xóa tài khoản</button>
                   </div>
                 </div>
 
@@ -330,36 +345,41 @@ export function AdminUsersManager({ initialUsers }: Props) {
                     {detail.profile.avatarImage ? <img src={detail.profile.avatarImage} alt="avatar" className="profile-avatar-image" /> : (detail.user.username[0] || 'U').toUpperCase()}
                   </div>
                   <div className="profile-meta">
-                    <p className="eyebrow">Tai khoan dang chon</p>
+                    <p className="eyebrow">Tài khoản đang chọn</p>
                     <strong>@{detail.user.username}</strong>
                   </div>
                 </div>
 
                 <div className="form-grid compact">
-                  <label><span>Ten dang ki</span><input value={detail.user.username} onChange={(e) => setDetail({ ...detail, user: { ...detail.user, username: e.target.value.toLowerCase() } })} /></label>
                   <label>
-                    <span>Role</span>
+                    <span>Tên đăng ký</span>
+                    <input value={detail.user.username} disabled className="readonly-input" />
+                  </label>
+                  <label>
+                    <span>Vai trò</span>
                     <select value={detail.user.role} onChange={(e) => setDetail({ ...detail, user: { ...detail.user, role: e.target.value === 'admin' ? 'admin' : 'customer' } })}>
                       <option value="customer">customer</option>
                       <option value="admin">admin</option>
                     </select>
                   </label>
-                  <label><span>Ten hien thi</span><input value={detail.profile.displayName} onChange={(e) => setDetail({ ...detail, profile: { ...detail.profile, displayName: e.target.value } })} /></label>
-                  <label><span>So dien thoai</span><input value={detail.profile.phone} onChange={(e) => setDetail({ ...detail, profile: { ...detail.profile, phone: e.target.value.replace(/\D/g, '').slice(0, 10) } })} /></label>
-                  <label className="full-span"><span>Dia chi</span><input value={detail.profile.address} onChange={(e) => setDetail({ ...detail, profile: { ...detail.profile, address: e.target.value } })} /></label>
-                  <label className="full-span"><span>Gioi thieu</span><input value={detail.profile.bio} onChange={(e) => setDetail({ ...detail, profile: { ...detail.profile, bio: e.target.value } })} /></label>
-                  <label className="full-span"><span>Anh dai dien</span><input type="file" accept="image/*" onChange={uploadAvatar} /></label>
+                  <label><span>Số điện thoại</span><input value={detail.profile.phone} onChange={(e) => setDetail({ ...detail, profile: { ...detail.profile, phone: e.target.value.replace(/\D/g, '').slice(0, 10) } })} /></label>
+                  <label><span>Email</span><input value={detail.profile.email} onChange={(e) => setDetail({ ...detail, profile: { ...detail.profile, email: e.target.value } })} /></label>
+                  <label><span>Số Zalo</span><input value={detail.profile.zaloNumber} onChange={(e) => setDetail({ ...detail, profile: { ...detail.profile, zaloNumber: e.target.value.replace(/\D/g, '').slice(0, 15) } })} /></label>
+                  <label><span>Số tài khoản</span><input value={detail.profile.bankAccount} onChange={(e) => setDetail({ ...detail, profile: { ...detail.profile, bankAccount: e.target.value } })} /></label>
+                  <label><span>Tên ngân hàng</span><input value={detail.profile.bankName} onChange={(e) => setDetail({ ...detail, profile: { ...detail.profile, bankName: e.target.value } })} /></label>
+                  <label className="full-span"><span>Giới thiệu ngắn</span><input value={detail.profile.bio} onChange={(e) => setDetail({ ...detail, profile: { ...detail.profile, bio: e.target.value } })} /></label>
+                  <label className="full-span"><span>Ảnh đại diện</span><input type="file" accept="image/*" onChange={uploadAvatar} /></label>
                 </div>
 
-                <button className="primary-button" type="button" disabled={loading} onClick={saveDetail}>Luu ho so tai khoan</button>
+                <button className="primary-button" type="button" disabled={loading} onClick={saveDetail}>Lưu hồ sơ tài khoản</button>
               </article>
 
               <article className="hub-card">
                 <div className="hub-card-head">
-                  <h3>Chat voi @{detail.user.username}</h3>
+                  <h3>Chat với @{detail.user.username}</h3>
                 </div>
                 <div className="chat-list account-chat-list">
-                  {detail.messages.length === 0 ? <div className="empty-state">Chua co cuoc tro chuyen nao.</div> : null}
+                  {detail.messages.length === 0 ? <div className="empty-state">Chưa có cuộc trò chuyện nào.</div> : null}
                   {detail.messages.map((item) => {
                     const own = item.from !== detail.user.username;
                     return (
@@ -371,8 +391,8 @@ export function AdminUsersManager({ initialUsers }: Props) {
                   })}
                 </div>
                 <div className="chat-compose">
-                  <input value={chatInput} onChange={(event) => setChatInput(event.target.value)} placeholder="Nhap tin nhan cho khach hang..." />
-                  <button className="primary-button" type="button" disabled={loading || !chatInput.trim()} onClick={sendMessageToUser}>Gui</button>
+                  <input value={chatInput} onChange={(event) => setChatInput(event.target.value)} placeholder="Nhập tin nhắn cho khách hàng..." />
+                  <button className="primary-button" type="button" disabled={loading || !chatInput.trim()} onClick={sendMessageToUser}>Gửi</button>
                 </div>
               </article>
             </>

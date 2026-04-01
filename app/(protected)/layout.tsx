@@ -1,5 +1,6 @@
 ﻿import { requireSession } from '@/lib/session';
 import { MobileTabbar } from '@/components/mobile-tabbar';
+import { LeftTagbar } from '@/components/left-tagbar';
 
 export default async function ProtectedLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const session = await requireSession();
@@ -7,9 +8,12 @@ export default async function ProtectedLayout({ children }: Readonly<{ children:
 
   return (
     <main className="app-shell">
-      <div className={`app-frame ${isAdmin ? 'app-frame-admin' : ''}`}>
-        <MobileTabbar isAdmin={isAdmin} username={session.username} />
-        <div className="content-area">{children}</div>
+      <div className={`app-frame app-frame-with-sidebar ${isAdmin ? 'app-frame-admin' : ''}`}>
+        <LeftTagbar isAdmin={isAdmin} />
+        <div className="content-area">
+          <MobileTabbar isAdmin={isAdmin} username={session.username} />
+          {children}
+        </div>
       </div>
     </main>
   );

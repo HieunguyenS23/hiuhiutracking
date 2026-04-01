@@ -1,12 +1,11 @@
 ﻿import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/session';
-import { createOrder, deleteOrder, getOrders, getOrdersByUsername, updateOrder } from '@/lib/store';
+import { createOrder, deleteOrder, getAppSettings, getOrders, getOrdersByUsername, getVouchers, updateOrder } from '@/lib/store';
 import type { OrderStatus, VoucherType } from '@/lib/types';
 import { hasAtLeastTwoWords, isValidVietnamPhone } from '@/lib/validators';
 
 const allowedStatuses: OrderStatus[] = ['pending', 'confirmed', 'ordered', 'canceled'];
-const allowedVoucherTypes: VoucherType[] = ['100k', '80k', '60k'];
 const TRACK_API_BASE = 'https://dodanhvu.dpdns.org';
 
 function normalizeCookie(raw: string) {
@@ -286,14 +285,19 @@ export async function POST(request: Request) {
   if (phone && !isValidVietnamPhone(phone)) {
     return NextResponse.json({ error: 'Số điện thoại phải đúng 10 chữ số hoặc để trống.' }, { status: 400 });
   }
-  if (!allowedVoucherTypes.includes(voucherType as VoucherType)) {
-    return NextResponse.json({ error: 'Loại mã không hợp lệ.' }, { status: 400 });
-  }
   if (!/^https?:\/\//.test(productLink)) {
     return NextResponse.json({ error: 'Link sản phẩm phải bắt đầu bằng http hoặc https.' }, { status: 400 });
   }
 
   try {
+    const [settings, vouchers] = await Promise.all([getAppSettings(), getVouchers()]);
+    const selectedVoucher = vouchers.find((item) => item.id === voucherType);
+    if (!selectedVoucher) return NextResponse.json({ error: 'Loại voucher không hợp lệ.' }, { status: 400 });
+    if (!selectedVoucher.active) return NextResponse.json({ error: 'Voucher này đang tạm ngưng.' }, { status: 400 });
+    if (!settings.orderFormEnabled && session.role !== 'admin') {
+      return NextResponse.json({ error: 'Form lên đơn đang tạm đóng. Vui lòng quay lại sau.' }, { status: 403 });
+    }
+
     const order = await createOrder({
       id: crypto.randomUUID(),
       username: session.username,
@@ -427,9 +431,8 @@ export async function PATCH(request: Request) {
   }
 
   if (voucherType !== undefined) {
-    if (!allowedVoucherTypes.includes(voucherType as VoucherType)) {
-      return NextResponse.json({ error: 'Loại mã không hợp lệ.' }, { status: 400 });
-    }
+    const vouchers = await getVouchers();
+    if (!vouchers.some((item) => item.id === voucherType)) return NextResponse.json({ error: 'Loại mã không hợp lệ.' }, { status: 400 });
     payload.voucherType = voucherType as VoucherType;
   }
 

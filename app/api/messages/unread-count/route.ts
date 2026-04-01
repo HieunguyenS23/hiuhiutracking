@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/session';
 import { getUnreadMessageCount } from '@/lib/store';
 

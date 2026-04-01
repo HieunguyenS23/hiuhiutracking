@@ -39,6 +39,9 @@ function detectDeliveryTone(raw: string) {
 
 export function AdminOrdersTable({ initialOrders }: Props) {
   const [orders, setOrders] = useState(initialOrders);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | OrderStatus>('all');
+  const [voucherFilter, setVoucherFilter] = useState('all');
   const [savingId, setSavingId] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -243,6 +246,28 @@ export function AdminOrdersTable({ initialOrders }: Props) {
   }
 
   const total = useMemo(() => orders.length, [orders.length]);
+  const stats = useMemo(() => ({
+    total: orders.length,
+    pending: orders.filter((item) => item.status === 'pending').length,
+    confirmed: orders.filter((item) => item.status === 'confirmed').length,
+    ordered: orders.filter((item) => item.status === 'ordered').length,
+    canceled: orders.filter((item) => item.status === 'canceled').length,
+  }), [orders]);
+
+  const voucherFilters = useMemo(() => Array.from(new Set(orders.map((item) => item.voucherType))).filter(Boolean), [orders]);
+
+  const filteredOrders = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    return orders.filter((item) => {
+      if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+      if (voucherFilter !== 'all' && item.voucherType !== voucherFilter) return false;
+      if (!keyword) return true;
+      return [item.recipientName, item.orderCode, item.phone, item.username, item.deliveryTracking, item.productName]
+        .join(' ')
+        .toLowerCase()
+        .includes(keyword);
+    });
+  }, [orders, search, statusFilter, voucherFilter]);
 
   return (
     <>
@@ -252,6 +277,26 @@ export function AdminOrdersTable({ initialOrders }: Props) {
           <h2>Bảng quản lí</h2>
         </div>
         <span className="chip">{total} đơn</span>
+      </div>
+
+      <div className="stats-grid">
+        <div className="stats-card"><span>Tổng</span><strong>{stats.total}</strong></div>
+        <div className="stats-card"><span>Chờ xác nhận</span><strong>{stats.pending}</strong></div>
+        <div className="stats-card"><span>Đã xác nhận</span><strong>{stats.confirmed}</strong></div>
+        <div className="stats-card"><span>Đã đặt</span><strong>{stats.ordered}</strong></div>
+        <div className="stats-card"><span>Đã hủy</span><strong>{stats.canceled}</strong></div>
+      </div>
+
+      <div className="filter-bar">
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm theo tên, mã đơn, SĐT, username..." />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as 'all' | OrderStatus)}>
+          <option value="all">Tất cả trạng thái</option>
+          {statusOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+        </select>
+        <select value={voucherFilter} onChange={(e) => setVoucherFilter(e.target.value)}>
+          <option value="all">Tất cả voucher</option>
+          {voucherFilters.map((value) => <option key={value} value={value}>{value}</option>)}
+        </select>
       </div>
 
       {message ? <div className="inline-success">{message}</div> : null}
@@ -271,12 +316,12 @@ export function AdminOrdersTable({ initialOrders }: Props) {
             </tr>
           </thead>
           <tbody>
-            {orders.length === 0 ? (
+            {filteredOrders.length === 0 ? (
               <tr>
-                <td className="sheet-empty" colSpan={7}>Chưa có đơn nào.</td>
+                <td className="sheet-empty" colSpan={7}>Không có đơn phù hợp bộ lọc.</td>
               </tr>
             ) : null}
-            {orders.map((order) => {
+            {filteredOrders.map((order) => {
               const deliveryStatus = order.status === 'canceled' ? 'Đơn đã hủy' : (order.deliveryStatus || 'Chưa kiểm tra');
               const tone = detectDeliveryTone(deliveryStatus);
               return (

@@ -3,12 +3,14 @@ import path from 'node:path';
 import { neon } from '@neondatabase/serverless';
 import type {
   AnnouncementRecord,
+  AppSettingsRecord,
   MessageRecord,
   OrderRecord,
   OrderStatus,
   StoreData,
   UserProfileRecord,
   UserRecord,
+  VoucherRecord,
 } from '@/lib/types';
 import { getAdminSeed, getCustomerSeed, getCustomerSeed2 } from '@/lib/session';
 
@@ -38,6 +40,10 @@ function createDefaultProfile(username: string): UserProfileRecord {
     displayName: username,
     phone: '',
     address: '',
+    email: '',
+    zaloNumber: '',
+    bankAccount: '',
+    bankName: '',
     bio: '',
     avatarColor: pickColorByUsername(username),
     avatarImage: '',
@@ -46,10 +52,28 @@ function createDefaultProfile(username: string): UserProfileRecord {
   };
 }
 
+function createDefaultVouchers(): VoucherRecord[] {
+  const now = new Date().toISOString();
+  return [
+    { id: '100k', label: 'Mã 100k', price: 100000, active: true, createdAt: now, updatedAt: now },
+    { id: '80k', label: 'Mã 80k', price: 80000, active: true, createdAt: now, updatedAt: now },
+    { id: '60k', label: 'Mã 60k', price: 60000, active: true, createdAt: now, updatedAt: now },
+  ];
+}
+
+function createDefaultSettings(): AppSettingsRecord {
+  return {
+    orderFormEnabled: true,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 function ensureCollections(data: StoreData) {
   if (!Array.isArray(data.profiles)) data.profiles = [];
   if (!Array.isArray(data.announcements)) data.announcements = [];
   if (!Array.isArray(data.messages)) data.messages = [];
+  if (!Array.isArray(data.vouchers)) data.vouchers = createDefaultVouchers();
+  if (!data.settings || typeof data.settings !== 'object') data.settings = createDefaultSettings();
 }
 
 function ensureSeedUsers(data: StoreData) {
@@ -70,7 +94,15 @@ function ensureSeedUsers(data: StoreData) {
 }
 
 function defaultStore(): StoreData {
-  const base: StoreData = { users: [], orders: [], profiles: [], announcements: [], messages: [] };
+  const base: StoreData = {
+    users: [],
+    orders: [],
+    profiles: [],
+    announcements: [],
+    messages: [],
+    vouchers: createDefaultVouchers(),
+    settings: createDefaultSettings(),
+  };
   ensureSeedUsers(base);
   return base;
 }
@@ -130,6 +162,10 @@ async function ensureDatabaseReady() {
     display_name TEXT NOT NULL DEFAULT '',
     phone TEXT NOT NULL DEFAULT '',
     address TEXT NOT NULL DEFAULT '',
+    email TEXT NOT NULL DEFAULT '',
+    zalo_number TEXT NOT NULL DEFAULT '',
+    bank_account TEXT NOT NULL DEFAULT '',
+    bank_name TEXT NOT NULL DEFAULT '',
     bio TEXT NOT NULL DEFAULT '',
     avatar_color TEXT NOT NULL DEFAULT '',
     avatar_image TEXT NOT NULL DEFAULT '',
@@ -138,6 +174,10 @@ async function ensureDatabaseReady() {
   )`;
   await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS avatar_image TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS last_seen_announcements_at TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS email TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS zalo_number TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS bank_account TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS bank_name TEXT NOT NULL DEFAULT ''`;
 
   await sql`CREATE TABLE IF NOT EXISTS admin_announcements (
     id TEXT PRIMARY KEY,
@@ -156,6 +196,21 @@ async function ensureDatabaseReady() {
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`;
   await sql`ALTER TABLE admin_user_messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ NULL`;
+
+  await sql`CREATE TABLE IF NOT EXISTS vouchers (
+    id TEXT PRIMARY KEY,
+    label TEXT NOT NULL,
+    price INTEGER NOT NULL DEFAULT 0,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
+
+  await sql`CREATE TABLE IF NOT EXISTS app_settings (
+    id SMALLINT PRIMARY KEY,
+    order_form_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
 
   const admin = getAdminSeed();
   const customer = getCustomerSeed();
@@ -183,11 +238,27 @@ async function ensureDatabaseReady() {
   for (const username of seededUsers) {
     const profile = createDefaultProfile(username);
     await sql`
-      INSERT INTO user_profiles (username, display_name, phone, address, bio, avatar_color, avatar_image, last_seen_announcements_at, updated_at)
-      VALUES (${username}, ${profile.displayName}, ${profile.phone}, ${profile.address}, ${profile.bio}, ${profile.avatarColor}, ${profile.avatarImage}, ${profile.lastSeenAnnouncementsAt}, ${profile.updatedAt})
+      INSERT INTO user_profiles (username, display_name, phone, address, email, zalo_number, bank_account, bank_name, bio, avatar_color, avatar_image, last_seen_announcements_at, updated_at)
+      VALUES (${username}, ${profile.displayName}, ${profile.phone}, ${profile.address}, ${profile.email}, ${profile.zaloNumber}, ${profile.bankAccount}, ${profile.bankName}, ${profile.bio}, ${profile.avatarColor}, ${profile.avatarImage}, ${profile.lastSeenAnnouncementsAt}, ${profile.updatedAt})
       ON CONFLICT (username) DO NOTHING
     `;
   }
+
+  const vouchers = createDefaultVouchers();
+  for (const voucher of vouchers) {
+    await sql`
+      INSERT INTO vouchers (id, label, price, active, created_at, updated_at)
+      VALUES (${voucher.id}, ${voucher.label}, ${voucher.price}, ${voucher.active}, ${voucher.createdAt}, ${voucher.updatedAt})
+      ON CONFLICT (id) DO NOTHING
+    `;
+  }
+
+  const settings = createDefaultSettings();
+  await sql`
+    INSERT INTO app_settings (id, order_form_enabled, updated_at)
+    VALUES (1, ${settings.orderFormEnabled}, ${settings.updatedAt})
+    ON CONFLICT (id) DO NOTHING
+  `;
 
   memoryStore.__portalDbReady = true;
 }
@@ -215,6 +286,10 @@ async function readFileStore() {
       displayName: String(profile.displayName || profile.username || ''),
       phone: String(profile.phone || ''),
       address: String(profile.address || ''),
+      email: String(profile.email || ''),
+      zaloNumber: String(profile.zaloNumber || ''),
+      bankAccount: String(profile.bankAccount || ''),
+      bankName: String(profile.bankName || ''),
       bio: String(profile.bio || ''),
       avatarColor: String(profile.avatarColor || pickColorByUsername(String(profile.username || ''))),
       avatarImage: String(profile.avatarImage || ''),
@@ -236,6 +311,19 @@ async function readFileStore() {
       createdAt: String(item.createdAt || new Date().toISOString()),
       readAt: String(item.readAt || ''),
     })).filter((item) => item.id && item.from && item.to && item.content);
+    parsed.vouchers = (parsed.vouchers || []).map((item) => ({
+      id: String(item.id || '').trim(),
+      label: String(item.label || '').trim(),
+      price: Math.max(0, Number(item.price || 0)),
+      active: Boolean(item.active),
+      createdAt: String(item.createdAt || new Date().toISOString()),
+      updatedAt: String(item.updatedAt || new Date().toISOString()),
+    })).filter((item) => Boolean(item.id) && Boolean(item.label));
+    if (parsed.vouchers.length === 0) parsed.vouchers = createDefaultVouchers();
+    parsed.settings = {
+      orderFormEnabled: parsed.settings?.orderFormEnabled !== false,
+      updatedAt: String(parsed.settings?.updatedAt || new Date().toISOString()),
+    };
     ensureSeedUsers(parsed);
     return parsed;
   } catch {
@@ -299,6 +387,10 @@ function mapProfile(row: Record<string, unknown>): UserProfileRecord {
     displayName: String(row.display_name || row.username || ''),
     phone: String(row.phone || ''),
     address: String(row.address || ''),
+    email: String(row.email || ''),
+    zaloNumber: String(row.zalo_number || ''),
+    bankAccount: String(row.bank_account || ''),
+    bankName: String(row.bank_name || ''),
     bio: String(row.bio || ''),
     avatarColor: String(row.avatar_color || pickColorByUsername(String(row.username || ''))),
     avatarImage: String(row.avatar_image || ''),
@@ -325,6 +417,17 @@ function mapMessage(row: Record<string, unknown>): MessageRecord {
     content: String(row.content || ''),
     createdAt: new Date(String(row.created_at || Date.now())).toISOString(),
     readAt: row.read_at ? new Date(String(row.read_at)).toISOString() : '',
+  };
+}
+
+function mapVoucher(row: Record<string, unknown>): VoucherRecord {
+  return {
+    id: String(row.id || ''),
+    label: String(row.label || ''),
+    price: Math.max(0, Number(row.price || 0)),
+    active: Boolean(row.active),
+    createdAt: new Date(String(row.created_at || Date.now())).toISOString(),
+    updatedAt: new Date(String(row.updated_at || Date.now())).toISOString(),
   };
 }
 
@@ -356,8 +459,8 @@ export async function createUser(user: UserRecord) {
     `;
     const profile = createDefaultProfile(user.username);
     await sql`
-      INSERT INTO user_profiles (username, display_name, phone, address, bio, avatar_color, avatar_image, last_seen_announcements_at, updated_at)
-      VALUES (${profile.username}, ${profile.displayName}, ${profile.phone}, ${profile.address}, ${profile.bio}, ${profile.avatarColor}, ${profile.avatarImage}, ${profile.lastSeenAnnouncementsAt}, ${profile.updatedAt})
+      INSERT INTO user_profiles (username, display_name, phone, address, email, zalo_number, bank_account, bank_name, bio, avatar_color, avatar_image, last_seen_announcements_at, updated_at)
+      VALUES (${profile.username}, ${profile.displayName}, ${profile.phone}, ${profile.address}, ${profile.email}, ${profile.zaloNumber}, ${profile.bankAccount}, ${profile.bankName}, ${profile.bio}, ${profile.avatarColor}, ${profile.avatarImage}, ${profile.lastSeenAnnouncementsAt}, ${profile.updatedAt})
       ON CONFLICT (username) DO NOTHING
     `;
     return user;
@@ -669,7 +772,7 @@ export async function getUserProfile(username: string) {
   if (sql) {
     await ensureDatabaseReady();
     const rows = await sql`
-      SELECT username, display_name, phone, address, bio, avatar_color, avatar_image, last_seen_announcements_at, updated_at
+      SELECT username, display_name, phone, address, email, zalo_number, bank_account, bank_name, bio, avatar_color, avatar_image, last_seen_announcements_at, updated_at
       FROM user_profiles
       WHERE username = ${username}
       LIMIT 1
@@ -681,8 +784,8 @@ export async function getUserProfile(username: string) {
 
     const fallback = createDefaultProfile(username);
     await sql`
-      INSERT INTO user_profiles (username, display_name, phone, address, bio, avatar_color, avatar_image, last_seen_announcements_at, updated_at)
-      VALUES (${fallback.username}, ${fallback.displayName}, ${fallback.phone}, ${fallback.address}, ${fallback.bio}, ${fallback.avatarColor}, ${fallback.avatarImage}, ${fallback.lastSeenAnnouncementsAt}, ${fallback.updatedAt})
+      INSERT INTO user_profiles (username, display_name, phone, address, email, zalo_number, bank_account, bank_name, bio, avatar_color, avatar_image, last_seen_announcements_at, updated_at)
+      VALUES (${fallback.username}, ${fallback.displayName}, ${fallback.phone}, ${fallback.address}, ${fallback.email}, ${fallback.zaloNumber}, ${fallback.bankAccount}, ${fallback.bankName}, ${fallback.bio}, ${fallback.avatarColor}, ${fallback.avatarImage}, ${fallback.lastSeenAnnouncementsAt}, ${fallback.updatedAt})
     `;
     return fallback;
   }
@@ -700,7 +803,7 @@ export async function getUserProfile(username: string) {
 
 export async function updateUserProfile(
   username: string,
-  payload: Partial<Pick<UserProfileRecord, 'displayName' | 'phone' | 'address' | 'bio' | 'avatarColor' | 'avatarImage' | 'lastSeenAnnouncementsAt'>>
+  payload: Partial<Pick<UserProfileRecord, 'displayName' | 'phone' | 'address' | 'email' | 'zaloNumber' | 'bankAccount' | 'bankName' | 'bio' | 'avatarColor' | 'avatarImage' | 'lastSeenAnnouncementsAt'>>
 ) {
   if (!username) throw new Error('Thiếu username.');
 
@@ -710,6 +813,10 @@ export async function updateUserProfile(
     displayName: payload.displayName === undefined ? current.displayName : String(payload.displayName || '').trim(),
     phone: payload.phone === undefined ? current.phone : String(payload.phone || '').trim(),
     address: payload.address === undefined ? current.address : String(payload.address || '').trim(),
+    email: payload.email === undefined ? current.email : String(payload.email || '').trim(),
+    zaloNumber: payload.zaloNumber === undefined ? current.zaloNumber : String(payload.zaloNumber || '').trim(),
+    bankAccount: payload.bankAccount === undefined ? current.bankAccount : String(payload.bankAccount || '').trim(),
+    bankName: payload.bankName === undefined ? current.bankName : String(payload.bankName || '').trim(),
     bio: payload.bio === undefined ? current.bio : String(payload.bio || '').trim(),
     avatarColor: payload.avatarColor === undefined ? current.avatarColor : String(payload.avatarColor || '').trim(),
     avatarImage: payload.avatarImage === undefined ? current.avatarImage : String(payload.avatarImage || '').trim(),
@@ -724,12 +831,16 @@ export async function updateUserProfile(
   if (sql) {
     await ensureDatabaseReady();
     await sql`
-      INSERT INTO user_profiles (username, display_name, phone, address, bio, avatar_color, avatar_image, last_seen_announcements_at, updated_at)
-      VALUES (${next.username}, ${next.displayName}, ${next.phone}, ${next.address}, ${next.bio}, ${next.avatarColor}, ${next.avatarImage}, ${next.lastSeenAnnouncementsAt}, ${next.updatedAt})
+      INSERT INTO user_profiles (username, display_name, phone, address, email, zalo_number, bank_account, bank_name, bio, avatar_color, avatar_image, last_seen_announcements_at, updated_at)
+      VALUES (${next.username}, ${next.displayName}, ${next.phone}, ${next.address}, ${next.email}, ${next.zaloNumber}, ${next.bankAccount}, ${next.bankName}, ${next.bio}, ${next.avatarColor}, ${next.avatarImage}, ${next.lastSeenAnnouncementsAt}, ${next.updatedAt})
       ON CONFLICT (username) DO UPDATE
       SET display_name = EXCLUDED.display_name,
           phone = EXCLUDED.phone,
           address = EXCLUDED.address,
+          email = EXCLUDED.email,
+          zalo_number = EXCLUDED.zalo_number,
+          bank_account = EXCLUDED.bank_account,
+          bank_name = EXCLUDED.bank_name,
           bio = EXCLUDED.bio,
           avatar_color = EXCLUDED.avatar_color,
           avatar_image = EXCLUDED.avatar_image,
@@ -991,6 +1102,187 @@ export async function getUnreadMessageCount(username: string) {
 
   const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
   return store.messages.filter((item) => item.to === username && !item.readAt).length;
+}
+
+export async function getUnreadMessageCountBySender(username: string) {
+  if (!username) return {} as Record<string, number>;
+
+  if (sql) {
+    await ensureDatabaseReady();
+    const rows = await sql`
+      SELECT from_username, COUNT(*)::int AS total
+      FROM admin_user_messages
+      WHERE to_username = ${username} AND read_at IS NULL
+      GROUP BY from_username
+    `;
+    const mapped: Record<string, number> = {};
+    for (const row of rows as Record<string, unknown>[]) {
+      mapped[String(row.from_username || '')] = Number(row.total || 0);
+    }
+    return mapped;
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  const mapped: Record<string, number> = {};
+  for (const item of store.messages) {
+    if (item.to !== username || item.readAt) continue;
+    mapped[item.from] = (mapped[item.from] || 0) + 1;
+  }
+  return mapped;
+}
+
+export async function getVouchers() {
+  if (sql) {
+    await ensureDatabaseReady();
+    const rows = await sql`
+      SELECT id, label, price, active, created_at, updated_at
+      FROM vouchers
+      ORDER BY created_at DESC
+    `;
+    return rows.map((row) => mapVoucher(row as Record<string, unknown>));
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  return [...store.vouchers].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function createVoucher(record: VoucherRecord) {
+  if (sql) {
+    await ensureDatabaseReady();
+    await sql`
+      INSERT INTO vouchers (id, label, price, active, created_at, updated_at)
+      VALUES (${record.id}, ${record.label}, ${record.price}, ${record.active}, ${record.createdAt}, ${record.updatedAt})
+    `;
+    return record;
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  if (store.vouchers.some((item) => item.id === record.id)) throw new Error('Mã voucher đã tồn tại.');
+  store.vouchers.push(record);
+  if (process.env.NODE_ENV === 'development') await writeFileStore(store);
+  else memoryStore.__portalStore = store;
+  return record;
+}
+
+export async function updateVoucher(voucherId: string, payload: Partial<Pick<VoucherRecord, 'label' | 'price' | 'active'>>) {
+  if (!voucherId) throw new Error('Thiếu mã voucher.');
+  const now = new Date().toISOString();
+
+  if (sql) {
+    await ensureDatabaseReady();
+    const rows = await sql`
+      SELECT id, label, price, active, created_at, updated_at
+      FROM vouchers
+      WHERE id = ${voucherId}
+      LIMIT 1
+    `;
+    if (rows.length === 0) throw new Error('Không tìm thấy voucher.');
+    const current = mapVoucher(rows[0] as Record<string, unknown>);
+
+    const next = {
+      ...current,
+      label: payload.label === undefined ? current.label : String(payload.label || '').trim(),
+      price: payload.price === undefined ? current.price : Math.max(0, Number(payload.price || 0)),
+      active: payload.active === undefined ? current.active : Boolean(payload.active),
+      updatedAt: now,
+    };
+
+    await sql`
+      UPDATE vouchers
+      SET label = ${next.label},
+          price = ${next.price},
+          active = ${next.active},
+          updated_at = ${next.updatedAt}
+      WHERE id = ${voucherId}
+    `;
+    return next;
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  const idx = store.vouchers.findIndex((item) => item.id === voucherId);
+  if (idx < 0) throw new Error('Không tìm thấy voucher.');
+  const current = store.vouchers[idx];
+  store.vouchers[idx] = {
+    ...current,
+    label: payload.label === undefined ? current.label : String(payload.label || '').trim(),
+    price: payload.price === undefined ? current.price : Math.max(0, Number(payload.price || 0)),
+    active: payload.active === undefined ? current.active : Boolean(payload.active),
+    updatedAt: now,
+  };
+  if (process.env.NODE_ENV === 'development') await writeFileStore(store);
+  else memoryStore.__portalStore = store;
+  return store.vouchers[idx];
+}
+
+export async function deleteVoucher(voucherId: string) {
+  if (!voucherId) throw new Error('Thiếu mã voucher.');
+
+  if (sql) {
+    await ensureDatabaseReady();
+    await sql`DELETE FROM vouchers WHERE id = ${voucherId}`;
+    return { ok: true };
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  store.vouchers = store.vouchers.filter((item) => item.id !== voucherId);
+  if (process.env.NODE_ENV === 'development') await writeFileStore(store);
+  else memoryStore.__portalStore = store;
+  return { ok: true };
+}
+
+export async function getAppSettings() {
+  if (sql) {
+    await ensureDatabaseReady();
+    const rows = await sql`
+      SELECT order_form_enabled, updated_at
+      FROM app_settings
+      WHERE id = 1
+      LIMIT 1
+    `;
+    if (rows.length > 0) {
+      return {
+        orderFormEnabled: Boolean((rows[0] as Record<string, unknown>).order_form_enabled),
+        updatedAt: new Date(String((rows[0] as Record<string, unknown>).updated_at || Date.now())).toISOString(),
+      };
+    }
+    const fallback = createDefaultSettings();
+    await sql`
+      INSERT INTO app_settings (id, order_form_enabled, updated_at)
+      VALUES (1, ${fallback.orderFormEnabled}, ${fallback.updatedAt})
+    `;
+    return fallback;
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  if (!store.settings) store.settings = createDefaultSettings();
+  return store.settings;
+}
+
+export async function updateAppSettings(payload: Partial<Pick<AppSettingsRecord, 'orderFormEnabled'>>) {
+  const current = await getAppSettings();
+  const next = {
+    ...current,
+    orderFormEnabled: payload.orderFormEnabled === undefined ? current.orderFormEnabled : Boolean(payload.orderFormEnabled),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (sql) {
+    await ensureDatabaseReady();
+    await sql`
+      INSERT INTO app_settings (id, order_form_enabled, updated_at)
+      VALUES (1, ${next.orderFormEnabled}, ${next.updatedAt})
+      ON CONFLICT (id) DO UPDATE
+      SET order_form_enabled = EXCLUDED.order_form_enabled,
+          updated_at = EXCLUDED.updated_at
+    `;
+    return next;
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  store.settings = next;
+  if (process.env.NODE_ENV === 'development') await writeFileStore(store);
+  else memoryStore.__portalStore = store;
+  return next;
 }
 
 

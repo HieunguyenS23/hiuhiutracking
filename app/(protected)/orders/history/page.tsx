@@ -11,7 +11,7 @@ export default async function OrderHistoryPage() {
   try {
     recentOrders = session.role === 'admin' ? await getOrders() : await getOrdersByUsername(session.username);
   } catch (error) {
-    loadError = error instanceof Error ? error.message : 'Không t?i du?c l?ch s? don.';
+    loadError = error instanceof Error ? error.message : 'Không tải được lịch sử đơn.';
   }
 
   return (

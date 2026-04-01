@@ -1,18 +1,18 @@
 ﻿import { NextResponse } from 'next/server';
-import { createSessionToken, hashPassword, requireSession, setSessionCookie } from '@/lib/session';
-import { findUser, getUserProfile, renameUsername, updateUserProfile, updateUserRecord } from '@/lib/store';
-import { isValidUsername, isValidVietnamPhone } from '@/lib/validators';
+import { requireSession } from '@/lib/session';
+import { findUser, getUserProfile, updateUserProfile } from '@/lib/store';
+import { isValidVietnamPhone } from '@/lib/validators';
 
 export async function GET() {
   const session = await requireSession();
 
   try {
     const user = await findUser(session.username);
-    if (!user) return NextResponse.json({ error: 'Khong tim thay tai khoan.' }, { status: 404 });
+    if (!user) return NextResponse.json({ error: 'Không tìm thấy tài khoản.' }, { status: 404 });
     const profile = await getUserProfile(session.username);
     return NextResponse.json({ profile, user: { username: user.username, role: user.role } });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Khong tai duoc ho so.' }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Không tải được hồ sơ.' }, { status: 500 });
   }
 }
 
@@ -20,53 +20,40 @@ export async function PATCH(request: Request) {
   const session = await requireSession();
   const body = await request.json();
 
-  const nextUsername = body.username === undefined ? undefined : String(body.username || '').trim().toLowerCase();
-  const nextPassword = body.password === undefined ? undefined : String(body.password || '').trim();
-  const displayName = body.displayName === undefined ? undefined : String(body.displayName || '').trim();
   const phone = body.phone === undefined ? undefined : String(body.phone || '').trim();
-  const address = body.address === undefined ? undefined : String(body.address || '').trim();
+  const email = body.email === undefined ? undefined : String(body.email || '').trim();
+  const zaloNumber = body.zaloNumber === undefined ? undefined : String(body.zaloNumber || '').trim();
+  const bankAccount = body.bankAccount === undefined ? undefined : String(body.bankAccount || '').trim();
+  const bankName = body.bankName === undefined ? undefined : String(body.bankName || '').trim();
   const bio = body.bio === undefined ? undefined : String(body.bio || '').trim();
   const avatarImage = body.avatarImage === undefined ? undefined : String(body.avatarImage || '').trim();
 
-  if (nextUsername !== undefined && !isValidUsername(nextUsername)) {
-    return NextResponse.json({ error: 'Username phai tu 5 ky tu, chi gom chu thuong khong dau, so hoac gach duoi.' }, { status: 400 });
-  }
-  if (nextPassword !== undefined && nextPassword.length > 0 && nextPassword.length < 6) {
-    return NextResponse.json({ error: 'Mat khau phai tu 6 ky tu.' }, { status: 400 });
-  }
-
-  if (displayName !== undefined && displayName.length > 60) {
-    return NextResponse.json({ error: 'Ten hien thi toi da 60 ky tu.' }, { status: 400 });
+  if (email !== undefined && email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: 'Email không hợp lệ.' }, { status: 400 });
   }
   if (phone !== undefined && phone && !isValidVietnamPhone(phone)) {
-    return NextResponse.json({ error: 'So dien thoai phai dung 10 chu so hoac de trong.' }, { status: 400 });
+    return NextResponse.json({ error: 'Số điện thoại phải đúng 10 chữ số hoặc để trống.' }, { status: 400 });
+  }
+  if (zaloNumber !== undefined && zaloNumber && !/^\d{8,15}$/.test(zaloNumber)) {
+    return NextResponse.json({ error: 'Số Zalo chỉ gồm số, từ 8 đến 15 ký tự.' }, { status: 400 });
+  }
+  if (bankAccount !== undefined && bankAccount.length > 40) {
+    return NextResponse.json({ error: 'Số tài khoản tối đa 40 ký tự.' }, { status: 400 });
+  }
+  if (bankName !== undefined && bankName.length > 80) {
+    return NextResponse.json({ error: 'Tên ngân hàng tối đa 80 ký tự.' }, { status: 400 });
   }
   if (bio !== undefined && bio.length > 300) {
-    return NextResponse.json({ error: 'Gioi thieu toi da 300 ky tu.' }, { status: 400 });
+    return NextResponse.json({ error: 'Giới thiệu tối đa 300 ký tự.' }, { status: 400 });
   }
-  if (avatarImage !== undefined && avatarImage.length > 1_500_000) {
-    return NextResponse.json({ error: 'Anh dai dien qua lon. Vui long chon anh nho hon 1MB.' }, { status: 400 });
+  if (avatarImage !== undefined && avatarImage.length > 6_500_000) {
+    return NextResponse.json({ error: 'Ảnh đại diện quá lớn. Vui lòng chọn ảnh nhỏ hơn 6MB.' }, { status: 400 });
   }
 
   try {
-    let activeUsername = session.username;
-    if (nextUsername && nextUsername !== session.username) {
-      await renameUsername(session.username, nextUsername);
-      activeUsername = nextUsername;
-    }
-
-    if (nextPassword && nextPassword.length >= 6) {
-      await updateUserRecord(activeUsername, { passwordHash: hashPassword(nextPassword) });
-    }
-
-    const profile = await updateUserProfile(activeUsername, { displayName, phone, address, bio, avatarImage });
-
-    if (activeUsername !== session.username) {
-      await setSessionCookie(createSessionToken(activeUsername, session.role));
-    }
-
-    return NextResponse.json({ ok: true, profile, username: activeUsername });
+    const profile = await updateUserProfile(session.username, { phone, email, zaloNumber, bankAccount, bankName, bio, avatarImage });
+    return NextResponse.json({ ok: true, profile, username: session.username });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Khong cap nhat duoc ho so.' }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Không cập nhật được hồ sơ.' }, { status: 500 });
   }
 }

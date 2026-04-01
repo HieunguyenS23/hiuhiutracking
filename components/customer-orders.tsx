@@ -104,6 +104,8 @@ function normalizeTimeline(result?: TrackingResult | null) {
 
 export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
   const [orders, setOrders] = useState(initialOrders);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [error, setError] = useState(initialError);
   const [message, setMessage] = useState('');
   const [trackingLoading, setTrackingLoading] = useState('');
@@ -177,6 +179,23 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
   }
 
   const timelineItems = useMemo(() => normalizeTimeline(trackingDetail?.result), [trackingDetail]);
+  const filteredOrders = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    return orders.filter((item) => {
+      if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+      if (!keyword) return true;
+      return [item.recipientName, item.orderCode, item.productName, item.phone, item.deliveryTracking]
+        .join(' ')
+        .toLowerCase()
+        .includes(keyword);
+    });
+  }, [orders, search, statusFilter]);
+
+  const stats = useMemo(() => ({
+    total: orders.length,
+    canceled: orders.filter((item) => item.status === 'canceled').length,
+    inProgress: orders.filter((item) => item.status !== 'canceled').length,
+  }), [orders]);
 
   return (
     <section className="phone-card ui-polish-history">
@@ -187,11 +206,26 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
         </div>
         <span className="chip">{orders.length} đơn</span>
       </div>
+      <div className="stats-grid">
+        <div className="stats-card"><span>Tổng đơn</span><strong>{stats.total}</strong></div>
+        <div className="stats-card"><span>Đang xử lí</span><strong>{stats.inProgress}</strong></div>
+        <div className="stats-card"><span>Đã hủy</span><strong>{stats.canceled}</strong></div>
+      </div>
+      <div className="filter-bar">
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm theo người nhận, mã đơn, sản phẩm..." />
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="all">Tất cả trạng thái</option>
+          <option value="pending">Chờ xác nhận</option>
+          <option value="confirmed">Đã xác nhận</option>
+          <option value="ordered">Đã đặt</option>
+          <option value="canceled">Đã hủy</option>
+        </select>
+      </div>
       {message ? <div className="inline-success">{message}</div> : null}
       {error ? <div className="inline-error">{error}</div> : null}
       <div className="order-list">
-        {!error && orders.length === 0 ? <div className="empty-state">Chưa có đơn nào được gửi.</div> : null}
-        {orders.map((order) => {
+        {!error && filteredOrders.length === 0 ? <div className="empty-state">Không có đơn phù hợp bộ lọc.</div> : null}
+        {filteredOrders.map((order) => {
           const isCanceled = order.status === 'canceled';
           const deliveryTone = detectDeliveryTone(order.deliveryStatus || '');
           return (

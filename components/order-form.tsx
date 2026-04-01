@@ -6,11 +6,12 @@ import type { VoucherType } from '@/lib/types';
 import { locationTree } from '@/lib/locations';
 import { hasAtLeastTwoWords, isValidVietnamPhone } from '@/lib/validators';
 
-const voucherOptions: { value: VoucherType; label: string }[] = [
-  { value: '100k', label: 'Mã 100k' },
-  { value: '80k', label: 'Mã 80k' },
-  { value: '60k', label: 'Mã 60k' },
-];
+type VoucherOption = {
+  id: string;
+  label: string;
+  price: number;
+  active: boolean;
+};
 
 function normalizeKeyword(value: string) {
   return value
@@ -38,6 +39,8 @@ export function OrderForm() {
   const [phone, setPhone] = useState('');
   const [addressLine, setAddressLine] = useState('');
   const [voucherType, setVoucherType] = useState<VoucherType>('100k');
+  const [voucherOptions, setVoucherOptions] = useState<VoucherOption[]>([]);
+  const [orderFormEnabled, setOrderFormEnabled] = useState(true);
   const [productLink, setProductLink] = useState('');
   const [variant, setVariant] = useState('');
   const [quantity, setQuantity] = useState('1');
@@ -51,6 +54,32 @@ export function OrderForm() {
 
   const districtOptions = province?.districts || [];
   const wardOptions = district?.wards || [];
+
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const [voucherResponse, settingsResponse] = await Promise.all([
+          fetch('/api/vouchers', { cache: 'no-store' }),
+          fetch('/api/settings', { cache: 'no-store' }),
+        ]);
+        const voucherData = await voucherResponse.json();
+        const settingsData = await settingsResponse.json();
+        if (!voucherResponse.ok) throw new Error(voucherData.error || 'Không tải được voucher.');
+        if (!settingsResponse.ok) throw new Error(settingsData.error || 'Không tải được cài đặt form.');
+
+        const activeVouchers = (Array.isArray(voucherData.vouchers) ? voucherData.vouchers : []).filter((item: VoucherOption) => item.active);
+        setVoucherOptions(activeVouchers);
+        setOrderFormEnabled(Boolean(settingsData.settings?.orderFormEnabled !== false));
+        if (activeVouchers.length > 0 && !activeVouchers.some((item: VoucherOption) => item.id === voucherType)) {
+          setVoucherType(activeVouchers[0].id);
+        }
+      } catch (configError) {
+        setError(configError instanceof Error ? configError.message : 'Không tải được cấu hình voucher.');
+      }
+    };
+
+    loadConfig();
+  }, []);
 
   useEffect(() => {
     if (!message && !error) return;
@@ -98,6 +127,12 @@ export function OrderForm() {
     setMessage('');
     setError('');
 
+    if (!orderFormEnabled) {
+      setLoading(false);
+      setError('Form lên đơn đang tạm đóng. Vui lòng quay lại sau.');
+      return;
+    }
+
     if (!hasAtLeastTwoWords(recipientName)) {
       setLoading(false);
       setError('Tên người nhận phải có ít nhất 2 từ.');
@@ -143,7 +178,7 @@ export function OrderForm() {
       setProvinceQuery('');
       setDistrictQuery('');
       setWardQuery('');
-      setVoucherType('100k');
+      setVoucherType(voucherOptions[0]?.id || '');
       setProductLink('');
       setVariant('');
       setQuantity('1');
@@ -165,6 +200,7 @@ export function OrderForm() {
         </div>
         <span className="chip chip-soft">Form mới</span>
       </div>
+      {!orderFormEnabled ? <div className="inline-error">Form lên đơn đang tạm đóng để xử lí hết hàng.</div> : null}
       <div className="form-grid compact order-form-grid-modern">
         <label><span>Tên người nhận</span><input value={recipientName} onChange={(event) => setRecipientName(event.target.value)} placeholder="Nguyễn Văn A" /></label>
         <label><span>Số điện thoại</span><input value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="09xxxxxxxx (có thể để trống)" /></label>
@@ -217,8 +253,8 @@ export function OrderForm() {
 
         <label>
           <span>Loại mã</span>
-          <select value={voucherType} onChange={(event) => setVoucherType(event.target.value as VoucherType)}>
-            {voucherOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+          <select value={voucherType} onChange={(event) => setVoucherType(event.target.value as VoucherType)} disabled={!orderFormEnabled || voucherOptions.length === 0}>
+            {voucherOptions.map((item) => <option key={item.id} value={item.id}>{item.label} - {item.price.toLocaleString('vi-VN')}đ</option>)}
           </select>
         </label>
         <label><span>Link sản phẩm</span><input value={productLink} onChange={(event) => setProductLink(event.target.value)} placeholder="https://shopee.vn/..." /></label>
@@ -228,7 +264,7 @@ export function OrderForm() {
       {message ? <div className="inline-success">{message}</div> : null}
       {error ? <div className="inline-error">{error}</div> : null}
       <div className="submit-bar">
-        <button className="primary-button" disabled={loading} onClick={submitOrder} type="button">{loading ? 'Đang gửi đơn...' : 'Gửi đơn'}</button>
+        <button className="primary-button" disabled={loading || !orderFormEnabled || voucherOptions.length === 0} onClick={submitOrder} type="button">{loading ? 'Đang gửi đơn...' : 'Gửi đơn'}</button>
       </div>
     </section>
   );

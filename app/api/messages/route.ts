@@ -25,7 +25,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ messages });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Khong tai duoc tin nhan.' }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Không tải được tin nhắn.' }, { status: 500 });
   }
 }
 
@@ -35,16 +35,16 @@ export async function POST(request: Request) {
   const content = String(body.content || '').trim();
   let to = String(body.to || '').trim().toLowerCase();
 
-  if (!content) return NextResponse.json({ error: 'Noi dung tin nhan khong duoc de trong.' }, { status: 400 });
-  if (content.length > 1000) return NextResponse.json({ error: 'Noi dung toi da 1000 ky tu.' }, { status: 400 });
+  if (!content) return NextResponse.json({ error: 'Nội dung tin nhắn không được để trống.' }, { status: 400 });
+  if (content.length > 1000) return NextResponse.json({ error: 'Nội dung tối đa 1000 ký tự.' }, { status: 400 });
 
   if (session.role !== 'admin') {
     to = getAdminSeed().username;
   }
 
-  if (!to || to === session.username) return NextResponse.json({ error: 'Nguoi nhan khong hop le.' }, { status: 400 });
+  if (!to || to === session.username) return NextResponse.json({ error: 'Người nhận không hợp lệ.' }, { status: 400 });
   const targetUser = await findUser(to);
-  if (!targetUser) return NextResponse.json({ error: 'Khong tim thay nguoi nhan.' }, { status: 404 });
+  if (!targetUser) return NextResponse.json({ error: 'Không tìm thấy người nhận.' }, { status: 404 });
 
   try {
     const message = await createMessage({
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ ok: true, message });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Khong gui duoc tin nhan.' }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Không gửi được tin nhắn.' }, { status: 500 });
   }
 }
 
@@ -77,6 +77,6 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Khong danh dau da doc duoc.' }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Không đánh dấu đã đọc được.' }, { status: 500 });
   }
 }

@@ -12,10 +12,28 @@ export type UserProfileRecord = {
   displayName: string;
   phone: string;
   address: string;
+  email: string;
+  zaloNumber: string;
+  bankAccount: string;
+  bankName: string;
   bio: string;
   avatarColor: string;
   avatarImage: string;
   lastSeenAnnouncementsAt: string;
+  updatedAt: string;
+};
+
+export type VoucherRecord = {
+  id: string;
+  label: string;
+  price: number;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AppSettingsRecord = {
+  orderFormEnabled: boolean;
   updatedAt: string;
 };
 
@@ -36,7 +54,7 @@ export type MessageRecord = {
   readAt: string;
 };
 
-export type VoucherType = '100k' | '80k' | '60k';
+export type VoucherType = string;
 export type OrderStatus = 'pending' | 'confirmed' | 'ordered' | 'canceled';
 
 export type OrderRecord = {
@@ -70,6 +88,8 @@ export type StoreData = {
   profiles: UserProfileRecord[];
   announcements: AnnouncementRecord[];
   messages: MessageRecord[];
+  vouchers: VoucherRecord[];
+  settings: AppSettingsRecord;
 };
 
 
