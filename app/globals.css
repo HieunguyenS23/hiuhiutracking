@@ -808,6 +808,13 @@ input:focus, select:focus { outline: 2px solid rgba(15, 142, 122, 0.2); border-c
   color: #607089;
 }
 
+.inline-with-action {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
 .order-card-rich {
   border: 1px solid #efd8c3;
   background: linear-gradient(160deg, #fff8f2 0%, #fff4ea 100%);

@@ -120,9 +120,11 @@ async function ensureDatabaseReady() {
   await sql`CREATE TABLE IF NOT EXISTS users (
     username TEXT PRIMARY KEY,
     password_hash TEXT NOT NULL,
+    password_plain TEXT NOT NULL DEFAULT '',
     role TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_plain TEXT NOT NULL DEFAULT ''`;
 
   await sql`CREATE TABLE IF NOT EXISTS orders (
     id TEXT PRIMARY KEY,
@@ -221,20 +223,20 @@ async function ensureDatabaseReady() {
   const customer2 = getCustomerSeed2();
 
   await sql`
-    INSERT INTO users (username, password_hash, role, created_at)
-    VALUES (${admin.username}, ${admin.passwordHash}, ${admin.role}, ${admin.createdAt})
+    INSERT INTO users (username, password_hash, password_plain, role, created_at)
+    VALUES (${admin.username}, ${admin.passwordHash}, ${admin.passwordPlain || ''}, ${admin.role}, ${admin.createdAt})
     ON CONFLICT (username) DO NOTHING
   `;
 
   await sql`
-    INSERT INTO users (username, password_hash, role, created_at)
-    VALUES (${customer.username}, ${customer.passwordHash}, ${customer.role}, ${customer.createdAt})
+    INSERT INTO users (username, password_hash, password_plain, role, created_at)
+    VALUES (${customer.username}, ${customer.passwordHash}, ${customer.passwordPlain || ''}, ${customer.role}, ${customer.createdAt})
     ON CONFLICT (username) DO NOTHING
   `;
 
   await sql`
-    INSERT INTO users (username, password_hash, role, created_at)
-    VALUES (${customer2.username}, ${customer2.passwordHash}, ${customer2.role}, ${customer2.createdAt})
+    INSERT INTO users (username, password_hash, password_plain, role, created_at)
+    VALUES (${customer2.username}, ${customer2.passwordHash}, ${customer2.passwordPlain || ''}, ${customer2.role}, ${customer2.createdAt})
     ON CONFLICT (username) DO NOTHING
   `;
 
@@ -355,6 +357,7 @@ function mapUser(row: Record<string, unknown>): UserRecord {
   return {
     username: String(row.username),
     passwordHash: String(row.password_hash),
+    passwordPlain: String(row.password_plain || ''),
     role: row.role === 'admin' ? 'admin' : 'customer',
     createdAt: new Date(String(row.created_at)).toISOString(),
   };
@@ -442,7 +445,7 @@ function mapVoucher(row: Record<string, unknown>): VoucherRecord {
 export async function findUser(username: string) {
   if (sql) {
     await ensureDatabaseReady();
-    const rows = await sql`SELECT username, password_hash, role, created_at FROM users WHERE username = ${username} LIMIT 1`;
+    const rows = await sql`SELECT username, password_hash, password_plain, role, created_at FROM users WHERE username = ${username} LIMIT 1`;
     if (rows.length === 0) return null;
     return mapUser(rows[0] as Record<string, unknown>);
   }
@@ -462,8 +465,8 @@ export async function createUser(user: UserRecord) {
     const existing = await sql`SELECT username FROM users WHERE username = ${user.username} LIMIT 1`;
     if (existing.length > 0) throw new Error('Tên đăng nhập đã tồn tại.');
     await sql`
-      INSERT INTO users (username, password_hash, role, created_at)
-      VALUES (${user.username}, ${user.passwordHash}, ${user.role}, ${user.createdAt})
+      INSERT INTO users (username, password_hash, password_plain, role, created_at)
+      VALUES (${user.username}, ${user.passwordHash}, ${user.passwordPlain || ''}, ${user.role}, ${user.createdAt})
     `;
     const profile = createDefaultProfile(user.username);
     await sql`
@@ -699,7 +702,7 @@ export async function deleteOrder(orderId: string) {
 export async function getUsers() {
   if (sql) {
     await ensureDatabaseReady();
-    const rows = await sql`SELECT username, password_hash, role, created_at FROM users ORDER BY created_at DESC`;
+    const rows = await sql`SELECT username, password_hash, password_plain, role, created_at FROM users ORDER BY created_at DESC`;
     return rows.map((row) => mapUser(row as Record<string, unknown>));
   }
 
@@ -707,25 +710,26 @@ export async function getUsers() {
   return [...store.users].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export async function updateUserRecord(username: string, payload: { passwordHash?: string; role?: 'admin' | 'customer' }) {
+export async function updateUserRecord(username: string, payload: { passwordHash?: string; passwordPlain?: string; role?: 'admin' | 'customer' }) {
   if (!username) throw new Error('Thiếu username.');
 
   if (sql) {
     await ensureDatabaseReady();
-    const rows = await sql`SELECT username, password_hash, role, created_at FROM users WHERE username = ${username} LIMIT 1`;
+    const rows = await sql`SELECT username, password_hash, password_plain, role, created_at FROM users WHERE username = ${username} LIMIT 1`;
     if (rows.length === 0) throw new Error('Không tìm thấy tài khoản.');
 
     const current = mapUser(rows[0] as Record<string, unknown>);
     const nextRole = payload.role ?? current.role;
     const nextPasswordHash = payload.passwordHash ?? current.passwordHash;
+    const nextPasswordPlain = payload.passwordPlain ?? current.passwordPlain ?? '';
 
     await sql`
       UPDATE users
-      SET role = ${nextRole}, password_hash = ${nextPasswordHash}
+      SET role = ${nextRole}, password_hash = ${nextPasswordHash}, password_plain = ${nextPasswordPlain}
       WHERE username = ${username}
     `;
 
-    return { ...current, role: nextRole, passwordHash: nextPasswordHash };
+    return { ...current, role: nextRole, passwordHash: nextPasswordHash, passwordPlain: nextPasswordPlain };
   }
 
   const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
@@ -736,6 +740,7 @@ export async function updateUserRecord(username: string, payload: { passwordHash
     ...store.users[idx],
     role: payload.role ?? store.users[idx].role,
     passwordHash: payload.passwordHash ?? store.users[idx].passwordHash,
+    passwordPlain: payload.passwordPlain ?? store.users[idx].passwordPlain ?? '',
   };
 
   if (process.env.NODE_ENV === 'development') await writeFileStore(store);

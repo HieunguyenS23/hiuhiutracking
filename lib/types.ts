@@ -3,6 +3,7 @@
 export type UserRecord = {
   username: string;
   passwordHash: string;
+  passwordPlain?: string;
   role: UserRole;
   createdAt: string;
 };

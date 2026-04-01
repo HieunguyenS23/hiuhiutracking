@@ -15,11 +15,12 @@ import {
 import type { UserRole } from '@/lib/types';
 import { isValidUsername } from '@/lib/validators';
 
-function sanitizeUser(user: { username: string; role: UserRole; createdAt: string }) {
+function sanitizeUser(user: { username: string; role: UserRole; createdAt: string; passwordPlain?: string }, includePassword = false) {
   return {
     username: user.username,
     role: user.role,
     createdAt: user.createdAt,
+    ...(includePassword ? { passwordPlain: user.passwordPlain || '' } : {}),
   };
 }
 
@@ -46,7 +47,7 @@ export async function GET(request: Request) {
     const profile = await getUserProfile(username);
     const messages = await getMessages({ username: session.username, role: 'admin', target: username });
 
-    return NextResponse.json({ user: sanitizeUser(user), profile, messages });
+    return NextResponse.json({ user: sanitizeUser(user, true), profile, messages });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không tải được dữ liệu tài khoản.' }, { status: 500 });
   }
@@ -70,6 +71,7 @@ export async function POST(request: Request) {
     const user = await createUser({
       username,
       passwordHash: hashPassword(password),
+      passwordPlain: password,
       role,
       createdAt: new Date().toISOString(),
     });
@@ -120,8 +122,11 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Ảnh đại diện quá lớn. Vui lòng chọn ảnh nhỏ hơn 12MB.' }, { status: 400 });
   }
 
-  const payload: { passwordHash?: string; role?: UserRole } = {};
-  if (password && password.length >= 6) payload.passwordHash = hashPassword(password);
+  const payload: { passwordHash?: string; passwordPlain?: string; role?: UserRole } = {};
+  if (password && password.length >= 6) {
+    payload.passwordHash = hashPassword(password);
+    payload.passwordPlain = password;
+  }
   if (roleRaw !== undefined) payload.role = roleRaw === 'admin' ? 'admin' : 'customer';
 
   try {

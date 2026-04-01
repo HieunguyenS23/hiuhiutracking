@@ -8,6 +8,7 @@ type UserRow = {
   username: string;
   role: 'admin' | 'customer';
   createdAt: string;
+  passwordPlain?: string;
   unreadCount?: number;
 };
 
@@ -60,6 +61,7 @@ export function AdminUsersManager({ initialUsers }: Props) {
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState<'admin' | 'customer'>('customer');
+  const [showPassword, setShowPassword] = useState(false);
 
   const total = useMemo(() => users.length, [users.length]);
 
@@ -85,6 +87,7 @@ export function AdminUsersManager({ initialUsers }: Props) {
       setDetail(null);
       return;
     }
+    setShowPassword(false);
 
     let stopped = false;
     const load = async () => {
@@ -380,6 +383,20 @@ export function AdminUsersManager({ initialUsers }: Props) {
                 </div>
 
                 <div className="form-grid compact">
+                  <label>
+                    <span>Mật khẩu hiện tại</span>
+                    <div className="inline-with-action">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={detail.user.passwordPlain || 'Chưa lưu'}
+                        readOnly
+                        className="readonly-input"
+                      />
+                      <button className="mini-action" type="button" onClick={() => setShowPassword((prev) => !prev)}>
+                        {showPassword ? 'Ẩn' : 'Hiện'}
+                      </button>
+                    </div>
+                  </label>
                   <label>
                     <span>Tên đăng ký</span>
                     <input value={detail.user.username} disabled className="readonly-input" />

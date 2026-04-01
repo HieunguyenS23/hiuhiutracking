@@ -31,6 +31,7 @@ export function getAdminSeed() {
   return {
     username: APP_USERNAME,
     passwordHash: hashPassword(APP_PASSWORD),
+    passwordPlain: APP_PASSWORD,
     role: 'admin' as const,
     createdAt: new Date().toISOString(),
   };
@@ -40,6 +41,7 @@ export function getCustomerSeed() {
   return {
     username: CUSTOMER_USERNAME,
     passwordHash: hashPassword(CUSTOMER_PASSWORD),
+    passwordPlain: CUSTOMER_PASSWORD,
     role: 'customer' as const,
     createdAt: new Date().toISOString(),
   };
@@ -49,6 +51,7 @@ export function getCustomerSeed2() {
   return {
     username: CUSTOMER2_USERNAME,
     passwordHash: hashPassword(CUSTOMER2_PASSWORD),
+    passwordPlain: CUSTOMER2_PASSWORD,
     role: 'customer' as const,
     createdAt: new Date().toISOString(),
   };
