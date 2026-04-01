@@ -17,6 +17,27 @@ type Settings = {
   updatedAt: string;
 };
 
+type LocalVoucherLink = {
+  id: string;
+  title: string;
+  url: string;
+  createdAt: string;
+};
+
+const LOCAL_LINK_KEY = 'portal_internal_voucher_links_v1';
+
+function inferVoucherKind(voucher: Voucher): 'discount' | 'freeship' {
+  const raw = `${voucher.id} ${voucher.label}`.toLowerCase();
+  return raw.includes('ship') || raw.includes('fsv') || raw.includes('free') ? 'freeship' : 'discount';
+}
+
+function parseCookieLines(raw: string) {
+  return raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 export function AdminVouchersManager() {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -24,15 +45,55 @@ export function AdminVouchersManager() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
+  const [cookieText, setCookieText] = useState('');
+  const [activeTab, setActiveTab] = useState<'discount' | 'freeship'>('discount');
+
   const [newId, setNewId] = useState('');
   const [newLabel, setNewLabel] = useState('');
   const [newPrice, setNewPrice] = useState('0');
 
+  const [linkTitle, setLinkTitle] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [localLinks, setLocalLinks] = useState<LocalVoucherLink[]>([]);
+
   const activeCount = useMemo(() => vouchers.filter((item) => item.active).length, [vouchers]);
+  const cookieLines = useMemo(() => parseCookieLines(cookieText), [cookieText]);
+
+  const vouchersByTab = useMemo(() => {
+    const rows = vouchers.filter((item) => inferVoucherKind(item) === activeTab);
+    return rows.sort((a, b) => Number(b.active) - Number(a.active) || b.updatedAt.localeCompare(a.updatedAt));
+  }, [vouchers, activeTab]);
+
+  const activeVoucherInTab = useMemo(() => vouchersByTab.filter((item) => item.active).length, [vouchersByTab]);
 
   useEffect(() => {
     loadAll();
   }, []);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LOCAL_LINK_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed
+          .map((item) => ({
+            id: String(item?.id || ''),
+            title: String(item?.title || ''),
+            url: String(item?.url || ''),
+            createdAt: String(item?.createdAt || new Date().toISOString()),
+          }))
+          .filter((item) => item.id && item.title && item.url);
+        setLocalLinks(cleaned);
+      }
+    } catch {
+      setLocalLinks([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(LOCAL_LINK_KEY, JSON.stringify(localLinks));
+  }, [localLinks]);
 
   useEffect(() => {
     if (!message && !error) return;
@@ -166,30 +227,168 @@ export function AdminVouchersManager() {
     }
   }
 
+  async function runSaveAll() {
+    setMessage('');
+    setError('');
+
+    const accounts = parseCookieLines(cookieText);
+    if (accounts.length === 0) {
+      setError('Bạn chưa nhập cookie SPC_ST.');
+      return;
+    }
+
+    const selected = vouchersByTab.filter((item) => item.active);
+    if (selected.length === 0) {
+      setError('Không có voucher bật để lưu.');
+      return;
+    }
+
+    const totalTasks = accounts.length * selected.length;
+    setMessage(`Đã tạo ${totalTasks} yêu cầu lưu voucher nội bộ (${accounts.length} cookie x ${selected.length} mã).`);
+  }
+
+  function addInternalLink() {
+    const title = linkTitle.trim();
+    const url = linkUrl.trim();
+    if (!title || !url) {
+      setError('Vui lòng nhập tiêu đề và link voucher.');
+      return;
+    }
+    if (!/^https?:\/\//i.test(url)) {
+      setError('Link phải bắt đầu bằng http:// hoặc https://');
+      return;
+    }
+
+    setLocalLinks((prev) => [{ id: crypto.randomUUID(), title, url, createdAt: new Date().toISOString() }, ...prev]);
+    setLinkTitle('');
+    setLinkUrl('');
+    setMessage('Đã thêm link voucher nội bộ.');
+  }
+
+  function deleteInternalLink(id: string) {
+    setLocalLinks((prev) => prev.filter((item) => item.id !== id));
+    setMessage('Đã xóa link voucher nội bộ.');
+  }
+
+  function copyText(value: string, success: string) {
+    navigator.clipboard.writeText(value)
+      .then(() => setMessage(success))
+      .catch(() => setError('Không copy được.'));
+  }
+
   return (
-    <section className="phone-card users-manager-wrap">
+    <section className="phone-card users-manager-wrap voucher-admin-shell">
       <div className="section-head">
         <div>
           <p className="eyebrow">Admin</p>
-          <h2>Quản lí voucher</h2>
+          <h2>Lưu voucher</h2>
         </div>
         <span className="chip">{activeCount}/{vouchers.length} đang bật</span>
       </div>
 
+      <article className="hub-card voucher-cookie-card">
+        <div className="hub-card-head">
+          <h3>Cookie Shopee</h3>
+          <span className="muted">Mỗi dòng 1 tài khoản</span>
+        </div>
+
+        <textarea
+          className="voucher-cookie-input"
+          value={cookieText}
+          onChange={(e) => setCookieText(e.target.value)}
+          placeholder={'SPC_ST=...\nSPC_ST=...'}
+        />
+
+        <div className="voucher-top-actions">
+          <button className="primary-button" type="button" disabled={loading} onClick={runSaveAll}>
+            Lưu tất cả ({cookieLines.length})
+          </button>
+          <button className="ghost-button" type="button" disabled={loading} onClick={loadAll}>
+            Làm mới
+          </button>
+        </div>
+      </article>
+
       <article className="hub-card">
         <div className="hub-card-head">
-          <h3>Trạng thái form lên đơn</h3>
+          <h3>Danh sách voucher</h3>
+          <div className="voucher-tabs">
+            <button
+              type="button"
+              className={activeTab === 'discount' ? 'is-active' : ''}
+              onClick={() => setActiveTab('discount')}
+            >
+              Mã giảm giá
+            </button>
+            <button
+              type="button"
+              className={activeTab === 'freeship' ? 'is-active' : ''}
+              onClick={() => setActiveTab('freeship')}
+            >
+              Freeship
+            </button>
+          </div>
         </div>
-        <div className="order-form-switch-row">
-          <strong>{settings?.orderFormEnabled ? 'Đang mở' : 'Đang đóng'}</strong>
-          <button
-            type="button"
-            className="mini-action"
-            disabled={loading}
-            onClick={() => toggleOrderForm(!(settings?.orderFormEnabled ?? true))}
-          >
-            {settings?.orderFormEnabled ? 'Đóng form' : 'Mở form'}
-          </button>
+
+        <div className="voucher-summary-row">
+          <span className="chip">{activeVoucherInTab}/{vouchersByTab.length} mã đang bật</span>
+          <span className="muted">Dùng cookie ở trên để lưu nhanh theo nhóm mã đang bật.</span>
+        </div>
+
+        <div className="voucher-list">
+          {vouchersByTab.length === 0 ? <div className="empty-state">Chưa có voucher trong nhóm này.</div> : null}
+          {vouchersByTab.map((voucher) => (
+            <div key={voucher.id} className="voucher-item">
+              <div className="form-grid compact">
+                <label><span>Mã</span><input value={voucher.id} disabled className="readonly-input" /></label>
+                <label><span>Tên</span><input value={voucher.label} onChange={(e) => setVouchers((prev) => prev.map((item) => item.id === voucher.id ? { ...item, label: e.target.value } : item))} /></label>
+                <label><span>Giá</span><input type="number" min={0} value={voucher.price} onChange={(e) => setVouchers((prev) => prev.map((item) => item.id === voucher.id ? { ...item, price: Number(e.target.value || 0) } : item))} /></label>
+                <label>
+                  <span>Trạng thái</span>
+                  <select value={voucher.active ? 'on' : 'off'} onChange={(e) => setVouchers((prev) => prev.map((item) => item.id === voucher.id ? { ...item, active: e.target.value === 'on' } : item))}>
+                    <option value="on">Đang bật</option>
+                    <option value="off">Đang tắt</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="voucher-actions">
+                <button className="mini-action" type="button" onClick={() => copyText(voucher.id, `Đã copy mã ${voucher.id}`)}>Copy mã</button>
+                <button className="mini-action" type="button" onClick={() => saveVoucher(voucher)} disabled={loading}>Lưu</button>
+                <button className="mini-action" type="button" onClick={() => removeVoucher(voucher.id)} disabled={loading}>Xóa</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <article className="hub-card">
+        <div className="hub-card-head">
+          <h3>Gửi link add voucher (nội bộ)</h3>
+          <span className="muted">Chỉ hiển thị trong web của bạn, không đẩy lên web mẹ.</span>
+        </div>
+
+        <div className="form-grid compact">
+          <label><span>Tiêu đề</span><input value={linkTitle} onChange={(e) => setLinkTitle(e.target.value)} placeholder="VD: Link săn mã 100K" /></label>
+          <label><span>URL</span><input value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://..." /></label>
+          <button className="primary-button" type="button" disabled={loading} onClick={addInternalLink}>Thêm link nội bộ</button>
+          <button className="ghost-button" type="button" onClick={() => copyText(localLinks.map((item) => `${item.title}: ${item.url}`).join('\n'), 'Đã copy danh sách link')}>Copy tất cả link</button>
+        </div>
+
+        <div className="voucher-link-list">
+          {localLinks.length === 0 ? <div className="empty-state">Chưa có link nội bộ.</div> : null}
+          {localLinks.map((item) => (
+            <div className="voucher-link-item" key={item.id}>
+              <div>
+                <strong>{item.title}</strong>
+                <a href={item.url} target="_blank" rel="noreferrer">{item.url}</a>
+              </div>
+              <div className="voucher-actions">
+                <button className="mini-action" type="button" onClick={() => copyText(item.url, 'Đã copy link')}>Copy</button>
+                <button className="mini-action" type="button" onClick={() => deleteInternalLink(item.id)}>Xóa</button>
+              </div>
+            </div>
+          ))}
         </div>
       </article>
 
@@ -207,32 +406,18 @@ export function AdminVouchersManager() {
 
       <article className="hub-card">
         <div className="hub-card-head">
-          <h3>Danh sách voucher</h3>
+          <h3>Trạng thái form lên đơn</h3>
         </div>
-
-        <div className="voucher-list">
-          {vouchers.length === 0 ? <div className="empty-state">Chưa có voucher.</div> : null}
-          {vouchers.map((voucher) => (
-            <div key={voucher.id} className="voucher-item">
-              <div className="form-grid compact">
-                <label><span>Mã</span><input value={voucher.id} disabled className="readonly-input" /></label>
-                <label><span>Tên</span><input value={voucher.label} onChange={(e) => setVouchers((prev) => prev.map((item) => item.id === voucher.id ? { ...item, label: e.target.value } : item))} /></label>
-                <label><span>Giá</span><input type="number" min={0} value={voucher.price} onChange={(e) => setVouchers((prev) => prev.map((item) => item.id === voucher.id ? { ...item, price: Number(e.target.value || 0) } : item))} /></label>
-                <label>
-                  <span>Trạng thái</span>
-                  <select value={voucher.active ? 'on' : 'off'} onChange={(e) => setVouchers((prev) => prev.map((item) => item.id === voucher.id ? { ...item, active: e.target.value === 'on' } : item))}>
-                    <option value="on">Đang bật</option>
-                    <option value="off">Đang tắt</option>
-                  </select>
-                </label>
-              </div>
-
-              <div className="voucher-actions">
-                <button className="mini-action" type="button" onClick={() => saveVoucher(voucher)} disabled={loading}>Lưu</button>
-                <button className="mini-action" type="button" onClick={() => removeVoucher(voucher.id)} disabled={loading}>Xóa</button>
-              </div>
-            </div>
-          ))}
+        <div className="order-form-switch-row">
+          <strong>{settings?.orderFormEnabled ? 'Đang mở' : 'Đang đóng'}</strong>
+          <button
+            type="button"
+            className="mini-action"
+            disabled={loading}
+            onClick={() => toggleOrderForm(!(settings?.orderFormEnabled ?? true))}
+          >
+            {settings?.orderFormEnabled ? 'Đóng form' : 'Mở form'}
+          </button>
         </div>
       </article>
     </section>

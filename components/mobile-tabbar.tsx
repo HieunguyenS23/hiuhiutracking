@@ -87,9 +87,6 @@ export function MobileTabbar({ isAdmin, username }: Props) {
               Tài khoản
               {unread.unreadMessages > 0 ? <span className="tab-badge">{unread.unreadMessages > 99 ? '99+' : unread.unreadMessages}</span> : null}
             </Link>
-            <Link className={pathname.startsWith('/admin/vouchers') ? 'is-active' : ''} href="/admin/vouchers">
-              Voucher
-            </Link>
             <Link className={pathname.startsWith('/profile') ? 'is-active' : ''} href="/profile">
               Hồ sơ
             </Link>
