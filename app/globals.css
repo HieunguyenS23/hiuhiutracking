@@ -125,6 +125,12 @@ button, input, select { font: inherit; }
   color: #1d3458;
 }
 
+.ui-polish-admin-orders .amount-text {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
 .ui-polish-admin-orders .sheet-table tbody tr:hover {
   background: #f8fbff;
 }

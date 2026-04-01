@@ -69,8 +69,8 @@ export function LeftTagbar({ isAdmin }: Props) {
     : [
         { href: '/orders/new', label: 'Lên đơn' },
         { href: '/orders/history', label: 'Lịch sử' },
-        { href: '/profile', label: 'Hồ sơ', badge: unread.unreadMessages },
-        { href: '/announcements', label: 'Thông báo', badge: unread.unreadAnnouncements },
+        { href: '/profile', label: 'Hồ sơ' },
+        { href: '/announcements', label: 'Thông báo', badge: unread.unreadAnnouncements + unread.unreadMessages },
       ];
 
   return (

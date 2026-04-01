@@ -101,13 +101,10 @@ export function MobileTabbar({ isAdmin, username }: Props) {
         ) : (
           <>
             <Link className={pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/history">Lịch sử</Link>
-            <Link className={`tab-link-with-badge ${pathname.startsWith('/profile') ? 'is-active' : ''}`} href="/profile">
-              Hồ sơ
-              {unread.unreadMessages > 0 ? <span className="tab-badge">{unread.unreadMessages > 99 ? '99+' : unread.unreadMessages}</span> : null}
-            </Link>
+            <Link className={pathname.startsWith('/profile') ? 'is-active' : ''} href="/profile">Hồ sơ</Link>
             <Link className={`tab-link-with-badge ${pathname.startsWith('/announcements') ? 'is-active' : ''}`} href="/announcements">
               Thông báo
-              {unread.unreadAnnouncements > 0 ? <span className="tab-badge">{unread.unreadAnnouncements > 99 ? '99+' : unread.unreadAnnouncements}</span> : null}
+              {unread.total > 0 ? <span className="tab-badge">{unread.total > 99 ? '99+' : unread.total}</span> : null}
             </Link>
           </>
         )}

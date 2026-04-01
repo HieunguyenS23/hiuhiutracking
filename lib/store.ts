@@ -515,7 +515,7 @@ export async function createOrder(order: OrderRecord) {
 
 export async function updateOrder(
   orderId: string,
-  payload: Partial<Pick<OrderRecord, 'status' | 'recipientName' | 'phone' | 'addressLine' | 'ward' | 'district' | 'province' | 'voucherType' | 'productLink' | 'variant' | 'quantity' | 'orderCode' | 'orderAmount' | 'deliveryStatus' | 'deliveryCheckedAt' | 'deliveryTracking' | 'productName' | 'processingCookie' | 'processingAccount'>>
+  payload: Partial<Pick<OrderRecord, 'orderPublicId' | 'status' | 'recipientName' | 'phone' | 'addressLine' | 'ward' | 'district' | 'province' | 'voucherType' | 'productLink' | 'variant' | 'quantity' | 'orderCode' | 'orderAmount' | 'deliveryStatus' | 'deliveryCheckedAt' | 'deliveryTracking' | 'productName' | 'processingCookie' | 'processingAccount'>>
 ) {
   ensurePersistentOrderStore();
 
@@ -533,6 +533,7 @@ export async function updateOrder(
     if (rows.length === 0) throw new Error('Không tìm thấy đơn hàng.');
 
     const current = mapOrder(rows[0] as Record<string, unknown>);
+    const nextOrderPublicId = payload.orderPublicId ?? current.orderPublicId;
     const nextStatus = payload.status ? normalizeStatus(payload.status) : current.status;
     const nextRecipientName = payload.recipientName ?? current.recipientName;
     const nextPhone = payload.phone ?? current.phone;
@@ -555,7 +556,8 @@ export async function updateOrder(
 
     await sql`
       UPDATE orders
-      SET recipient_name = ${nextRecipientName},
+      SET order_public_id = ${nextOrderPublicId},
+          recipient_name = ${nextRecipientName},
           phone = ${nextPhone},
           address_line = ${nextAddressLine},
           ward = ${nextWard},
@@ -579,6 +581,7 @@ export async function updateOrder(
 
     return {
       ...current,
+      orderPublicId: nextOrderPublicId,
       recipientName: nextRecipientName,
       phone: nextPhone,
       addressLine: nextAddressLine,
@@ -608,6 +611,7 @@ export async function updateOrder(
   const current = store.orders[index];
   store.orders[index] = {
     ...current,
+    orderPublicId: payload.orderPublicId ?? current.orderPublicId,
     recipientName: payload.recipientName ?? current.recipientName,
     phone: payload.phone ?? current.phone,
     addressLine: payload.addressLine ?? current.addressLine,

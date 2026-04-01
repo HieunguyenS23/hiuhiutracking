@@ -1,31 +1,52 @@
 ﻿import crypto from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { requireSession } from '@/lib/session';
-import { createOrder, deleteOrder, getAppSettings, getOrders, getOrdersByUsername, getVouchers, updateOrder } from '@/lib/store';
-import type { OrderStatus, VoucherType } from '@/lib/types';
+import { createOrder, deleteOrder, getAppSettings, getOrders, getVouchers, updateOrder } from '@/lib/store';
+import type { OrderRecord, OrderStatus, VoucherType } from '@/lib/types';
 import { hasAtLeastTwoWords, isValidVietnamPhone } from '@/lib/validators';
 
 const allowedStatuses: OrderStatus[] = ['pending', 'confirmed', 'ordered', 'canceled'];
 const TRACK_API_BASE = 'https://dodanhvu.dpdns.org';
-const ID_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const ID_DIGITS = '0123456789';
 
-function getOrderDayPrefix(date: Date) {
-  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' }).format(date);
-}
-
-function randomSuffix(length: number) {
+function randomDigits(length: number) {
   let out = '';
-  for (let i = 0; i < length; i += 1) out += ID_CHARS[Math.floor(Math.random() * ID_CHARS.length)];
+  for (let i = 0; i < length; i += 1) out += ID_DIGITS[Math.floor(Math.random() * ID_DIGITS.length)];
   return out;
 }
 
-function generateOrderPublicId(existing: Set<string>, now = new Date()) {
-  const prefix = getOrderDayPrefix(now);
-  for (let i = 0; i < 40; i += 1) {
-    const candidate = `${prefix}${randomSuffix(6)}`;
+function isSixDigitId(value: string) {
+  return /^\d{6}$/.test(String(value || '').trim());
+}
+
+function generateOrderPublicId(existing: Set<string>) {
+  for (let i = 0; i < 200; i += 1) {
+    const candidate = randomDigits(6);
     if (!existing.has(candidate)) return candidate;
   }
-  return `${prefix}${String(now.getTime()).slice(-6)}`;
+  return String(Math.floor(Math.random() * 900000) + 100000);
+}
+
+async function ensureOrdersHavePublicId(orders: OrderRecord[]) {
+  const existing = new Set(orders.map((item) => String(item.orderPublicId || '').trim()).filter(Boolean));
+
+  const ensured = await Promise.all(
+    orders.map(async (order) => {
+      const current = String(order.orderPublicId || '').trim();
+      if (isSixDigitId(current)) return order;
+
+      const nextId = generateOrderPublicId(existing);
+      existing.add(nextId);
+
+      try {
+        return await updateOrder(order.id, { orderPublicId: nextId });
+      } catch {
+        return { ...order, orderPublicId: nextId };
+      }
+    })
+  );
+
+  return ensured;
 }
 
 function normalizeCookie(raw: string) {
@@ -274,8 +295,13 @@ async function refreshCookieByAccount(accountInput: string) {
 export async function GET() {
   const session = await requireSession();
   try {
-    const orders = session.role === 'admin' ? await getOrders() : await getOrdersByUsername(session.username);
-    const synced = await Promise.all(orders.map((order) => syncDeliveryStatusOnRead(order)));
+    const allOrders = await getOrders();
+    const withPublicId = await ensureOrdersHavePublicId(allOrders);
+    const scopedOrders =
+      session.role === 'admin'
+        ? withPublicId
+        : withPublicId.filter((item) => item.username === session.username);
+    const synced = await Promise.all(scopedOrders.map((order) => syncDeliveryStatusOnRead(order)));
     return NextResponse.json({ orders: synced });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Không tải được danh sách đơn.' }, { status: 503 });
