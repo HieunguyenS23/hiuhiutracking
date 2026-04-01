@@ -2012,6 +2012,9 @@ input:focus, select:focus { outline: 2px solid rgba(15, 142, 122, 0.2); border-c
 .announcements-customer-stack {
   display: grid;
   grid-template-columns: 1fr;
+  grid-template-areas:
+    "notice"
+    "chat";
   gap: 14px;
   width: 100%;
   max-width: 860px;
@@ -2019,12 +2022,22 @@ input:focus, select:focus { outline: 2px solid rgba(15, 142, 122, 0.2); border-c
 
 .announcements-customer-stack > * {
   width: 100%;
+  min-width: 0;
+  justify-self: stretch;
 }
 
 .announcements-notice-card,
 .announcements-chat-card {
   max-width: 100%;
   width: 100%;
+}
+
+.announcements-notice-card {
+  grid-area: notice;
+}
+
+.customer-chat-card {
+  grid-area: chat;
 }
 
 .customer-announcement-list {
@@ -2037,6 +2050,20 @@ input:focus, select:focus { outline: 2px solid rgba(15, 142, 122, 0.2); border-c
   max-height: 300px;
   min-height: 190px;
   overflow: auto;
+}
+
+@media (min-width: 980px) {
+  .announcements-customer-stack {
+    max-width: 920px;
+  }
+
+  .customer-chat-card {
+    padding: 16px;
+  }
+
+  .customer-chat-list .chat-item {
+    width: min(72%, 760px);
+  }
 }
 
 @media (max-width: 760px) {
