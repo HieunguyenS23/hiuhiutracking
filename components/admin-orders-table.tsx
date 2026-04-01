@@ -266,6 +266,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
       if (voucherFilter !== 'all' && item.voucherType !== voucherFilter) return false;
       if (!keyword) return true;
       return [item.recipientName, item.orderCode, item.phone, item.username, item.deliveryTracking, item.productName]
+        .concat(item.orderPublicId || '')
         .join(' ')
         .toLowerCase()
         .includes(keyword);
@@ -306,6 +307,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
         <table className="sheet-table">
           <thead>
             <tr>
+              <th>ID đơn</th>
               <th className="col-order-code">Mã đơn hàng</th>
               <th>Người nhận</th>
               <th>Check</th>
@@ -318,7 +320,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
           <tbody>
             {filteredOrders.length === 0 ? (
               <tr>
-                <td className="sheet-empty" colSpan={7}>Không có đơn phù hợp bộ lọc.</td>
+                <td className="sheet-empty" colSpan={8}>Không có đơn phù hợp bộ lọc.</td>
               </tr>
             ) : null}
             {filteredOrders.map((order) => {
@@ -326,6 +328,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
               const tone = detectDeliveryTone(deliveryStatus);
               return (
                 <tr key={order.id}>
+                  <td><span className="order-code-chip">{order.orderPublicId || 'Chưa có'}</span></td>
                   <td className="col-order-code"><span className="order-code-chip">{order.orderCode || 'Chưa có'}</span></td>
                   <td>{order.recipientName}</td>
                   <td className="col-check">
@@ -388,6 +391,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
               </div>
 
               <div className="detail-grid editable-grid">
+                <div className="detail-item"><span>ID đơn</span><strong>{detailDraft.orderPublicId || 'Chưa có'}</strong></div>
                 <div className="detail-item"><span>Mã đơn hàng</span><strong>{detailDraft.orderCode || 'Chưa có'}</strong></div>
                 <div className="detail-item"><span>Thành tiền</span><strong>{detailDraft.orderAmount || 'Chưa có'}</strong></div>
                 <div className="detail-item"><span>Username</span><strong>@{detailDraft.username}</strong></div>

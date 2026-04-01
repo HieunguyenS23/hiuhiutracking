@@ -2024,3 +2024,98 @@ input:focus, select:focus { outline: 2px solid rgba(15, 142, 122, 0.2); border-c
     grid-column: span 1;
   }
 }
+
+/* Final layout + tracking popup polish */
+.profile-page-grid,
+.profile-page-grid-single {
+  grid-template-columns: minmax(320px, 860px);
+  justify-content: center;
+}
+
+.profile-page-grid .hub-profile {
+  grid-area: auto;
+  min-height: auto;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.tracking-modal-backdrop {
+  z-index: 3000;
+  place-items: start center;
+  padding: 74px 14px 14px;
+}
+
+.tracking-modal-card {
+  width: min(680px, 96vw);
+  max-height: min(76vh, 760px);
+}
+
+.tracking-modal-card .modal-head {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  padding: 12px 14px;
+  gap: 10px;
+}
+
+.tracking-modal-card .modal-head h3 {
+  font-size: clamp(19px, 3vw, 24px);
+}
+
+.tracking-modal-card .modal-close {
+  position: static;
+}
+
+.tracking-modal-card .modal-body {
+  padding: 10px 14px 14px;
+  gap: 10px;
+}
+
+.tracking-modal-card .tracking-summary-grid {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.tracking-modal-card .tracking-summary-item {
+  padding: 9px 10px;
+}
+
+.tracking-modal-card .tracking-summary-item strong {
+  font-size: 15px;
+}
+
+.tracking-modal-card .tracking-timeline-block {
+  padding: 10px;
+}
+
+.tracking-modal-card .timeline-clean {
+  gap: 8px;
+}
+
+.tracking-modal-card .timeline-clean li {
+  padding: 9px 10px;
+}
+
+@media (max-width: 760px) {
+  .tracking-modal-backdrop {
+    padding-top: 88px;
+  }
+
+  .tracking-modal-card {
+    width: min(94vw, 620px);
+    max-height: min(74vh, 680px);
+  }
+
+  .tracking-modal-card .modal-head {
+    padding: 10px 12px;
+  }
+
+  .tracking-modal-card .modal-body {
+    padding: 8px 12px 12px;
+    gap: 8px;
+  }
+
+  .tracking-modal-card .tracking-summary-item {
+    padding: 8px 9px;
+  }
+}

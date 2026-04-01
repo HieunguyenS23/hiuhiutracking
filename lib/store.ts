@@ -126,6 +126,7 @@ async function ensureDatabaseReady() {
 
   await sql`CREATE TABLE IF NOT EXISTS orders (
     id TEXT PRIMARY KEY,
+    order_public_id TEXT NOT NULL DEFAULT '',
     username TEXT NOT NULL,
     recipient_name TEXT NOT NULL,
     phone TEXT NOT NULL,
@@ -150,6 +151,7 @@ async function ensureDatabaseReady() {
   )`;
 
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_code TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_public_id TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_amount TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_status TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_checked_at TEXT NOT NULL DEFAULT ''`;
@@ -272,6 +274,7 @@ async function readFileStore() {
     ensureSeedUsers(parsed);
     parsed.orders = (parsed.orders || []).map((order) => ({
       ...order,
+      orderPublicId: String((order as any).orderPublicId || ''),
       status: normalizeStatus(order.status),
       orderCode: String(order.orderCode || ''),
       orderAmount: String(order.orderAmount || ''),
@@ -360,6 +363,7 @@ function mapUser(row: Record<string, unknown>): UserRecord {
 function mapOrder(row: Record<string, unknown>): OrderRecord {
   return {
     id: String(row.id),
+    orderPublicId: String(row.order_public_id || ''),
     username: String(row.username),
     recipientName: String(row.recipient_name),
     phone: String(row.phone),
@@ -488,12 +492,12 @@ export async function createOrder(order: OrderRecord) {
     await ensureDatabaseReady();
     await sql`
       INSERT INTO orders (
-        id, username, recipient_name, phone, address_line, ward, district, province,
+        id, order_public_id, username, recipient_name, phone, address_line, ward, district, province,
         voucher_type, product_link, variant, quantity, status, order_code, order_amount,
         delivery_status, delivery_checked_at, delivery_tracking, product_name, processing_cookie,
         processing_account, created_at
       ) VALUES (
-        ${order.id}, ${order.username}, ${order.recipientName}, ${order.phone}, ${order.addressLine}, ${order.ward},
+        ${order.id}, ${order.orderPublicId}, ${order.username}, ${order.recipientName}, ${order.phone}, ${order.addressLine}, ${order.ward},
         ${order.district}, ${order.province}, ${order.voucherType}, ${order.productLink}, ${order.variant},
         ${order.quantity}, ${order.status}, ${order.orderCode}, ${order.orderAmount}, ${order.deliveryStatus},
         ${order.deliveryCheckedAt}, ${order.deliveryTracking}, ${order.productName || ''}, ${order.processingCookie},
@@ -518,7 +522,7 @@ export async function updateOrder(
   if (sql) {
     await ensureDatabaseReady();
     const rows = await sql`
-      SELECT id, username, recipient_name, phone, address_line, ward, district, province,
+      SELECT id, order_public_id, username, recipient_name, phone, address_line, ward, district, province,
              voucher_type, product_link, variant, quantity, status, order_code, order_amount,
              delivery_status, delivery_checked_at, delivery_tracking, product_name, processing_cookie,
              processing_account, created_at
@@ -634,7 +638,7 @@ export async function getOrders() {
   if (sql) {
     await ensureDatabaseReady();
     const rows = await sql`
-      SELECT id, username, recipient_name, phone, address_line, ward, district, province,
+      SELECT id, order_public_id, username, recipient_name, phone, address_line, ward, district, province,
              voucher_type, product_link, variant, quantity, status, order_code, order_amount,
              delivery_status, delivery_checked_at, delivery_tracking, product_name, processing_cookie,
              processing_account, created_at
@@ -654,7 +658,7 @@ export async function getOrdersByUsername(username: string) {
   if (sql) {
     await ensureDatabaseReady();
     const rows = await sql`
-      SELECT id, username, recipient_name, phone, address_line, ward, district, province,
+      SELECT id, order_public_id, username, recipient_name, phone, address_line, ward, district, province,
              voucher_type, product_link, variant, quantity, status, order_code, order_amount,
              delivery_status, delivery_checked_at, delivery_tracking, product_name, processing_cookie,
              processing_account, created_at

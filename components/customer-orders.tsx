@@ -187,7 +187,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
     return orders.filter((item) => {
       if (statusFilter !== 'all' && item.status !== statusFilter) return false;
       if (!keyword) return true;
-      return [item.recipientName, item.orderCode, item.productName, item.phone, item.deliveryTracking]
+      return [item.orderPublicId, item.recipientName, item.orderCode, item.productName, item.phone, item.deliveryTracking]
         .join(' ')
         .toLowerCase()
         .includes(keyword);
@@ -215,7 +215,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
         <div className="stats-card"><span>Đã hủy</span><strong>{stats.canceled}</strong></div>
       </div>
       <div className="filter-bar">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm theo người nhận, mã đơn, sản phẩm..." />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm theo ID đơn, người nhận, mã đơn, sản phẩm..." />
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="all">Tất cả trạng thái</option>
           <option value="pending">Chờ xác nhận</option>
@@ -249,6 +249,10 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
                 </div>
               </div>
 
+              <div className="order-meta-grid">
+                <span className="order-code-chip">ID đơn: {order.orderPublicId || 'Chưa có'}</span>
+              </div>
+
               {!isCanceled ? (
                 <div className="order-meta-grid">
                   <span className="order-code-chip">Mã đơn hàng: {order.orderCode || 'Chưa có'}</span>
@@ -275,7 +279,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
       </div>
 
       {trackingDetail ? (
-        <div className="modal-backdrop" onClick={() => setTrackingDetail(null)}>
+        <div className="modal-backdrop tracking-modal-backdrop" onClick={() => setTrackingDetail(null)}>
           <div className="modal-card modal-card-clean tracking-modal-card" onClick={(event) => event.stopPropagation()}>
             <div className="modal-head modern modal-head-clean">
               <div>
@@ -293,10 +297,6 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
                 <div className="tracking-summary-item">
                   <span>Trạng thái hiện tại</span>
                   <strong>{trackingDetail.result?.status || trackingDetail.result?.error || 'Chưa có dữ liệu'}</strong>
-                </div>
-                <div className="tracking-summary-item">
-                  <span>Số mốc hành trình</span>
-                  <strong>{timelineItems.length}</strong>
                 </div>
               </div>
 

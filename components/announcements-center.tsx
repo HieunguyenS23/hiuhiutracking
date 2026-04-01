@@ -197,7 +197,7 @@ export function AnnouncementsCenter({ isAdmin, username }: Props) {
       <div className="section-head">
         <div>
           <p className="eyebrow">Thông báo</p>
-          <h2>Thông báo từ Admin</h2>
+          <h2>Thông báo và nhắn tin với Admin</h2>
         </div>
       </div>
 

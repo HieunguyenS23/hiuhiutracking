@@ -60,6 +60,7 @@ export type OrderStatus = 'pending' | 'confirmed' | 'ordered' | 'canceled';
 
 export type OrderRecord = {
   id: string;
+  orderPublicId: string;
   username: string;
   recipientName: string;
   phone: string;

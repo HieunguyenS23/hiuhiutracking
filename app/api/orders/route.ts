@@ -7,6 +7,26 @@ import { hasAtLeastTwoWords, isValidVietnamPhone } from '@/lib/validators';
 
 const allowedStatuses: OrderStatus[] = ['pending', 'confirmed', 'ordered', 'canceled'];
 const TRACK_API_BASE = 'https://dodanhvu.dpdns.org';
+const ID_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+function getOrderDayPrefix(date: Date) {
+  return new Intl.DateTimeFormat('en-GB', { day: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' }).format(date);
+}
+
+function randomSuffix(length: number) {
+  let out = '';
+  for (let i = 0; i < length; i += 1) out += ID_CHARS[Math.floor(Math.random() * ID_CHARS.length)];
+  return out;
+}
+
+function generateOrderPublicId(existing: Set<string>, now = new Date()) {
+  const prefix = getOrderDayPrefix(now);
+  for (let i = 0; i < 40; i += 1) {
+    const candidate = `${prefix}${randomSuffix(6)}`;
+    if (!existing.has(candidate)) return candidate;
+  }
+  return `${prefix}${String(now.getTime()).slice(-6)}`;
+}
 
 function normalizeCookie(raw: string) {
   const value = raw.trim();
@@ -298,8 +318,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Form lên đơn đang tạm đóng. Vui lòng quay lại sau.' }, { status: 403 });
     }
 
+    const existingOrders = await getOrders();
+    const existingIds = new Set(existingOrders.map((item) => String(item.orderPublicId || '')));
+    const orderPublicId = generateOrderPublicId(existingIds);
+
     const order = await createOrder({
       id: crypto.randomUUID(),
+      orderPublicId,
       username: session.username,
       recipientName,
       phone,
