@@ -2009,6 +2009,16 @@ input:focus, select:focus { outline: 2px solid rgba(15, 142, 122, 0.2); border-c
   grid-template-columns: 1fr auto auto;
 }
 
+.announcements-customer-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.announcements-chat-card {
+  max-width: 760px;
+  width: 100%;
+}
+
 @media (max-width: 760px) {
   .toast-stack {
     right: 10px;
@@ -2022,6 +2032,10 @@ input:focus, select:focus { outline: 2px solid rgba(15, 142, 122, 0.2); border-c
 
   .chat-upload-btn {
     grid-column: span 1;
+  }
+
+  .announcements-chat-card {
+    max-width: none;
   }
 }
 

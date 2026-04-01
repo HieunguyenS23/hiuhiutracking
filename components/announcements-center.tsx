@@ -197,12 +197,12 @@ export function AnnouncementsCenter({ isAdmin, username }: Props) {
       <div className="section-head">
         <div>
           <p className="eyebrow">Thông báo</p>
-          <h2>Thông báo và nhắn tin với Admin</h2>
+          <h2>Thông báo</h2>
         </div>
       </div>
 
-      <article className="hub-card hub-announcements">
-        {isAdmin ? (
+      {isAdmin ? (
+        <article className="hub-card hub-announcements">
           <div className="form-grid">
             <label>
               <span>Tiêu đề</span>
@@ -214,50 +214,68 @@ export function AnnouncementsCenter({ isAdmin, username }: Props) {
             </label>
             <button className="primary-button" disabled={loading} onClick={postAnnouncement} type="button">Đăng thông báo</button>
           </div>
-        ) : null}
 
-        <div className="announcement-list">
-          {announcements.length === 0 ? <div className="empty-state">Chưa có thông báo nào.</div> : null}
-          {announcements.map((item) => (
-            <article key={item.id} className="announcement-item">
-              <strong>{item.title}</strong>
-              <p>{item.content}</p>
-              <div className="announcement-foot">
-                <span className="muted">{new Date(item.createdAt).toLocaleString('vi-VN')} · @{item.createdBy}</span>
-                {isAdmin ? <button className="mini-action" type="button" onClick={() => removeAnnouncement(item.id)}>Xóa</button> : null}
-              </div>
-            </article>
-          ))}
-        </div>
-      </article>
-
-      {!isAdmin ? (
-        <article className="hub-card hub-chat">
-          <div className="hub-card-head">
-            <h3>Chat với Admin</h3>
-          </div>
-          <div className="chat-list" ref={chatListRef}>
-            {messages.length === 0 ? <div className="empty-state">Chưa có cuộc trò chuyện nào.</div> : null}
-            {messages.map((item) => {
-              const own = item.from === username;
-              return (
-                <div className={`chat-item ${own ? 'chat-own' : 'chat-other'}`} key={item.id}>
-                  {item.content ? <p>{item.content}</p> : null}
-                  {item.imageData ? <img className="chat-image" src={item.imageData} alt="chat" /> : null}
-                  <span>{new Date(item.createdAt).toLocaleString('vi-VN')} · @{item.from}</span>
+          <div className="announcement-list">
+            {announcements.length === 0 ? <div className="empty-state">Chưa có thông báo nào.</div> : null}
+            {announcements.map((item) => (
+              <article key={item.id} className="announcement-item">
+                <strong>{item.title}</strong>
+                <p>{item.content}</p>
+                <div className="announcement-foot">
+                  <span className="muted">{new Date(item.createdAt).toLocaleString('vi-VN')} · @{item.createdBy}</span>
+                  <button className="mini-action" type="button" onClick={() => removeAnnouncement(item.id)}>Xóa</button>
                 </div>
-              );
-            })}
-          </div>
-          {chatImage ? <img className="chat-image-preview" src={chatImage} alt="preview" /> : null}
-          <div className="chat-compose">
-            <input value={chatInput} onChange={(event) => setChatInput(event.target.value)} placeholder="Nhập tin nhắn..." />
-            <label className="mini-action chat-upload-btn" htmlFor="chat-image-input">Ảnh</label>
-            <input id="chat-image-input" type="file" accept="image/*" onChange={chooseChatImage} className="chat-file-input" />
-            <button className="primary-button" type="button" disabled={loading} onClick={sendMessage}>Gửi</button>
+              </article>
+            ))}
           </div>
         </article>
-      ) : null}
+      ) : (
+        <div className="announcements-customer-stack">
+          <article className="hub-card hub-announcements">
+            <div className="hub-card-head">
+              <h3>Thông báo chung từ Admin</h3>
+            </div>
+            <div className="announcement-list">
+              {announcements.length === 0 ? <div className="empty-state">Hiện chưa có thông báo chung nào từ Admin.</div> : null}
+              {announcements.map((item) => (
+                <article key={item.id} className="announcement-item">
+                  <strong>{item.title}</strong>
+                  <p>{item.content}</p>
+                  <div className="announcement-foot">
+                    <span className="muted">{new Date(item.createdAt).toLocaleString('vi-VN')} · @{item.createdBy}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </article>
+
+          <article className="hub-card announcements-chat-card">
+            <div className="hub-card-head">
+              <h3>Chat với Admin</h3>
+            </div>
+            <div className="chat-list" ref={chatListRef}>
+              {messages.length === 0 ? <div className="empty-state">Chưa có cuộc trò chuyện nào.</div> : null}
+              {messages.map((item) => {
+                const own = item.from === username;
+                return (
+                  <div className={`chat-item ${own ? 'chat-own' : 'chat-other'}`} key={item.id}>
+                    {item.content ? <p>{item.content}</p> : null}
+                    {item.imageData ? <img className="chat-image" src={item.imageData} alt="chat" /> : null}
+                    <span>{new Date(item.createdAt).toLocaleString('vi-VN')} · @{item.from}</span>
+                  </div>
+                );
+              })}
+            </div>
+            {chatImage ? <img className="chat-image-preview" src={chatImage} alt="preview" /> : null}
+            <div className="chat-compose">
+              <input value={chatInput} onChange={(event) => setChatInput(event.target.value)} placeholder="Nhập tin nhắn..." />
+              <label className="mini-action chat-upload-btn" htmlFor="chat-image-input">Ảnh</label>
+              <input id="chat-image-input" type="file" accept="image/*" onChange={chooseChatImage} className="chat-file-input" />
+              <button className="primary-button" type="button" disabled={loading} onClick={sendMessage}>Gửi</button>
+            </div>
+          </article>
+        </div>
+      )}
     </section>
   );
 }
