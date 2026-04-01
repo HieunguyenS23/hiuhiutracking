@@ -46,11 +46,10 @@ export default function LoginPage() {
   return (
     <main className="auth-shell">
       <section className="auth-card">
-        <div className="auth-badge">A</div>
+        <div className="auth-badge">SN</div>
         <div className="auth-heading">
-          <p className="eyebrow">Khách hàng</p>
-          <h1>Lên đơn Shopee</h1>
-          <p>Web mới hoàn toàn, ưu tiên điện thoại, sạch và đủ chỗ để phát triển tiếp những bước sau.</p>
+          <p className="eyebrow">Shopee Portal</p>
+          <h1>Đăng nhập hệ thống</h1>
         </div>
         <div className="auth-tabs">
           <button className={mode === 'login' ? 'active' : ''} onClick={() => setMode('login')} type="button">Đăng nhập</button>
@@ -71,7 +70,6 @@ export default function LoginPage() {
         <button className="primary-button" disabled={loading} onClick={submit} type="button">
           {loading ? 'Đang xử lý...' : mode === 'login' ? 'Vào hệ thống' : 'Tạo tài khoản'}
         </button>
-        <p className="auth-footnote">Tài khoản admin lấy từ biến môi trường `APP_USERNAME` và `APP_PASSWORD`.</p>
       </section>
     </main>
   );

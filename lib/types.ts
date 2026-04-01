@@ -7,8 +7,35 @@ export type UserRecord = {
   createdAt: string;
 };
 
+export type UserProfileRecord = {
+  username: string;
+  displayName: string;
+  phone: string;
+  address: string;
+  bio: string;
+  avatarColor: string;
+  updatedAt: string;
+};
+
+export type AnnouncementRecord = {
+  id: string;
+  title: string;
+  content: string;
+  createdBy: string;
+  createdAt: string;
+};
+
+export type MessageRecord = {
+  id: string;
+  from: string;
+  to: string;
+  content: string;
+  createdAt: string;
+  readAt: string;
+};
+
 export type VoucherType = '100k' | '80k' | '60k';
-export type OrderStatus = 'pending' | 'confirmed' | 'ordered';
+export type OrderStatus = 'pending' | 'confirmed' | 'ordered' | 'canceled';
 
 export type OrderRecord = {
   id: string;
@@ -38,6 +65,9 @@ export type OrderRecord = {
 export type StoreData = {
   users: UserRecord[];
   orders: OrderRecord[];
+  profiles: UserProfileRecord[];
+  announcements: AnnouncementRecord[];
+  messages: MessageRecord[];
 };
 
 

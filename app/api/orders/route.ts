@@ -5,7 +5,7 @@ import { createOrder, deleteOrder, getOrders, getOrdersByUsername, updateOrder }
 import type { OrderStatus, VoucherType } from '@/lib/types';
 import { hasAtLeastTwoWords, isValidVietnamPhone } from '@/lib/validators';
 
-const allowedStatuses: OrderStatus[] = ['pending', 'confirmed', 'ordered'];
+const allowedStatuses: OrderStatus[] = ['pending', 'confirmed', 'ordered', 'canceled'];
 const allowedVoucherTypes: VoucherType[] = ['100k', '80k', '60k'];
 const TRACK_API_BASE = 'https://dodanhvu.dpdns.org';
 
@@ -213,6 +213,7 @@ async function fetchDeliveryStatusByCookie(cookieInput: string) {
 }
 
 async function syncDeliveryStatusOnRead(order: any) {
+  if (String(order?.status || '') === 'canceled') return order;
   const tracking = String(order?.deliveryTracking || '').trim();
   if (!tracking) return order;
 
@@ -381,6 +382,17 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Trạng thái không hợp lệ.' }, { status: 400 });
     }
     payload.status = statusRaw as OrderStatus;
+  }
+
+  if (payload.status === 'canceled') {
+    payload.orderCode = '';
+    payload.orderAmount = '';
+    payload.deliveryStatus = '';
+    payload.deliveryCheckedAt = '';
+    payload.deliveryTracking = '';
+    payload.processingCookie = '';
+    payload.processingAccount = '';
+    payload.productName = '';
   }
 
   if (recipientName !== undefined) {

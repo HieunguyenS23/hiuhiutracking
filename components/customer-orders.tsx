@@ -7,6 +7,7 @@ const statusLabel: Record<string, string> = {
   pending: 'Chờ xác nhận',
   confirmed: 'Đã xác nhận',
   ordered: 'Đã đặt',
+  canceled: 'Đã hủy',
 };
 
 function detectDeliveryTone(raw: string) {
@@ -191,6 +192,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
       <div className="order-list">
         {!error && orders.length === 0 ? <div className="empty-state">Chưa có đơn nào được gửi.</div> : null}
         {orders.map((order) => {
+          const isCanceled = order.status === 'canceled';
           const deliveryTone = detectDeliveryTone(order.deliveryStatus || '');
           return (
             <article className="order-card order-card-rich" key={order.id}>
@@ -198,8 +200,8 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
                 <strong>{order.recipientName}</strong>
                 <div className="order-status-wrap">
                   <span className={`order-code-chip order-chip-admin status-${order.status}`}>Admin: {statusLabel[order.status] || 'Chờ xác nhận'}</span>
-                  {order.deliveryTracking ? <span className="tracking-tag">{order.deliveryTracking}</span> : null}
-                  {order.deliveryTracking ? (
+                  {!isCanceled && order.deliveryTracking ? <span className="tracking-tag">{order.deliveryTracking}</span> : null}
+                  {!isCanceled && order.deliveryTracking ? (
                     <button
                       className="mini-action"
                       type="button"
@@ -212,16 +214,19 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
                 </div>
               </div>
 
-              <div className="order-meta-grid">
-                <span className="order-code-chip">Mã đơn hàng: {order.orderCode || 'Chưa có'}</span>
-                <span className="amount-text">{order.orderAmount || 'Chưa có thành tiền'}</span>
-              </div>
+              {!isCanceled ? (
+                <div className="order-meta-grid">
+                  <span className="order-code-chip">Mã đơn hàng: {order.orderCode || 'Chưa có'}</span>
+                  <span className="amount-text">{order.orderAmount || 'Chưa có thành tiền'}</span>
+                </div>
+              ) : null}
 
-              <div className="order-row muted">
-                <span className={`order-code-chip order-chip-delivery delivery-${deliveryTone}`}>Trạng thái giao hàng: {order.deliveryStatus || 'Chưa kiểm tra'}</span>
-              </div>
+              {!isCanceled ? (
+                <div className="order-row muted">
+                  <span className={`order-code-chip order-chip-delivery delivery-${deliveryTone}`}>Trạng thái giao hàng: {order.deliveryStatus || 'Chưa kiểm tra'}</span>
+                </div>
+              ) : null}
               <p>{order.addressLine}, {order.ward}, {order.district}, {order.province}</p>
-              <p>{order.productName || 'Chưa có'}</p>
               <p>{order.variant ? `${order.variant} · SL ${order.quantity}` : `SL ${order.quantity}`}</p>
               <a className="order-link" href={order.productLink} target="_blank" rel="noreferrer">Mở link sản phẩm</a>
               <div className="order-row muted">

@@ -1,7 +1,15 @@
 ﻿import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { neon } from '@neondatabase/serverless';
-import type { OrderRecord, OrderStatus, StoreData, UserRecord } from '@/lib/types';
+import type {
+  AnnouncementRecord,
+  MessageRecord,
+  OrderRecord,
+  OrderStatus,
+  StoreData,
+  UserProfileRecord,
+  UserRecord,
+} from '@/lib/types';
 import { getAdminSeed, getCustomerSeed, getCustomerSeed2 } from '@/lib/session';
 
 const storeFile = path.join(process.cwd(), 'data', 'store.json');
@@ -10,14 +18,40 @@ const databaseUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
 const hasDatabase = Boolean(databaseUrl);
 const sql = hasDatabase ? neon(databaseUrl) : null;
 
-const allowedStatuses: OrderStatus[] = ['pending', 'confirmed', 'ordered'];
+const allowedStatuses: OrderStatus[] = ['pending', 'confirmed', 'ordered', 'canceled'];
+const defaultAvatarColors = ['#ff6d3f', '#2f7e79', '#4165d2', '#b85f16', '#8c4ccf', '#087f5b'];
 
 function normalizeStatus(value: unknown): OrderStatus {
   const raw = String(value || '').toLowerCase() as OrderStatus;
   return allowedStatuses.includes(raw) ? raw : 'pending';
 }
 
+function pickColorByUsername(username: string) {
+  let hash = 0;
+  for (let i = 0; i < username.length; i += 1) hash += username.charCodeAt(i);
+  return defaultAvatarColors[hash % defaultAvatarColors.length];
+}
+
+function createDefaultProfile(username: string): UserProfileRecord {
+  return {
+    username,
+    displayName: username,
+    phone: '',
+    address: '',
+    bio: '',
+    avatarColor: pickColorByUsername(username),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function ensureCollections(data: StoreData) {
+  if (!Array.isArray(data.profiles)) data.profiles = [];
+  if (!Array.isArray(data.announcements)) data.announcements = [];
+  if (!Array.isArray(data.messages)) data.messages = [];
+}
+
 function ensureSeedUsers(data: StoreData) {
+  ensureCollections(data);
   const admin = getAdminSeed();
   const customer = getCustomerSeed();
   const customer2 = getCustomerSeed2();
@@ -25,10 +59,16 @@ function ensureSeedUsers(data: StoreData) {
   if (!data.users.some((item) => item.username === admin.username)) data.users.unshift(admin);
   if (!data.users.some((item) => item.username === customer.username)) data.users.push(customer);
   if (!data.users.some((item) => item.username === customer2.username)) data.users.push(customer2);
+
+  for (const user of data.users) {
+    if (!data.profiles.some((item) => item.username === user.username)) {
+      data.profiles.push(createDefaultProfile(user.username));
+    }
+  }
 }
 
 function defaultStore(): StoreData {
-  const base: StoreData = { users: [], orders: [] };
+  const base: StoreData = { users: [], orders: [], profiles: [], announcements: [], messages: [] };
   ensureSeedUsers(base);
   return base;
 }
@@ -83,6 +123,33 @@ async function ensureDatabaseReady() {
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS product_name TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS processing_cookie TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS processing_account TEXT NOT NULL DEFAULT ''`;
+  await sql`CREATE TABLE IF NOT EXISTS user_profiles (
+    username TEXT PRIMARY KEY,
+    display_name TEXT NOT NULL DEFAULT '',
+    phone TEXT NOT NULL DEFAULT '',
+    address TEXT NOT NULL DEFAULT '',
+    bio TEXT NOT NULL DEFAULT '',
+    avatar_color TEXT NOT NULL DEFAULT '',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
+
+  await sql`CREATE TABLE IF NOT EXISTS admin_announcements (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
+
+  await sql`CREATE TABLE IF NOT EXISTS admin_user_messages (
+    id TEXT PRIMARY KEY,
+    from_username TEXT NOT NULL,
+    to_username TEXT NOT NULL,
+    content TEXT NOT NULL,
+    read_at TIMESTAMPTZ NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
+  await sql`ALTER TABLE admin_user_messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ NULL`;
 
   const admin = getAdminSeed();
   const customer = getCustomerSeed();
@@ -106,6 +173,16 @@ async function ensureDatabaseReady() {
     ON CONFLICT (username) DO NOTHING
   `;
 
+  const seededUsers = [admin.username, customer.username, customer2.username];
+  for (const username of seededUsers) {
+    const profile = createDefaultProfile(username);
+    await sql`
+      INSERT INTO user_profiles (username, display_name, phone, address, bio, avatar_color, updated_at)
+      VALUES (${username}, ${profile.displayName}, ${profile.phone}, ${profile.address}, ${profile.bio}, ${profile.avatarColor}, ${profile.updatedAt})
+      ON CONFLICT (username) DO NOTHING
+    `;
+  }
+
   memoryStore.__portalDbReady = true;
 }
 
@@ -126,6 +203,32 @@ async function readFileStore() {
       processingCookie: String(order.processingCookie || ''),
       processingAccount: String(order.processingAccount || ''),
     }));
+    parsed.profiles = (parsed.profiles || []).map((profile) => ({
+      ...createDefaultProfile(String(profile.username || '')),
+      username: String(profile.username || ''),
+      displayName: String(profile.displayName || profile.username || ''),
+      phone: String(profile.phone || ''),
+      address: String(profile.address || ''),
+      bio: String(profile.bio || ''),
+      avatarColor: String(profile.avatarColor || pickColorByUsername(String(profile.username || ''))),
+      updatedAt: String(profile.updatedAt || new Date().toISOString()),
+    })).filter((profile) => Boolean(profile.username));
+    parsed.announcements = (parsed.announcements || []).map((item) => ({
+      id: String(item.id || ''),
+      title: String(item.title || ''),
+      content: String(item.content || ''),
+      createdBy: String(item.createdBy || 'admin'),
+      createdAt: String(item.createdAt || new Date().toISOString()),
+    })).filter((item) => item.id && item.title && item.content);
+    parsed.messages = (parsed.messages || []).map((item) => ({
+      id: String(item.id || ''),
+      from: String(item.from || ''),
+      to: String(item.to || ''),
+      content: String(item.content || ''),
+      createdAt: String(item.createdAt || new Date().toISOString()),
+      readAt: String(item.readAt || ''),
+    })).filter((item) => item.id && item.from && item.to && item.content);
+    ensureSeedUsers(parsed);
     return parsed;
   } catch {
     const fresh = defaultStore();
@@ -182,6 +285,39 @@ function mapOrder(row: Record<string, unknown>): OrderRecord {
   };
 }
 
+function mapProfile(row: Record<string, unknown>): UserProfileRecord {
+  return {
+    username: String(row.username),
+    displayName: String(row.display_name || row.username || ''),
+    phone: String(row.phone || ''),
+    address: String(row.address || ''),
+    bio: String(row.bio || ''),
+    avatarColor: String(row.avatar_color || pickColorByUsername(String(row.username || ''))),
+    updatedAt: new Date(String(row.updated_at || Date.now())).toISOString(),
+  };
+}
+
+function mapAnnouncement(row: Record<string, unknown>): AnnouncementRecord {
+  return {
+    id: String(row.id),
+    title: String(row.title || ''),
+    content: String(row.content || ''),
+    createdBy: String(row.created_by || 'admin'),
+    createdAt: new Date(String(row.created_at || Date.now())).toISOString(),
+  };
+}
+
+function mapMessage(row: Record<string, unknown>): MessageRecord {
+  return {
+    id: String(row.id),
+    from: String(row.from_username || row.from || ''),
+    to: String(row.to_username || row.to || ''),
+    content: String(row.content || ''),
+    createdAt: new Date(String(row.created_at || Date.now())).toISOString(),
+    readAt: row.read_at ? new Date(String(row.read_at)).toISOString() : '',
+  };
+}
+
 export async function findUser(username: string) {
   if (sql) {
     await ensureDatabaseReady();
@@ -208,12 +344,21 @@ export async function createUser(user: UserRecord) {
       INSERT INTO users (username, password_hash, role, created_at)
       VALUES (${user.username}, ${user.passwordHash}, ${user.role}, ${user.createdAt})
     `;
+    const profile = createDefaultProfile(user.username);
+    await sql`
+      INSERT INTO user_profiles (username, display_name, phone, address, bio, avatar_color, updated_at)
+      VALUES (${profile.username}, ${profile.displayName}, ${profile.phone}, ${profile.address}, ${profile.bio}, ${profile.avatarColor}, ${profile.updatedAt})
+      ON CONFLICT (username) DO NOTHING
+    `;
     return user;
   }
 
   const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
   if (store.users.some((item) => item.username === user.username)) throw new Error('Tên đăng nhập đã tồn tại.');
   store.users.push(user);
+  if (!store.profiles.some((item) => item.username === user.username)) {
+    store.profiles.push(createDefaultProfile(user.username));
+  }
   if (process.env.NODE_ENV === 'development') await writeFileStore(store);
   else memoryStore.__portalStore = store;
   return user;
@@ -488,6 +633,8 @@ export async function deleteUserRecord(username: string) {
     if (role === 'admin') throw new Error('Không thể xóa tài khoản admin.');
 
     await sql`DELETE FROM users WHERE username = ${username}`;
+    await sql`DELETE FROM user_profiles WHERE username = ${username}`;
+    await sql`DELETE FROM admin_user_messages WHERE from_username = ${username} OR to_username = ${username}`;
     return { ok: true };
   }
 
@@ -497,11 +644,239 @@ export async function deleteUserRecord(username: string) {
   if (target.role === 'admin') throw new Error('Không thể xóa tài khoản admin.');
 
   store.users = store.users.filter((u) => u.username !== username);
+  store.profiles = store.profiles.filter((item) => item.username !== username);
+  store.messages = store.messages.filter((item) => item.from !== username && item.to !== username);
 
   if (process.env.NODE_ENV === 'development') await writeFileStore(store);
   else memoryStore.__portalStore = store;
 
   return { ok: true };
+}
+
+export async function getUserProfile(username: string) {
+  if (!username) throw new Error('Thiếu username.');
+
+  if (sql) {
+    await ensureDatabaseReady();
+    const rows = await sql`
+      SELECT username, display_name, phone, address, bio, avatar_color, updated_at
+      FROM user_profiles
+      WHERE username = ${username}
+      LIMIT 1
+    `;
+
+    if (rows.length > 0) {
+      return mapProfile(rows[0] as Record<string, unknown>);
+    }
+
+    const fallback = createDefaultProfile(username);
+    await sql`
+      INSERT INTO user_profiles (username, display_name, phone, address, bio, avatar_color, updated_at)
+      VALUES (${fallback.username}, ${fallback.displayName}, ${fallback.phone}, ${fallback.address}, ${fallback.bio}, ${fallback.avatarColor}, ${fallback.updatedAt})
+    `;
+    return fallback;
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  let profile = store.profiles.find((item) => item.username === username) || null;
+  if (!profile) {
+    profile = createDefaultProfile(username);
+    store.profiles.push(profile);
+    if (process.env.NODE_ENV === 'development') await writeFileStore(store);
+    else memoryStore.__portalStore = store;
+  }
+  return profile;
+}
+
+export async function updateUserProfile(
+  username: string,
+  payload: Partial<Pick<UserProfileRecord, 'displayName' | 'phone' | 'address' | 'bio' | 'avatarColor'>>
+) {
+  if (!username) throw new Error('Thiếu username.');
+
+  const current = await getUserProfile(username);
+  const next = {
+    ...current,
+    displayName: payload.displayName === undefined ? current.displayName : String(payload.displayName || '').trim(),
+    phone: payload.phone === undefined ? current.phone : String(payload.phone || '').trim(),
+    address: payload.address === undefined ? current.address : String(payload.address || '').trim(),
+    bio: payload.bio === undefined ? current.bio : String(payload.bio || '').trim(),
+    avatarColor: payload.avatarColor === undefined ? current.avatarColor : String(payload.avatarColor || '').trim(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (!next.displayName) next.displayName = username;
+  if (!next.avatarColor) next.avatarColor = pickColorByUsername(username);
+
+  if (sql) {
+    await ensureDatabaseReady();
+    await sql`
+      INSERT INTO user_profiles (username, display_name, phone, address, bio, avatar_color, updated_at)
+      VALUES (${next.username}, ${next.displayName}, ${next.phone}, ${next.address}, ${next.bio}, ${next.avatarColor}, ${next.updatedAt})
+      ON CONFLICT (username) DO UPDATE
+      SET display_name = EXCLUDED.display_name,
+          phone = EXCLUDED.phone,
+          address = EXCLUDED.address,
+          bio = EXCLUDED.bio,
+          avatar_color = EXCLUDED.avatar_color,
+          updated_at = EXCLUDED.updated_at
+    `;
+    return next;
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  const idx = store.profiles.findIndex((item) => item.username === username);
+  if (idx >= 0) store.profiles[idx] = next;
+  else store.profiles.push(next);
+  if (process.env.NODE_ENV === 'development') await writeFileStore(store);
+  else memoryStore.__portalStore = store;
+  return next;
+}
+
+export async function getAnnouncements() {
+  if (sql) {
+    await ensureDatabaseReady();
+    const rows = await sql`
+      SELECT id, title, content, created_by, created_at
+      FROM admin_announcements
+      ORDER BY created_at DESC
+      LIMIT 40
+    `;
+    return rows.map((row) => mapAnnouncement(row as Record<string, unknown>));
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  return [...store.announcements].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 40);
+}
+
+export async function createAnnouncement(record: AnnouncementRecord) {
+  if (sql) {
+    await ensureDatabaseReady();
+    await sql`
+      INSERT INTO admin_announcements (id, title, content, created_by, created_at)
+      VALUES (${record.id}, ${record.title}, ${record.content}, ${record.createdBy}, ${record.createdAt})
+    `;
+    return record;
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  store.announcements.unshift(record);
+  if (process.env.NODE_ENV === 'development') await writeFileStore(store);
+  else memoryStore.__portalStore = store;
+  return record;
+}
+
+export async function getMessages(options: { username: string; role: 'admin' | 'customer'; target?: string }) {
+  const { username, role, target } = options;
+
+  if (sql) {
+    await ensureDatabaseReady();
+    if (role === 'admin' && target) {
+      const rows = await sql`
+        SELECT id, from_username, to_username, content, read_at, created_at
+        FROM admin_user_messages
+        WHERE (from_username = ${target} AND to_username = ${username}) OR (from_username = ${username} AND to_username = ${target})
+        ORDER BY created_at ASC
+        LIMIT 300
+      `;
+      return rows.map((row) => mapMessage(row as Record<string, unknown>));
+    }
+
+    if (role === 'admin') {
+      const rows = await sql`
+        SELECT id, from_username, to_username, content, read_at, created_at
+        FROM admin_user_messages
+        ORDER BY created_at ASC
+        LIMIT 400
+      `;
+      return rows.map((row) => mapMessage(row as Record<string, unknown>));
+    }
+
+    const rows = await sql`
+      SELECT id, from_username, to_username, content, read_at, created_at
+      FROM admin_user_messages
+      WHERE from_username = ${username} OR to_username = ${username}
+      ORDER BY created_at ASC
+      LIMIT 300
+    `;
+    return rows.map((row) => mapMessage(row as Record<string, unknown>));
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  const all = [...store.messages].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  if (role === 'admin' && target) {
+    return all.filter((item) => (item.from === target && item.to === username) || (item.from === username && item.to === target));
+  }
+  if (role === 'admin') return all;
+  return all.filter((item) => item.from === username || item.to === username);
+}
+
+export async function createMessage(record: MessageRecord) {
+  if (sql) {
+    await ensureDatabaseReady();
+    await sql`
+      INSERT INTO admin_user_messages (id, from_username, to_username, content, read_at, created_at)
+      VALUES (${record.id}, ${record.from}, ${record.to}, ${record.content}, ${record.readAt || null}, ${record.createdAt})
+    `;
+    return record;
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  store.messages.push(record);
+  if (process.env.NODE_ENV === 'development') await writeFileStore(store);
+  else memoryStore.__portalStore = store;
+  return record;
+}
+
+export async function markMessagesRead(options: { username: string; from?: string }) {
+  const { username, from } = options;
+  const now = new Date().toISOString();
+
+  if (sql) {
+    await ensureDatabaseReady();
+    if (from) {
+      await sql`
+        UPDATE admin_user_messages
+        SET read_at = ${now}
+        WHERE to_username = ${username} AND from_username = ${from} AND read_at IS NULL
+      `;
+      return { ok: true };
+    }
+    await sql`
+      UPDATE admin_user_messages
+      SET read_at = ${now}
+      WHERE to_username = ${username} AND read_at IS NULL
+    `;
+    return { ok: true };
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  store.messages = store.messages.map((item) => {
+    if (item.to !== username) return item;
+    if (from && item.from !== from) return item;
+    if (item.readAt) return item;
+    return { ...item, readAt: now };
+  });
+  if (process.env.NODE_ENV === 'development') await writeFileStore(store);
+  else memoryStore.__portalStore = store;
+  return { ok: true };
+}
+
+export async function getUnreadMessageCount(username: string) {
+  if (!username) return 0;
+
+  if (sql) {
+    await ensureDatabaseReady();
+    const rows = await sql`
+      SELECT COUNT(*)::int AS total
+      FROM admin_user_messages
+      WHERE to_username = ${username} AND read_at IS NULL
+    `;
+    return Number((rows[0] as Record<string, unknown>)?.total || 0);
+  }
+
+  const store = process.env.NODE_ENV === 'development' ? await readFileStore() : await readMemoryStore();
+  return store.messages.filter((item) => item.to === username && !item.readAt).length;
 }
 
 

@@ -11,6 +11,7 @@ const statusOptions: { value: OrderStatus; label: string }[] = [
   { value: 'pending', label: 'Chờ xác nhận' },
   { value: 'confirmed', label: 'Đã xác nhận' },
   { value: 'ordered', label: 'Đã đặt' },
+  { value: 'canceled', label: 'Đã hủy' },
 ];
 
 const voucherOptions: { value: VoucherType; label: string }[] = [
@@ -23,6 +24,7 @@ const statusLabel: Record<OrderStatus, string> = {
   pending: 'Chờ xác nhận',
   confirmed: 'Đã xác nhận',
   ordered: 'Đã đặt',
+  canceled: 'Đã hủy',
 };
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -124,6 +126,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
 
       try {
         for (const order of ordersRef.current) {
+          if (order.status === 'canceled') continue;
           let current = order;
 
           if ((order.processingAccount || '').trim()) {
@@ -166,6 +169,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
   }, []);
 
   async function refreshCookie(order: OrderRecord) {
+    if (order.status === 'canceled') return;
     await patchOrder(order.id, {
       processingAccount: order.processingAccount,
       refreshCookieFromAccount: true,
@@ -173,6 +177,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
   }
 
   async function refreshDeliveryStatus(order: OrderRecord) {
+    if (order.status === 'canceled') return;
     await patchOrder(order.id, {
       processingCookie: order.processingCookie,
       refreshDeliveryStatus: true,
@@ -272,7 +277,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
               </tr>
             ) : null}
             {orders.map((order) => {
-              const deliveryStatus = order.deliveryStatus || 'Chưa kiểm tra';
+              const deliveryStatus = order.status === 'canceled' ? 'Đơn đã hủy' : (order.deliveryStatus || 'Chưa kiểm tra');
               const tone = detectDeliveryTone(deliveryStatus);
               return (
                 <tr key={order.id}>
@@ -302,8 +307,8 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                   </td>
                   <td>
                     <div className="icon-actions">
-                      <button className="icon-action-btn" title="Cập nhật cookie" aria-label="Cập nhật cookie" disabled={savingId === order.id || !order.processingAccount} onClick={() => refreshCookie(order)} type="button">↻</button>
-                      <button className="icon-action-btn" title="Cập nhật trạng thái giao hàng" aria-label="Cập nhật trạng thái giao hàng" disabled={savingId === order.id || !order.processingCookie} onClick={() => refreshDeliveryStatus(order)} type="button">⌛</button>
+                      <button className="icon-action-btn" title="Cập nhật cookie" aria-label="Cập nhật cookie" disabled={savingId === order.id || !order.processingAccount || order.status === 'canceled'} onClick={() => refreshCookie(order)} type="button">↻</button>
+                      <button className="icon-action-btn" title="Cập nhật trạng thái giao hàng" aria-label="Cập nhật trạng thái giao hàng" disabled={savingId === order.id || !order.processingCookie || order.status === 'canceled'} onClick={() => refreshDeliveryStatus(order)} type="button">⌛</button>
                       <button className="icon-action-btn" title="Xem chi tiết" aria-label="Xem chi tiết" onClick={() => openDetail(order)} type="button">ⓘ</button>
                       <button className="icon-action-btn" title="Xóa đơn" aria-label="Xóa đơn" onClick={() => removeOrder(order)} disabled={savingId === order.id} type="button">🗑</button>
                     </div>
