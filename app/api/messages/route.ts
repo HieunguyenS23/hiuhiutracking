@@ -33,10 +33,12 @@ export async function POST(request: Request) {
   const session = await requireSession();
   const body = await request.json();
   const content = String(body.content || '').trim();
+  const imageData = String(body.imageData || '').trim();
   let to = String(body.to || '').trim().toLowerCase();
 
-  if (!content) return NextResponse.json({ error: 'Nội dung tin nhắn không được để trống.' }, { status: 400 });
+  if (!content && !imageData) return NextResponse.json({ error: 'Tin nhắn không được để trống.' }, { status: 400 });
   if (content.length > 1000) return NextResponse.json({ error: 'Nội dung tối đa 1000 ký tự.' }, { status: 400 });
+  if (imageData && imageData.length > 12_000_000) return NextResponse.json({ error: 'Ảnh gửi trong chat quá lớn (tối đa ~12MB).' }, { status: 400 });
 
   if (session.role !== 'admin') {
     to = getAdminSeed().username;
@@ -52,6 +54,7 @@ export async function POST(request: Request) {
       from: session.username,
       to,
       content,
+      imageData,
       createdAt: new Date().toISOString(),
       readAt: '',
     });

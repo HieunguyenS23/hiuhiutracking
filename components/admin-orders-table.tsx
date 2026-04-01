@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { OrderRecord, OrderStatus, VoucherType } from '@/lib/types';
+import { showToast } from '@/lib/client-toast';
 
 type Props = {
   initialOrders: OrderRecord[];
@@ -54,6 +55,8 @@ export function AdminOrdersTable({ initialOrders }: Props) {
 
   useEffect(() => {
     if (!message && !error) return;
+    if (message) showToast(message, 'success');
+    if (error) showToast(error, 'error');
     const timer = window.setTimeout(() => {
       setMessage('');
       setError('');
@@ -298,9 +301,6 @@ export function AdminOrdersTable({ initialOrders }: Props) {
           {voucherFilters.map((value) => <option key={value} value={value}>{value}</option>)}
         </select>
       </div>
-
-      {message ? <div className="inline-success">{message}</div> : null}
-      {error ? <div className="inline-error">{error}</div> : null}
 
       <div className="sheet-wrap">
         <table className="sheet-table">

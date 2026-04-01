@@ -7,7 +7,7 @@ export default async function AnnouncementsPage() {
 
   return (
     <div className="page-stack page-stack-spaced">
-      <AnnouncementsCenter isAdmin={isAdmin} />
+      <AnnouncementsCenter isAdmin={isAdmin} username={session.username} />
     </div>
   );
 }

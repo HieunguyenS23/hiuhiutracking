@@ -7,7 +7,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="page-stack page-stack-spaced">
-      <ProfileCenter isAdmin={isAdmin} username={session.username} />
+      <ProfileCenter isAdmin={isAdmin} />
     </div>
   );
 }

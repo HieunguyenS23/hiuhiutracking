@@ -1,6 +1,8 @@
 ﻿'use client';
 
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { imageFileToDataUrl } from '@/lib/client-image';
+import { showToast } from '@/lib/client-toast';
 
 type Profile = {
   username: string;
@@ -15,30 +17,13 @@ type Profile = {
   updatedAt: string;
 };
 
-type Message = {
-  id: string;
-  from: string;
-  to: string;
-  content: string;
-  createdAt: string;
-};
-
 type Props = {
   isAdmin: boolean;
-  username: string;
 };
 
-const MESSAGE_POLL_MS = 4000;
-
-export function ProfileCenter({ isAdmin, username }: Props) {
+export function ProfileCenter({ isAdmin }: Props) {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const [chatInput, setChatInput] = useState('');
-  const chatListRef = useRef<HTMLDivElement | null>(null);
 
   const initials = useMemo(() => {
     if (!profile?.username) return 'U';
@@ -52,87 +37,38 @@ export function ProfileCenter({ isAdmin, username }: Props) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Không tải được hồ sơ.');
       setProfile(data.profile || null);
+      if (!silent) showToast('Đã tải hồ sơ.', 'info');
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Không tải được hồ sơ.');
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }
-
-  async function loadMessages(silent = false) {
-    if (isAdmin) return;
-    if (!silent) setLoading(true);
-    try {
-      const response = await fetch('/api/messages?markRead=1', { cache: 'no-store' });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Không tải được tin nhắn.');
-      setMessages(Array.isArray(data.messages) ? data.messages : []);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Không tải được tin nhắn.');
+      showToast(loadError instanceof Error ? loadError.message : 'Không tải được hồ sơ.', 'error');
     } finally {
       if (!silent) setLoading(false);
     }
   }
 
   useEffect(() => {
-    const boot = async () => {
-      setLoading(true);
-      try {
-        await Promise.all([loadProfile(true), loadMessages(true)]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    boot();
+    loadProfile(true);
   }, []);
 
-  useEffect(() => {
-    if (isAdmin) return;
-    const timer = window.setInterval(() => {
-      loadMessages(true);
-    }, MESSAGE_POLL_MS);
-
-    return () => window.clearInterval(timer);
-  }, [isAdmin]);
-
-  useEffect(() => {
-    if (isAdmin) return;
-    const el = chatListRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [messages, isAdmin]);
-
-  useEffect(() => {
-    if (!message && !error) return;
-    const timer = window.setTimeout(() => {
-      setMessage('');
-      setError('');
-    }, 3000);
-    return () => window.clearTimeout(timer);
-  }, [message, error]);
-
-  function handleAvatarUpload(event: ChangeEvent<HTMLInputElement>) {
+  async function handleAvatarUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file || !profile) return;
     if (!file.type.startsWith('image/')) {
-      setError('Vui lòng chọn file ảnh hợp lệ.');
+      showToast('Vui lòng chọn file ảnh hợp lệ.', 'error');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result || '');
+    try {
+      const dataUrl = await imageFileToDataUrl(file, 1600, 0.84);
       setProfile({ ...profile, avatarImage: dataUrl });
-    };
-    reader.readAsDataURL(file);
+      showToast('Đã chọn ảnh đại diện. Nhấn Lưu hồ sơ để cập nhật.', 'info');
+    } catch {
+      showToast('Không xử lí được ảnh đại diện.', 'error');
+    }
   }
 
   async function saveProfile() {
     if (!profile) return;
     setLoading(true);
-    setMessage('');
-    setError('');
     try {
       const response = await fetch('/api/profile', {
         method: 'PATCH',
@@ -150,32 +86,9 @@ export function ProfileCenter({ isAdmin, username }: Props) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Không cập nhật được hồ sơ.');
       setProfile(data.profile || profile);
-      setMessage('Đã cập nhật hồ sơ.');
+      showToast('Đã cập nhật hồ sơ.', 'success');
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Không cập nhật được hồ sơ.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function sendMessage() {
-    if (isAdmin || !chatInput.trim()) return;
-    setLoading(true);
-    setMessage('');
-    setError('');
-    try {
-      const response = await fetch('/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: chatInput.trim() }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Không gửi được tin nhắn.');
-      setChatInput('');
-      setMessage('Đã gửi tin nhắn.');
-      await loadMessages(true);
-    } catch (sendError) {
-      setError(sendError instanceof Error ? sendError.message : 'Không gửi được tin nhắn.');
+      showToast(saveError instanceof Error ? saveError.message : 'Không cập nhật được hồ sơ.', 'error');
     } finally {
       setLoading(false);
     }
@@ -190,10 +103,7 @@ export function ProfileCenter({ isAdmin, username }: Props) {
         </div>
       </div>
 
-      {message ? <div className="inline-success">{message}</div> : null}
-      {error ? <div className="inline-error">{error}</div> : null}
-
-      <div className="profile-page-grid">
+      <div className={`profile-page-grid ${isAdmin ? 'profile-page-grid-single' : ''}`}>
         <article className="hub-card hub-profile">
           <div className="hub-card-head">
             <h3>Hồ sơ cá nhân</h3>
@@ -251,30 +161,6 @@ export function ProfileCenter({ isAdmin, username }: Props) {
             <div className="empty-state">{loading ? 'Đang tải hồ sơ...' : 'Chưa có dữ liệu hồ sơ.'}</div>
           )}
         </article>
-
-        {!isAdmin ? (
-          <article className="hub-card hub-chat">
-            <div className="hub-card-head">
-              <h3>Chat với Admin</h3>
-            </div>
-            <div className="chat-list" ref={chatListRef}>
-              {messages.length === 0 ? <div className="empty-state">Chưa có cuộc trò chuyện nào.</div> : null}
-              {messages.map((item) => {
-                const own = item.from === username;
-                return (
-                  <div className={`chat-item ${own ? 'chat-own' : 'chat-other'}`} key={item.id}>
-                    <p>{item.content}</p>
-                    <span>{new Date(item.createdAt).toLocaleString('vi-VN')} · @{item.from}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="chat-compose">
-              <input value={chatInput} onChange={(event) => setChatInput(event.target.value)} placeholder="Nhập tin nhắn..." />
-              <button className="primary-button" type="button" disabled={loading || !chatInput.trim()} onClick={sendMessage}>Gửi</button>
-            </div>
-          </article>
-        ) : null}
       </div>
     </section>
   );

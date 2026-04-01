@@ -1,6 +1,8 @@
 ﻿'use client';
 
 import { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { imageFileToDataUrl } from '@/lib/client-image';
+import { showToast } from '@/lib/client-toast';
 
 type UserRow = {
   username: string;
@@ -25,6 +27,7 @@ type Message = {
   from: string;
   to: string;
   content: string;
+  imageData: string;
   createdAt: string;
 };
 
@@ -48,6 +51,7 @@ export function AdminUsersManager({ initialUsers }: Props) {
 
   const [detail, setDetail] = useState<DetailPayload | null>(null);
   const [chatInput, setChatInput] = useState('');
+  const [chatImage, setChatImage] = useState('');
 
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -98,6 +102,7 @@ export function AdminUsersManager({ initialUsers }: Props) {
         refreshUsers(selectedUsername).catch(() => {});
       } catch (loadError) {
         if (!stopped) setError(loadError instanceof Error ? loadError.message : 'Không tải được hồ sơ tài khoản.');
+        if (!stopped) showToast(loadError instanceof Error ? loadError.message : 'Không tải được hồ sơ tài khoản.', 'error');
       }
     };
 
@@ -142,12 +147,14 @@ export function AdminUsersManager({ initialUsers }: Props) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Không tạo được tài khoản.');
       setMessage('Đã tạo tài khoản thành công.');
+      showToast('Đã tạo tài khoản thành công.', 'success');
       setNewUsername('');
       setNewPassword('');
       setNewRole('customer');
       await refreshUsers(data?.user?.username);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không tạo được tài khoản.');
+      showToast(err instanceof Error ? err.message : 'Không tạo được tài khoản.', 'error');
     } finally {
       setLoading(false);
     }
@@ -179,9 +186,11 @@ export function AdminUsersManager({ initialUsers }: Props) {
       if (!response.ok) throw new Error(data.error || 'Không cập nhật được tài khoản.');
 
       setMessage('Đã cập nhật hồ sơ tài khoản.');
+      showToast('Đã cập nhật hồ sơ tài khoản.', 'success');
       await refreshUsers(data?.user?.username || detail.user.username);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không cập nhật được tài khoản.');
+      showToast(err instanceof Error ? err.message : 'Không cập nhật được tài khoản.', 'error');
     } finally {
       setLoading(false);
     }
@@ -209,8 +218,10 @@ export function AdminUsersManager({ initialUsers }: Props) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Không cập nhật được mật khẩu.');
       setMessage('Đã đổi mật khẩu.');
+      showToast('Đã đổi mật khẩu.', 'success');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không cập nhật được mật khẩu.');
+      showToast(err instanceof Error ? err.message : 'Không cập nhật được mật khẩu.', 'error');
     } finally {
       setLoading(false);
     }
@@ -226,16 +237,18 @@ export function AdminUsersManager({ initialUsers }: Props) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Không xóa được tài khoản.');
       setMessage('Đã xóa tài khoản thành công.');
+      showToast('Đã xóa tài khoản thành công.', 'success');
       await refreshUsers();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không xóa được tài khoản.');
+      showToast(err instanceof Error ? err.message : 'Không xóa được tài khoản.', 'error');
     } finally {
       setLoading(false);
     }
   }
 
   async function sendMessageToUser() {
-    if (!detail || !chatInput.trim()) return;
+    if (!detail || (!chatInput.trim() && !chatImage)) return;
     setLoading(true);
     setMessage('');
     setError('');
@@ -243,14 +256,17 @@ export function AdminUsersManager({ initialUsers }: Props) {
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ to: detail.user.username, content: chatInput.trim() }),
+        body: JSON.stringify({ to: detail.user.username, content: chatInput.trim(), imageData: chatImage }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Không gửi được tin nhắn.');
       setChatInput('');
+      setChatImage('');
       setMessage('Đã gửi tin nhắn cho khách hàng.');
+      showToast('Đã gửi tin nhắn cho khách hàng.', 'success');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Không gửi được tin nhắn.');
+      showToast(err instanceof Error ? err.message : 'Không gửi được tin nhắn.', 'error');
     } finally {
       setLoading(false);
     }
@@ -264,12 +280,28 @@ export function AdminUsersManager({ initialUsers }: Props) {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result || '');
-      setDetail({ ...detail, profile: { ...detail.profile, avatarImage: dataUrl } });
-    };
-    reader.readAsDataURL(file);
+    imageFileToDataUrl(file, 1600, 0.84)
+      .then((dataUrl) => {
+        setDetail({ ...detail, profile: { ...detail.profile, avatarImage: dataUrl } });
+        showToast('Đã chọn ảnh đại diện mới.', 'info');
+      })
+      .catch(() => showToast('Không xử lí được ảnh đại diện.', 'error'));
+  }
+
+  function uploadChatImage(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('Vui lòng chọn ảnh hợp lệ để gửi chat.', 'error');
+      return;
+    }
+
+    imageFileToDataUrl(file, 1700, 0.85)
+      .then((dataUrl) => {
+        setChatImage(dataUrl);
+        showToast('Đã thêm ảnh vào tin nhắn.', 'info');
+      })
+      .catch(() => showToast('Không xử lí được ảnh chat.', 'error'));
   }
 
   return (
@@ -281,9 +313,6 @@ export function AdminUsersManager({ initialUsers }: Props) {
         </div>
         <span className="chip">{total} tài khoản</span>
       </div>
-
-      {message ? <div className="inline-success">{message}</div> : null}
-      {error ? <div className="inline-error">{error}</div> : null}
 
       <div className="users-manager-grid">
         <aside className="users-sidebar">
@@ -384,15 +413,19 @@ export function AdminUsersManager({ initialUsers }: Props) {
                     const own = item.from !== detail.user.username;
                     return (
                       <div className={`chat-item ${own ? 'chat-own' : 'chat-other'}`} key={item.id}>
-                        <p>{item.content}</p>
+                        {item.content ? <p>{item.content}</p> : null}
+                        {item.imageData ? <img className="chat-image" src={item.imageData} alt="chat" /> : null}
                         <span>{new Date(item.createdAt).toLocaleString('vi-VN')} · @{item.from}</span>
                       </div>
                     );
                   })}
                 </div>
+                {chatImage ? <img className="chat-image-preview" src={chatImage} alt="preview" /> : null}
                 <div className="chat-compose">
                   <input value={chatInput} onChange={(event) => setChatInput(event.target.value)} placeholder="Nhập tin nhắn cho khách hàng..." />
-                  <button className="primary-button" type="button" disabled={loading || !chatInput.trim()} onClick={sendMessageToUser}>Gửi</button>
+                  <label className="mini-action chat-upload-btn" htmlFor="admin-chat-image-input">Ảnh</label>
+                  <input id="admin-chat-image-input" type="file" accept="image/*" onChange={uploadChatImage} className="chat-file-input" />
+                  <button className="primary-button" type="button" disabled={loading || (!chatInput.trim() && !chatImage)} onClick={sendMessageToUser}>Gửi</button>
                 </div>
               </article>
             </>

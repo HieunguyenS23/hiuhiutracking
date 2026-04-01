@@ -46,8 +46,8 @@ export async function PATCH(request: Request) {
   if (bio !== undefined && bio.length > 300) {
     return NextResponse.json({ error: 'Giới thiệu tối đa 300 ký tự.' }, { status: 400 });
   }
-  if (avatarImage !== undefined && avatarImage.length > 6_500_000) {
-    return NextResponse.json({ error: 'Ảnh đại diện quá lớn. Vui lòng chọn ảnh nhỏ hơn 6MB.' }, { status: 400 });
+  if (avatarImage !== undefined && avatarImage.length > 12_000_000) {
+    return NextResponse.json({ error: 'Ảnh đại diện quá lớn. Vui lòng chọn ảnh nhỏ hơn 12MB.' }, { status: 400 });
   }
 
   try {

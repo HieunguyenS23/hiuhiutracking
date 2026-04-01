@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { VoucherType } from '@/lib/types';
 import { locationTree } from '@/lib/locations';
 import { hasAtLeastTwoWords, isValidVietnamPhone } from '@/lib/validators';
+import { showToast } from '@/lib/client-toast';
 
 type VoucherOption = {
   id: string;
@@ -83,12 +84,18 @@ export function OrderForm() {
 
   useEffect(() => {
     if (!message && !error) return;
+    if (message) showToast(message, 'success');
+    if (error) showToast(error, 'error');
     const timer = window.setTimeout(() => {
       setMessage('');
       setError('');
     }, 3000);
     return () => window.clearTimeout(timer);
   }, [message, error]);
+
+  useEffect(() => {
+    if (!orderFormEnabled) showToast('Form lên đơn đang tạm đóng.', 'info');
+  }, [orderFormEnabled]);
 
   function onProvinceInput(value: string) {
     setProvinceQuery(value);
@@ -200,7 +207,6 @@ export function OrderForm() {
         </div>
         <span className="chip chip-soft">Form mới</span>
       </div>
-      {!orderFormEnabled ? <div className="inline-error">Form lên đơn đang tạm đóng để xử lí hết hàng.</div> : null}
       <div className="form-grid compact order-form-grid-modern">
         <label><span>Tên người nhận</span><input value={recipientName} onChange={(event) => setRecipientName(event.target.value)} placeholder="Nguyễn Văn A" /></label>
         <label><span>Số điện thoại</span><input value={phone} onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="09xxxxxxxx (có thể để trống)" /></label>
@@ -261,8 +267,6 @@ export function OrderForm() {
         <label><span>Phân loại sản phẩm</span><input value={variant} onChange={(event) => setVariant(event.target.value)} placeholder="Màu đỏ / size M" /></label>
         <label><span>Số lượng</span><input value={quantity} min="1" type="number" onChange={(event) => setQuantity(event.target.value)} /></label>
       </div>
-      {message ? <div className="inline-success">{message}</div> : null}
-      {error ? <div className="inline-error">{error}</div> : null}
       <div className="submit-bar">
         <button className="primary-button" disabled={loading || !orderFormEnabled || voucherOptions.length === 0} onClick={submitOrder} type="button">{loading ? 'Đang gửi đơn...' : 'Gửi đơn'}</button>
       </div>

@@ -1,6 +1,7 @@
 ﻿import { requireAdmin } from '@/lib/session';
 import { getOrders } from '@/lib/store';
 import { AdminOrdersTable } from '@/components/admin-orders-table';
+import { ServerToast } from '@/components/server-toast';
 
 export default async function AdminOrdersPage() {
   await requireAdmin();
@@ -17,7 +18,7 @@ export default async function AdminOrdersPage() {
   return (
     <div className="page-stack page-stack-spaced">
       <section className="phone-card ui-polish-admin-orders">
-        {loadError ? <div className="inline-error">{loadError}</div> : null}
+        {loadError ? <ServerToast message={loadError} variant="error" /> : null}
         {!loadError ? <AdminOrdersTable initialOrders={orders} /> : null}
       </section>
     </div>

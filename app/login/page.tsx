@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { showToast } from '@/lib/client-toast';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,16 +29,21 @@ export default function LoginPage() {
       if (!response.ok) throw new Error(data.error || 'Không thể xử lý yêu cầu.');
 
       if (mode === 'register') {
-        setMessage(data.message || 'Đăng ký thành công. Vui lòng đăng nhập.');
+        const msg = data.message || 'Đăng ký thành công. Vui lòng đăng nhập.';
+        setMessage(msg);
+        showToast(msg, 'success');
         setMode('login');
         return;
       }
 
       setMessage('Đăng nhập thành công. Đang chuyển trang...');
+      showToast('Đăng nhập thành công. Đang chuyển trang...', 'success');
       router.replace('/orders/new');
       router.refresh();
     } catch (submissionError) {
-      setError(submissionError instanceof Error ? submissionError.message : 'Đã có lỗi xảy ra.');
+      const msg = submissionError instanceof Error ? submissionError.message : 'Đã có lỗi xảy ra.';
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
     }
@@ -65,8 +71,6 @@ export default function LoginPage() {
             <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Nhập mật khẩu" />
           </label>
         </div>
-        {message ? <div className="inline-success">{message}</div> : null}
-        {error ? <div className="inline-error">{error}</div> : null}
         <button className="primary-button" disabled={loading} onClick={submit} type="button">
           {loading ? 'Đang xử lý...' : mode === 'login' ? 'Vào hệ thống' : 'Tạo tài khoản'}
         </button>

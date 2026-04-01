@@ -21,6 +21,10 @@ export function MobileTabbar({ isAdmin, username }: Props) {
   const roleLabel = isAdmin ? 'Admin' : 'Khách hàng';
   const profileInitial = (username[0] || 'U').toUpperCase();
 
+  function toggleLeftTagbar() {
+    window.dispatchEvent(new Event('left-tagbar:toggle'));
+  }
+
   useEffect(() => {
     let stopped = false;
 
@@ -52,11 +56,18 @@ export function MobileTabbar({ isAdmin, username }: Props) {
   return (
     <header className="mobile-topbar combined-topbar">
       <div className="profile-row">
-        <div className="profile-card profile-inline">
-          <div className="profile-avatar">{profileInitial}</div>
-          <div className="profile-meta">
-            <p className="eyebrow">{roleLabel}</p>
-            <strong>@{username}</strong>
+        <div className="profile-row-left">
+          <button className="menu-inline-btn" type="button" onClick={toggleLeftTagbar} aria-label="Mở menu">
+            <span />
+            <span />
+            <span />
+          </button>
+          <div className="profile-card profile-inline">
+            <div className="profile-avatar">{profileInitial}</div>
+            <div className="profile-meta">
+              <p className="eyebrow">{roleLabel}</p>
+              <strong>@{username}</strong>
+            </div>
           </div>
         </div>
         <form action="/api/auth/logout" method="post" className="logout-inline-form">

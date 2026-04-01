@@ -50,6 +50,7 @@ export type MessageRecord = {
   from: string;
   to: string;
   content: string;
+  imageData: string;
   createdAt: string;
   readAt: string;
 };

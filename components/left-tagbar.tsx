@@ -15,7 +15,7 @@ type UnreadPayload = {
 
 export function LeftTagbar({ isAdmin }: Props) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState<UnreadPayload>({ unreadMessages: 0, unreadAnnouncements: 0 });
 
   useEffect(() => {
@@ -38,6 +38,24 @@ export function LeftTagbar({ isAdmin }: Props) {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const onToggle = () => setOpen((prev) => !prev);
+    const onClose = () => setOpen(false);
+    const onKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+
+    window.addEventListener('left-tagbar:toggle', onToggle);
+    window.addEventListener('left-tagbar:close', onClose);
+    window.addEventListener('keydown', onKeydown);
+
+    return () => {
+      window.removeEventListener('left-tagbar:toggle', onToggle);
+      window.removeEventListener('left-tagbar:close', onClose);
+      window.removeEventListener('keydown', onKeydown);
+    };
+  }, []);
+
   const links = isAdmin
     ? [
         { href: '/orders/new', label: 'Lên đơn' },
@@ -56,22 +74,31 @@ export function LeftTagbar({ isAdmin }: Props) {
       ];
 
   return (
-    <aside className={`left-tagbar ${open ? 'open' : 'closed'}`}>
-      <button type="button" className="left-tagbar-toggle" onClick={() => setOpen((prev) => !prev)}>
-        {open ? 'Thu gọn' : 'Mở menu'}
-      </button>
+    <>
+      <div className={`left-tagbar-overlay ${open ? 'show' : ''}`} onClick={() => setOpen(false)} />
+      <aside className={`left-tagbar ${open ? 'open' : 'closed'}`}>
+        <div className="left-tagbar-head">
+          <strong>Menu</strong>
+          <button type="button" className="left-tagbar-close" onClick={() => setOpen(false)}>×</button>
+        </div>
 
-      <nav className="left-tagbar-nav">
-        {links.map((item) => {
-          const active = pathname.startsWith(item.href);
-          return (
-            <Link key={item.href} href={item.href} className={`left-tagbar-link ${active ? 'is-active' : ''}`}>
-              <span>{item.label}</span>
-              {Number(item.badge || 0) > 0 ? <span className="left-tagbar-badge">{item.badge! > 99 ? '99+' : item.badge}</span> : null}
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+        <nav className="left-tagbar-nav">
+          {links.map((item) => {
+            const active = pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`left-tagbar-link ${active ? 'is-active' : ''}`}
+                onClick={() => setOpen(false)}
+              >
+                <span>{item.label}</span>
+                {Number(item.badge || 0) > 0 ? <span className="left-tagbar-badge">{item.badge! > 99 ? '99+' : item.badge}</span> : null}
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+    </>
   );
 }

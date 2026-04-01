@@ -192,10 +192,12 @@ async function ensureDatabaseReady() {
     from_username TEXT NOT NULL,
     to_username TEXT NOT NULL,
     content TEXT NOT NULL,
+    image_data TEXT NOT NULL DEFAULT '',
     read_at TIMESTAMPTZ NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`;
   await sql`ALTER TABLE admin_user_messages ADD COLUMN IF NOT EXISTS read_at TIMESTAMPTZ NULL`;
+  await sql`ALTER TABLE admin_user_messages ADD COLUMN IF NOT EXISTS image_data TEXT NOT NULL DEFAULT ''`;
 
   await sql`CREATE TABLE IF NOT EXISTS vouchers (
     id TEXT PRIMARY KEY,
@@ -308,9 +310,10 @@ async function readFileStore() {
       from: String(item.from || ''),
       to: String(item.to || ''),
       content: String(item.content || ''),
+      imageData: String((item as any).imageData || ''),
       createdAt: String(item.createdAt || new Date().toISOString()),
       readAt: String(item.readAt || ''),
-    })).filter((item) => item.id && item.from && item.to && item.content);
+    })).filter((item) => item.id && item.from && item.to && (item.content || item.imageData));
     parsed.vouchers = (parsed.vouchers || []).map((item) => ({
       id: String(item.id || '').trim(),
       label: String(item.label || '').trim(),
@@ -415,6 +418,7 @@ function mapMessage(row: Record<string, unknown>): MessageRecord {
     from: String(row.from_username || row.from || ''),
     to: String(row.to_username || row.to || ''),
     content: String(row.content || ''),
+    imageData: String(row.image_data || ''),
     createdAt: new Date(String(row.created_at || Date.now())).toISOString(),
     readAt: row.read_at ? new Date(String(row.read_at)).toISOString() : '',
   };
@@ -998,7 +1002,7 @@ export async function getMessages(options: { username: string; role: 'admin' | '
     await ensureDatabaseReady();
     if (role === 'admin' && target) {
       const rows = await sql`
-        SELECT id, from_username, to_username, content, read_at, created_at
+        SELECT id, from_username, to_username, content, image_data, read_at, created_at
         FROM admin_user_messages
         WHERE (from_username = ${target} AND to_username = ${username}) OR (from_username = ${username} AND to_username = ${target})
         ORDER BY created_at ASC
@@ -1009,7 +1013,7 @@ export async function getMessages(options: { username: string; role: 'admin' | '
 
     if (role === 'admin') {
       const rows = await sql`
-        SELECT id, from_username, to_username, content, read_at, created_at
+        SELECT id, from_username, to_username, content, image_data, read_at, created_at
         FROM admin_user_messages
         ORDER BY created_at ASC
         LIMIT 400
@@ -1018,7 +1022,7 @@ export async function getMessages(options: { username: string; role: 'admin' | '
     }
 
     const rows = await sql`
-      SELECT id, from_username, to_username, content, read_at, created_at
+      SELECT id, from_username, to_username, content, image_data, read_at, created_at
       FROM admin_user_messages
       WHERE from_username = ${username} OR to_username = ${username}
       ORDER BY created_at ASC
@@ -1040,8 +1044,8 @@ export async function createMessage(record: MessageRecord) {
   if (sql) {
     await ensureDatabaseReady();
     await sql`
-      INSERT INTO admin_user_messages (id, from_username, to_username, content, read_at, created_at)
-      VALUES (${record.id}, ${record.from}, ${record.to}, ${record.content}, ${record.readAt || null}, ${record.createdAt})
+      INSERT INTO admin_user_messages (id, from_username, to_username, content, image_data, read_at, created_at)
+      VALUES (${record.id}, ${record.from}, ${record.to}, ${record.content}, ${record.imageData || ''}, ${record.readAt || null}, ${record.createdAt})
     `;
     return record;
   }

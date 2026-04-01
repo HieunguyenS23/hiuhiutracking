@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { showToast } from '@/lib/client-toast';
 
 type Voucher = {
   id: string;
@@ -35,6 +36,8 @@ export function AdminVouchersManager() {
 
   useEffect(() => {
     if (!message && !error) return;
+    if (message) showToast(message, 'success');
+    if (error) showToast(error, 'error');
     const timer = window.setTimeout(() => {
       setMessage('');
       setError('');
@@ -172,9 +175,6 @@ export function AdminVouchersManager() {
         </div>
         <span className="chip">{activeCount}/{vouchers.length} đang bật</span>
       </div>
-
-      {message ? <div className="inline-success">{message}</div> : null}
-      {error ? <div className="inline-error">{error}</div> : null}
 
       <article className="hub-card">
         <div className="hub-card-head">

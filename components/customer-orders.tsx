@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { OrderRecord } from '@/lib/types';
+import { showToast } from '@/lib/client-toast';
 
 const statusLabel: Record<string, string> = {
   pending: 'Chờ xác nhận',
@@ -113,6 +114,8 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
 
   useEffect(() => {
     if (!message && !error) return;
+    if (message) showToast(message, 'success');
+    if (error) showToast(error, 'error');
     const timer = window.setTimeout(() => {
       setMessage('');
       setError('');
@@ -221,8 +224,6 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
           <option value="canceled">Đã hủy</option>
         </select>
       </div>
-      {message ? <div className="inline-success">{message}</div> : null}
-      {error ? <div className="inline-error">{error}</div> : null}
       <div className="order-list">
         {!error && filteredOrders.length === 0 ? <div className="empty-state">Không có đơn phù hợp bộ lọc.</div> : null}
         {filteredOrders.map((order) => {
