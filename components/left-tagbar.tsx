@@ -62,7 +62,8 @@ export function LeftTagbar({ isAdmin }: Props) {
         { href: '/orders/history', label: 'Lịch sử' },
         { href: '/admin/orders', label: 'Quản lí đơn' },
         { href: '/admin/users', label: 'Quản lí tài khoản', badge: unread.unreadMessages },
-        { href: '/admin/vouchers', label: 'Lưu voucher' },
+        { href: '/admin/vouchers', label: 'Quản lí voucher' },
+        { href: '/admin/save-voucher', label: 'LƯU VOUCHER' },
         { href: '/profile', label: 'Hồ sơ' },
         { href: '/announcements', label: 'Thông báo', badge: unread.unreadAnnouncements },
       ]
@@ -102,4 +103,5 @@ export function LeftTagbar({ isAdmin }: Props) {
     </>
   );
 }
+
 

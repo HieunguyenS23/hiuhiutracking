@@ -2326,3 +2326,35 @@ input:focus, select:focus { outline: 2px solid rgba(15, 142, 122, 0.2); border-c
     width: 100%;
   }
 }
+
+/* Save voucher page */
+.voucher-save-shell .hub-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+}
+
+.voucher-checkbox-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.voucher-checkbox-item input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+
+.voucher-checkbox-item strong {
+  color: #17406f;
+}
+
+.voucher-checkbox-item p {
+  margin: 4px 0 2px;
+  color: #2a3f63;
+  font-weight: 600;
+}
+
+.voucher-checkbox-item small {
+  color: #6e7f97;
+}
