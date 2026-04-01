@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { imageFileToDataUrl } from '@/lib/client-image';
 import { showToast } from '@/lib/client-toast';
 
@@ -61,8 +61,13 @@ export function AdminUsersManager({ initialUsers }: Props) {
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState<'admin' | 'customer'>('customer');
+  const selectedUsernameRef = useRef(selectedUsername);
 
   const total = useMemo(() => users.length, [users.length]);
+
+  useEffect(() => {
+    selectedUsernameRef.current = selectedUsername;
+  }, [selectedUsername]);
 
   useEffect(() => {
     if (!message && !error) return;
@@ -122,7 +127,7 @@ export function AdminUsersManager({ initialUsers }: Props) {
     const list = Array.isArray(data.users) ? data.users : [];
     setUsers(list);
 
-    const target = nextSelected || selectedUsername;
+    const target = nextSelected || selectedUsernameRef.current;
     if (target && list.some((item: UserRow) => item.username === target)) {
       setSelectedUsername(target);
       return;
