@@ -21,18 +21,13 @@ export function MobileTabbar({ isAdmin, username }: Props) {
   const roleLabel = isAdmin ? 'Admin' : 'Khách hàng';
   const profileInitial = (username[0] || 'U').toUpperCase();
 
-  function openLeftTagbar() {
-    if (typeof window === 'undefined') return;
-    try {
-      if (window.location.hash !== '#menu-drawer') {
-        window.location.hash = 'menu-drawer';
-      }
-    } catch {
-      // ignore
+  function toggleLeftTagbar() {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('left-tagbar:toggle'));
     }
-
-    window.dispatchEvent(new Event('left-tagbar:open'));
-    document.dispatchEvent(new Event('left-tagbar:open'));
+    if (typeof document !== 'undefined') {
+      document.dispatchEvent(new Event('left-tagbar:toggle'));
+    }
   }
 
   useEffect(() => {
@@ -67,23 +62,20 @@ export function MobileTabbar({ isAdmin, username }: Props) {
     <header className="mobile-topbar combined-topbar">
       <div className="profile-row">
         <div className="profile-row-left">
-          <a
+          <button
             className="menu-inline-btn"
-            href="#menu-drawer"
-            onClick={(event) => {
-              event.preventDefault();
-              openLeftTagbar();
-            }}
+            type="button"
+            onClick={toggleLeftTagbar}
             onTouchStart={(event) => {
               event.preventDefault();
-              openLeftTagbar();
+              toggleLeftTagbar();
             }}
             aria-label="Mở menu"
           >
             <span />
             <span />
             <span />
-          </a>
+          </button>
           <div className="profile-card profile-inline">
             <div className="profile-avatar">{profileInitial}</div>
             <div className="profile-meta">

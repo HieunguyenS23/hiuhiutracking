@@ -2881,3 +2881,59 @@ input:focus, select:focus { outline: 2px solid rgba(15, 142, 122, 0.2); border-c
   opacity: 1 !important;
   pointer-events: auto !important;
 }
+
+/* force dropdown mode for tagbar, no URL/hash side effects */
+.left-tagbar {
+  position: fixed !important;
+  top: 74px !important;
+  left: 12px !important;
+  width: min(360px, calc(100vw - 24px)) !important;
+  max-height: calc(100vh - 86px) !important;
+  overflow: auto !important;
+  z-index: 9600 !important;
+  border: 1px solid #c7d8ee !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  box-shadow: 0 20px 38px rgba(20, 41, 70, 0.2) !important;
+  transform-origin: top left !important;
+  transition: transform .18s ease, opacity .18s ease !important;
+  padding: 10px !important;
+}
+
+.left-tagbar.open {
+  display: block !important;
+  transform: translateY(0) scale(1) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.left-tagbar.closed {
+  display: none !important;
+  transform: translateY(-8px) scale(.98) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.left-tagbar-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(15, 29, 48, 0.32) !important;
+  z-index: 9500 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity .2s ease !important;
+}
+
+.left-tagbar-overlay.show {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+@media (max-width: 640px) {
+  .left-tagbar {
+    top: 68px !important;
+    left: 8px !important;
+    width: calc(100vw - 16px) !important;
+    max-height: calc(100vh - 76px) !important;
+  }
+}

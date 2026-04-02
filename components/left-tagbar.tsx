@@ -26,15 +26,7 @@ export function LeftTagbar({ isAdmin }: Props) {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState<UnreadPayload>({ unreadMessages: 0, unreadAnnouncements: 0 });
 
-  const closeMenu = () => {
-    setOpen(false);
-    if (typeof window !== 'undefined') {
-      if (window.location.hash === '#menu-drawer') {
-        const { pathname: p, search } = window.location;
-        window.history.replaceState(null, '', `${p}${search}`);
-      }
-    }
-  };
+  const closeMenu = () => setOpen(false);
 
   useEffect(() => {
     const load = async () => {
@@ -63,9 +55,6 @@ export function LeftTagbar({ isAdmin }: Props) {
     const onKeydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') closeMenu();
     };
-    const onHash = () => {
-      setOpen(window.location.hash === '#menu-drawer');
-    };
 
     window.addEventListener('left-tagbar:toggle', onToggle);
     window.addEventListener('left-tagbar:open', onOpen);
@@ -74,9 +63,6 @@ export function LeftTagbar({ isAdmin }: Props) {
     document.addEventListener('left-tagbar:open', onOpen as EventListener);
     document.addEventListener('left-tagbar:close', onClose as EventListener);
     window.addEventListener('keydown', onKeydown);
-    window.addEventListener('hashchange', onHash);
-
-    onHash();
 
     return () => {
       window.removeEventListener('left-tagbar:toggle', onToggle);
@@ -86,7 +72,6 @@ export function LeftTagbar({ isAdmin }: Props) {
       document.removeEventListener('left-tagbar:open', onOpen as EventListener);
       document.removeEventListener('left-tagbar:close', onClose as EventListener);
       window.removeEventListener('keydown', onKeydown);
-      window.removeEventListener('hashchange', onHash);
     };
   }, []);
 
@@ -125,10 +110,10 @@ export function LeftTagbar({ isAdmin }: Props) {
   return (
     <>
       <div className={`left-tagbar-overlay ${open ? 'show' : ''}`} onClick={closeMenu} />
-      <aside id="menu-drawer" className={`left-tagbar ${open ? 'open' : 'closed'}`}>
+      <aside className={`left-tagbar ${open ? 'open' : 'closed'}`}>
         <div className="left-tagbar-head">
           <strong>Dịch vụ Shoppe</strong>
-          <a href="#" className="left-tagbar-close" onClick={(e) => { e.preventDefault(); closeMenu(); }} aria-label="Đóng menu">×</a>
+          <button type="button" className="left-tagbar-close" onClick={closeMenu} aria-label="Đóng menu">×</button>
         </div>
 
         <nav className="left-tagbar-nav">
