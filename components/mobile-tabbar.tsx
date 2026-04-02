@@ -75,36 +75,14 @@ export function MobileTabbar({ isAdmin, username }: Props) {
         </form>
       </div>
 
-      <nav className={`mobile-tabbar ${isAdmin ? 'mobile-tabbar-admin' : ''}`}>
+      <nav className="mobile-tabbar">
         <Link className={pathname.startsWith('/orders') && !pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/new">Lên đơn</Link>
-        {isAdmin ? (
-          <>
-            <Link className={pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/history">Lịch sử</Link>
-            <Link className={`tab-link-with-badge ${pathname.startsWith('/admin/orders') ? 'is-active' : ''}`} href="/admin/orders">
-              Quản lí đơn
-            </Link>
-            <Link className={`tab-link-with-badge ${pathname.startsWith('/admin/users') ? 'is-active' : ''}`} href="/admin/users">
-              Tài khoản
-              {unread.unreadMessages > 0 ? <span className="tab-badge">{unread.unreadMessages > 99 ? '99+' : unread.unreadMessages}</span> : null}
-            </Link>
-            <Link className={pathname.startsWith('/profile') ? 'is-active' : ''} href="/profile">
-              Hồ sơ
-            </Link>
-            <Link className={`tab-link-with-badge ${pathname.startsWith('/announcements') ? 'is-active' : ''}`} href="/announcements">
-              Thông báo
-              {unread.unreadAnnouncements > 0 ? <span className="tab-badge">{unread.unreadAnnouncements > 99 ? '99+' : unread.unreadAnnouncements}</span> : null}
-            </Link>
-          </>
-        ) : (
-          <>
-            <Link className={pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/history">Lịch sử</Link>
-            <Link className={pathname.startsWith('/profile') ? 'is-active' : ''} href="/profile">Hồ sơ</Link>
-            <Link className={`tab-link-with-badge ${pathname.startsWith('/announcements') ? 'is-active' : ''}`} href="/announcements">
-              Thông báo
-              {unread.total > 0 ? <span className="tab-badge">{unread.total > 99 ? '99+' : unread.total}</span> : null}
-            </Link>
-          </>
-        )}
+        <Link className={pathname.startsWith('/orders/history') ? 'is-active' : ''} href="/orders/history">Lịch sử</Link>
+        <Link className={pathname.startsWith('/profile') ? 'is-active' : ''} href="/profile">Hồ sơ</Link>
+        <Link className={`tab-link-with-badge ${pathname.startsWith('/announcements') ? 'is-active' : ''}`} href="/announcements">
+          Thông báo
+          {unread.total > 0 ? <span className="tab-badge">{unread.total > 99 ? '99+' : unread.total}</span> : null}
+        </Link>
       </nav>
     </header>
   );

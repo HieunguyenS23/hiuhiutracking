@@ -40,17 +40,20 @@ export function LeftTagbar({ isAdmin }: Props) {
 
   useEffect(() => {
     const onToggle = () => setOpen((prev) => !prev);
+    const onOpen = () => setOpen(true);
     const onClose = () => setOpen(false);
     const onKeydown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false);
     };
 
     window.addEventListener('left-tagbar:toggle', onToggle);
+    window.addEventListener('left-tagbar:open', onOpen);
     window.addEventListener('left-tagbar:close', onClose);
     window.addEventListener('keydown', onKeydown);
 
     return () => {
       window.removeEventListener('left-tagbar:toggle', onToggle);
+      window.removeEventListener('left-tagbar:open', onOpen);
       window.removeEventListener('left-tagbar:close', onClose);
       window.removeEventListener('keydown', onKeydown);
     };
@@ -63,7 +66,10 @@ export function LeftTagbar({ isAdmin }: Props) {
         { href: '/admin/orders', label: 'Quản lí đơn' },
         { href: '/admin/users', label: 'Quản lí tài khoản', badge: unread.unreadMessages },
         { href: '/admin/vouchers', label: 'Quản lí voucher' },
+        { href: '/admin/lookup', label: 'Tra cứu' },
         { href: '/admin/save-voucher', label: 'LƯU VOUCHER' },
+        { href: '/admin/add-mail', label: 'Thêm mail' },
+        { href: '/admin/read-mail', label: 'Đọc mail' },
         { href: '/profile', label: 'Hồ sơ' },
         { href: '/announcements', label: 'Thông báo', badge: unread.unreadAnnouncements },
       ]
@@ -103,5 +109,3 @@ export function LeftTagbar({ isAdmin }: Props) {
     </>
   );
 }
-
-
