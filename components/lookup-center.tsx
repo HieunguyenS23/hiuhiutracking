@@ -35,6 +35,22 @@ function normalizeCookie(raw: string) {
   return value.startsWith('SPC_ST=') ? value : `SPC_ST=${value}`;
 }
 
+function normalizeQrImageSource(raw: string) {
+  const value = String(raw || '').trim();
+  if (!value) return '';
+
+  if (/^data:image\//i.test(value)) return value;
+  if (/^https?:\/\//i.test(value)) return value;
+
+  const base64 = value
+    .replace(/^data:[^;]+;base64,/i, '')
+    .replace(/\s+/g, '');
+
+  if (!base64) return '';
+  return `data:image/png;base64,${base64}`;
+}
+
+
 function extractOrderProductName(order: LookupOrder) {
   const names = (order.products || []).map((item) => String(item?.name || '').trim()).filter(Boolean);
   if (names.length > 0) return names.join(' | ');
@@ -159,13 +175,23 @@ export function LookupCenter() {
     try {
       const result = await callLookup({ action: 'qr_generate' });
       const payload = result.data || {};
-      const sessionId = String(payload.sessionId || payload.session_id || '');
-      const qrBase64 = String(payload.qrBase64 || payload.qr_base64 || '');
+      const source = payload?.data && typeof payload.data === 'object' ? payload.data : payload;
+      const sessionId = String(source.sessionId || source.session_id || payload.sessionId || payload.session_id || '');
+      const qrRaw = String(
+        source.qrBase64 ||
+        source.qr_base64 ||
+        source.qr ||
+        source.qrcode ||
+        source.qrUrl ||
+        source.qr_url ||
+        ''
+      );
+      const qrImageSrc = normalizeQrImageSource(qrRaw);
 
-      if (!sessionId || !qrBase64) throw new Error('API không trả sessionId hoặc qrBase64.');
+      if (!sessionId || !qrImageSrc) throw new Error('API không trả sessionId hoặc ảnh QR hợp lệ.');
 
       setQrSessionId(sessionId);
-      setQrImage(qrBase64);
+      setQrImage(qrImageSrc);
       setQrStatusText('Đang chờ quét QR...');
 
       pollTimer.current = window.setInterval(async () => {
@@ -446,3 +472,5 @@ export function LookupCenter() {
     </section>
   );
 }
+
+
