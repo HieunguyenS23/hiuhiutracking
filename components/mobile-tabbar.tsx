@@ -21,13 +21,9 @@ export function MobileTabbar({ isAdmin, username }: Props) {
   const roleLabel = isAdmin ? 'Admin' : 'Khách hàng';
   const profileInitial = (username[0] || 'U').toUpperCase();
 
-  function toggleLeftTagbar() {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('left-tagbar:toggle'));
-    }
-    if (typeof document !== 'undefined') {
-      document.dispatchEvent(new Event('left-tagbar:toggle'));
-    }
+  function toggleDrawer() {
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('app-drawer:toggle'));
+    if (typeof document !== 'undefined') document.dispatchEvent(new Event('app-drawer:toggle'));
   }
 
   useEffect(() => {
@@ -59,16 +55,16 @@ export function MobileTabbar({ isAdmin, username }: Props) {
   }, []);
 
   return (
-    <header className="mobile-topbar combined-topbar">
-      <div className="profile-row">
+    <header className="mobile-topbar combined-topbar app-topbar">
+      <div className="profile-row app-topbar-row">
         <div className="profile-row-left">
           <button
-            className="menu-inline-btn"
+            className="app-menu-btn"
             type="button"
-            onClick={toggleLeftTagbar}
+            onClick={toggleDrawer}
             onTouchStart={(event) => {
               event.preventDefault();
-              toggleLeftTagbar();
+              toggleDrawer();
             }}
             aria-label="Mở menu"
           >

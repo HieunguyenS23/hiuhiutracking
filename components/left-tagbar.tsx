@@ -26,7 +26,7 @@ export function LeftTagbar({ isAdmin }: Props) {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState<UnreadPayload>({ unreadMessages: 0, unreadAnnouncements: 0 });
 
-  const closeMenu = () => setOpen(false);
+  const closeDrawer = () => setOpen(false);
 
   useEffect(() => {
     const load = async () => {
@@ -51,26 +51,26 @@ export function LeftTagbar({ isAdmin }: Props) {
   useEffect(() => {
     const onToggle = () => setOpen((prev) => !prev);
     const onOpen = () => setOpen(true);
-    const onClose = () => closeMenu();
+    const onClose = () => setOpen(false);
     const onKeydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeMenu();
+      if (event.key === 'Escape') setOpen(false);
     };
 
-    window.addEventListener('left-tagbar:toggle', onToggle);
-    window.addEventListener('left-tagbar:open', onOpen);
-    window.addEventListener('left-tagbar:close', onClose);
-    document.addEventListener('left-tagbar:toggle', onToggle as EventListener);
-    document.addEventListener('left-tagbar:open', onOpen as EventListener);
-    document.addEventListener('left-tagbar:close', onClose as EventListener);
+    window.addEventListener('app-drawer:toggle', onToggle);
+    window.addEventListener('app-drawer:open', onOpen);
+    window.addEventListener('app-drawer:close', onClose);
+    document.addEventListener('app-drawer:toggle', onToggle as EventListener);
+    document.addEventListener('app-drawer:open', onOpen as EventListener);
+    document.addEventListener('app-drawer:close', onClose as EventListener);
     window.addEventListener('keydown', onKeydown);
 
     return () => {
-      window.removeEventListener('left-tagbar:toggle', onToggle);
-      window.removeEventListener('left-tagbar:open', onOpen);
-      window.removeEventListener('left-tagbar:close', onClose);
-      document.removeEventListener('left-tagbar:toggle', onToggle as EventListener);
-      document.removeEventListener('left-tagbar:open', onOpen as EventListener);
-      document.removeEventListener('left-tagbar:close', onClose as EventListener);
+      window.removeEventListener('app-drawer:toggle', onToggle);
+      window.removeEventListener('app-drawer:open', onOpen);
+      window.removeEventListener('app-drawer:close', onClose);
+      document.removeEventListener('app-drawer:toggle', onToggle as EventListener);
+      document.removeEventListener('app-drawer:open', onOpen as EventListener);
+      document.removeEventListener('app-drawer:close', onClose as EventListener);
       window.removeEventListener('keydown', onKeydown);
     };
   }, []);
@@ -109,29 +109,29 @@ export function LeftTagbar({ isAdmin }: Props) {
 
   return (
     <>
-      <div className={`left-tagbar-overlay ${open ? 'show' : ''}`} onClick={closeMenu} />
-      <aside className={`left-tagbar ${open ? 'open' : 'closed'}`}>
-        <div className="left-tagbar-head">
+      <div className={`app-drawer-overlay ${open ? 'show' : ''}`} onClick={closeDrawer} />
+      <aside className={`app-drawer ${open ? 'open' : 'closed'}`}>
+        <div className="app-drawer-head">
           <strong>Dịch vụ Shoppe</strong>
-          <button type="button" className="left-tagbar-close" onClick={closeMenu} aria-label="Đóng menu">×</button>
+          <button type="button" className="app-drawer-close" onClick={closeDrawer} aria-label="Đóng menu">×</button>
         </div>
 
-        <nav className="left-tagbar-nav">
+        <nav className="app-drawer-nav">
           {grouped.map(([section, items]) => (
-            <div key={section} className="left-tagbar-group">
-              <p className="left-tagbar-group-title">{section}</p>
+            <div key={section} className="app-drawer-group">
+              <p className="app-drawer-title">{section}</p>
               {items.map((item) => {
                 const active = pathname.startsWith(item.href);
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`left-tagbar-link ${active ? 'is-active' : ''}`}
-                    onClick={closeMenu}
+                    className={`app-drawer-link ${active ? 'is-active' : ''}`}
+                    onClick={closeDrawer}
                   >
-                    <span className="left-tagbar-icon" aria-hidden>{item.icon}</span>
-                    <span className="left-tagbar-label">{item.label}</span>
-                    {Number(item.badge || 0) > 0 ? <span className="left-tagbar-badge">{item.badge! > 99 ? '99+' : item.badge}</span> : null}
+                    <span className="app-drawer-icon" aria-hidden>{item.icon}</span>
+                    <span className="app-drawer-label">{item.label}</span>
+                    {Number(item.badge || 0) > 0 ? <span className="app-drawer-badge">{item.badge! > 99 ? '99+' : item.badge}</span> : null}
                   </Link>
                 );
               })}
