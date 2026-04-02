@@ -55,14 +55,20 @@ export function LeftTagbar({ isAdmin }: Props) {
     };
 
     window.addEventListener('left-tagbar:toggle', onToggle);
+    document.addEventListener('left-tagbar:toggle', onToggle as EventListener);
     window.addEventListener('left-tagbar:open', onOpen);
+    document.addEventListener('left-tagbar:open', onOpen as EventListener);
     window.addEventListener('left-tagbar:close', onClose);
+    document.addEventListener('left-tagbar:close', onClose as EventListener);
     window.addEventListener('keydown', onKeydown);
 
     return () => {
       window.removeEventListener('left-tagbar:toggle', onToggle);
+      document.removeEventListener('left-tagbar:toggle', onToggle as EventListener);
       window.removeEventListener('left-tagbar:open', onOpen);
+      document.removeEventListener('left-tagbar:open', onOpen as EventListener);
       window.removeEventListener('left-tagbar:close', onClose);
+      document.removeEventListener('left-tagbar:close', onClose as EventListener);
       window.removeEventListener('keydown', onKeydown);
     };
   }, []);
@@ -134,3 +140,4 @@ export function LeftTagbar({ isAdmin }: Props) {
     </>
   );
 }
+

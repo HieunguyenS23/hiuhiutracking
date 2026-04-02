@@ -21,8 +21,13 @@ export function MobileTabbar({ isAdmin, username }: Props) {
   const roleLabel = isAdmin ? 'Admin' : 'Khách hàng';
   const profileInitial = (username[0] || 'U').toUpperCase();
 
-  function toggleLeftTagbar() {
-    window.dispatchEvent(new Event('left-tagbar:toggle'));
+  function openLeftTagbar() {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('left-tagbar:open'));
+    }
+    if (typeof document !== 'undefined') {
+      document.dispatchEvent(new CustomEvent('left-tagbar:open'));
+    }
   }
 
   useEffect(() => {
@@ -57,7 +62,8 @@ export function MobileTabbar({ isAdmin, username }: Props) {
     <header className="mobile-topbar combined-topbar">
       <div className="profile-row">
         <div className="profile-row-left">
-          <button className="menu-inline-btn" type="button" onClick={toggleLeftTagbar} aria-label="Mở menu">
+          <button className="menu-inline-btn" type="button" onClick={openLeftTagbar}
+            onTouchStart={(event) => { event.preventDefault(); openLeftTagbar(); }} aria-label="Mở menu">
             <span />
             <span />
             <span />
@@ -87,3 +93,4 @@ export function MobileTabbar({ isAdmin, username }: Props) {
     </header>
   );
 }
+

@@ -2842,3 +2842,35 @@ input:focus, select:focus { outline: 2px solid rgba(15, 142, 122, 0.2); border-c
     max-height: calc(100vh - 76px);
   }
 }
+
+/* hard-fix mobile click for hamburger/drawer */
+.mobile-topbar,
+.profile-row,
+.profile-row-left {
+  position: relative;
+  z-index: 600 !important;
+}
+
+.menu-inline-btn {
+  position: relative;
+  z-index: 620 !important;
+  pointer-events: auto !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.left-tagbar-overlay {
+  z-index: 9500 !important;
+}
+
+.left-tagbar {
+  z-index: 9600 !important;
+  pointer-events: auto !important;
+}
+
+.left-tagbar.open {
+  pointer-events: auto !important;
+}
+
+.left-tagbar.closed {
+  pointer-events: none !important;
+}
