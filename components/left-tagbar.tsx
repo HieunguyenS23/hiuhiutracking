@@ -26,6 +26,16 @@ export function LeftTagbar({ isAdmin }: Props) {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState<UnreadPayload>({ unreadMessages: 0, unreadAnnouncements: 0 });
 
+  const closeMenu = () => {
+    setOpen(false);
+    if (typeof window !== 'undefined') {
+      if (window.location.hash === '#menu-drawer') {
+        const { pathname: p, search } = window.location;
+        window.history.replaceState(null, '', `${p}${search}`);
+      }
+    }
+  };
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -49,27 +59,34 @@ export function LeftTagbar({ isAdmin }: Props) {
   useEffect(() => {
     const onToggle = () => setOpen((prev) => !prev);
     const onOpen = () => setOpen(true);
-    const onClose = () => setOpen(false);
+    const onClose = () => closeMenu();
     const onKeydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
+      if (event.key === 'Escape') closeMenu();
+    };
+    const onHash = () => {
+      setOpen(window.location.hash === '#menu-drawer');
     };
 
     window.addEventListener('left-tagbar:toggle', onToggle);
-    document.addEventListener('left-tagbar:toggle', onToggle as EventListener);
     window.addEventListener('left-tagbar:open', onOpen);
-    document.addEventListener('left-tagbar:open', onOpen as EventListener);
     window.addEventListener('left-tagbar:close', onClose);
+    document.addEventListener('left-tagbar:toggle', onToggle as EventListener);
+    document.addEventListener('left-tagbar:open', onOpen as EventListener);
     document.addEventListener('left-tagbar:close', onClose as EventListener);
     window.addEventListener('keydown', onKeydown);
+    window.addEventListener('hashchange', onHash);
+
+    onHash();
 
     return () => {
       window.removeEventListener('left-tagbar:toggle', onToggle);
-      document.removeEventListener('left-tagbar:toggle', onToggle as EventListener);
       window.removeEventListener('left-tagbar:open', onOpen);
-      document.removeEventListener('left-tagbar:open', onOpen as EventListener);
       window.removeEventListener('left-tagbar:close', onClose);
+      document.removeEventListener('left-tagbar:toggle', onToggle as EventListener);
+      document.removeEventListener('left-tagbar:open', onOpen as EventListener);
       document.removeEventListener('left-tagbar:close', onClose as EventListener);
       window.removeEventListener('keydown', onKeydown);
+      window.removeEventListener('hashchange', onHash);
     };
   }, []);
 
@@ -107,11 +124,11 @@ export function LeftTagbar({ isAdmin }: Props) {
 
   return (
     <>
-      <div className={`left-tagbar-overlay ${open ? 'show' : ''}`} onClick={() => setOpen(false)} />
-      <aside className={`left-tagbar ${open ? 'open' : 'closed'}`}>
+      <div className={`left-tagbar-overlay ${open ? 'show' : ''}`} onClick={closeMenu} />
+      <aside id="menu-drawer" className={`left-tagbar ${open ? 'open' : 'closed'}`}>
         <div className="left-tagbar-head">
           <strong>Dịch vụ Shoppe</strong>
-          <button type="button" className="left-tagbar-close" onClick={() => setOpen(false)} aria-label="Đóng menu">×</button>
+          <a href="#" className="left-tagbar-close" onClick={(e) => { e.preventDefault(); closeMenu(); }} aria-label="Đóng menu">×</a>
         </div>
 
         <nav className="left-tagbar-nav">
@@ -125,7 +142,7 @@ export function LeftTagbar({ isAdmin }: Props) {
                     key={item.href}
                     href={item.href}
                     className={`left-tagbar-link ${active ? 'is-active' : ''}`}
-                    onClick={() => setOpen(false)}
+                    onClick={closeMenu}
                   >
                     <span className="left-tagbar-icon" aria-hidden>{item.icon}</span>
                     <span className="left-tagbar-label">{item.label}</span>
@@ -140,4 +157,3 @@ export function LeftTagbar({ isAdmin }: Props) {
     </>
   );
 }
-

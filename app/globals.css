@@ -2874,3 +2874,10 @@ input:focus, select:focus { outline: 2px solid rgba(15, 142, 122, 0.2); border-c
 .left-tagbar.closed {
   pointer-events: none !important;
 }
+
+/* hash fallback for mobile drawer */
+.left-tagbar:target {
+  transform: translateY(0) scale(1) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
