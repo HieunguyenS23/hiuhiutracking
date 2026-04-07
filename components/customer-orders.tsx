@@ -12,11 +12,10 @@ const statusLabel: Record<string, string> = {
 };
 
 function detectDeliveryTone(raw: string) {
-  const value = raw.toLowerCase();
+  const value = String(raw || '').toLowerCase();
   if (value.includes('giao hàng thành công') || value.includes('đã giao') || value.includes('da giao') || value.includes('order delivered')) return 'delivered';
-  if (value.includes('hủy') || value.includes('huy') || value.includes('trả') || value.includes('tra hang') || value.includes('không thành công')) return 'failed';
-  if (value.includes('đang giao') || value.includes('dang giao') || value.includes('đang vận chuyển') || value.includes('van chuyen')) return 'shipping';
-  return 'pending';
+  if (value.includes('hủy') || value.includes('huy') || value.includes('hoàn') || value.includes('hoan')) return 'failed';
+  return 'shipping';
 }
 
 type Props = {
@@ -43,7 +42,6 @@ type TrackingResult = {
 function toTimelineEpoch(raw: string) {
   const text = String(raw || '').trim();
   if (!text) return Number.NEGATIVE_INFINITY;
-
   if (/^\d+$/.test(text)) {
     const n = Number(text);
     if (Number.isFinite(n)) {
@@ -51,7 +49,6 @@ function toTimelineEpoch(raw: string) {
       if (n > 1_000_000_000) return n * 1000;
     }
   }
-
   const direct = Date.parse(text);
   if (Number.isFinite(direct)) return direct;
 
@@ -65,7 +62,6 @@ function toTimelineEpoch(raw: string) {
     const year = Number(m[6]);
     return new Date(year, month, day, hour, minute, second).getTime();
   }
-
   return Number.NEGATIVE_INFINITY;
 }
 
@@ -111,6 +107,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
   const [message, setMessage] = useState('');
   const [trackingLoading, setTrackingLoading] = useState('');
   const [trackingDetail, setTrackingDetail] = useState<{ tracking: string; productName: string; result: TrackingResult } | null>(null);
+  const [orderImagePreview, setOrderImagePreview] = useState('');
 
   useEffect(() => {
     if (!message && !error) return;
@@ -131,9 +128,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
         const response = await fetch('/api/orders', { cache: 'no-store' });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Không tải được lịch sử đơn.');
-        if (!stopped) {
-          setOrders(Array.isArray(data.orders) ? data.orders : []);
-        }
+        if (!stopped) setOrders(Array.isArray(data.orders) ? data.orders : []);
       } catch (pollError) {
         if (!stopped) setError(pollError instanceof Error ? pollError.message : 'Không tải được lịch sử đơn.');
       }
@@ -163,11 +158,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
       const result = data.result || {};
       const currentStatus = String(data?.currentStatus || result?.status || result?.latest?.desc || '').trim();
 
-      setTrackingDetail({
-        tracking,
-        productName: order.productName || 'Chưa có',
-        result,
-      });
+      setTrackingDetail({ tracking, productName: order.productName || 'Chưa có', result });
 
       if (currentStatus) {
         setOrders((prev) => prev.map((item) => (item.id === order.id ? { ...item, deliveryStatus: currentStatus } : item)));
@@ -182,6 +173,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
   }
 
   const timelineItems = useMemo(() => normalizeTimeline(trackingDetail?.result), [trackingDetail]);
+
   const filteredOrders = useMemo(() => {
     const keyword = search.trim().toLowerCase();
     return orders.filter((item) => {
@@ -209,11 +201,13 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
         </div>
         <span className="chip">{orders.length} đơn</span>
       </div>
+
       <div className="stats-grid">
         <div className="stats-card"><span>Tổng đơn</span><strong>{stats.total}</strong></div>
         <div className="stats-card"><span>Đang xử lí</span><strong>{stats.inProgress}</strong></div>
         <div className="stats-card"><span>Đã hủy</span><strong>{stats.canceled}</strong></div>
       </div>
+
       <div className="filter-bar">
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm theo ID đơn, người nhận, mã đơn, sản phẩm..." />
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
@@ -224,6 +218,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
           <option value="canceled">Đã hủy</option>
         </select>
       </div>
+
       <div className="order-list">
         {!error && filteredOrders.length === 0 ? <div className="empty-state">Không có đơn phù hợp bộ lọc.</div> : null}
         {filteredOrders.map((order) => {
@@ -237,12 +232,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
                   <span className={`order-code-chip order-chip-admin status-${order.status}`}>Admin: {statusLabel[order.status] || 'Chờ xác nhận'}</span>
                   {!isCanceled && order.deliveryTracking ? <span className="tracking-tag">{order.deliveryTracking}</span> : null}
                   {!isCanceled && order.deliveryTracking ? (
-                    <button
-                      className="mini-action"
-                      type="button"
-                      onClick={() => openTracking(order)}
-                      disabled={trackingLoading === order.deliveryTracking}
-                    >
+                    <button className="mini-action" type="button" onClick={() => openTracking(order)} disabled={trackingLoading === order.deliveryTracking}>
                       {trackingLoading === order.deliveryTracking ? 'Đang tra...' : 'Xem hành trình'}
                     </button>
                   ) : null}
@@ -265,10 +255,17 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
                   <span className={`order-code-chip order-chip-delivery delivery-${deliveryTone}`}>Trạng thái giao hàng: {order.deliveryStatus || 'Chưa kiểm tra'}</span>
                 </div>
               ) : null}
+
               <p>{order.addressLine}, {order.ward}, {order.district}, {order.province}</p>
+              {order.adminNote ? <p className="order-admin-note">Ghi chú admin: {order.adminNote}</p> : null}
               {!isCanceled ? <p className="product-name-line">{order.productName || 'Tên sản phẩm sẽ được admin cập nhật'}</p> : null}
               <p>{order.variant ? `${order.variant} · SL ${order.quantity}` : `SL ${order.quantity}`}</p>
-              <a className="order-link" href={order.productLink} target="_blank" rel="noreferrer">Mở link sản phẩm</a>
+
+              <div className="order-row">
+                <a className="order-link" href={order.productLink} target="_blank" rel="noreferrer">Mở link sản phẩm</a>
+                {order.orderImage ? <button className="mini-action" type="button" onClick={() => setOrderImagePreview(order.orderImage || '')}>Xem ảnh đơn</button> : null}
+              </div>
+
               <div className="order-row muted">
                 <span>{new Date(order.createdAt).toLocaleString('vi-VN')}</span>
                 <span>@{order.username}</span>
@@ -279,7 +276,7 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
       </div>
 
       {trackingDetail ? (
-        <div className="modal-backdrop tracking-modal-backdrop" onClick={() => setTrackingDetail(null)}>
+        <div className="modal-backdrop tracking-modal-backdrop tracking-fullscreen" onClick={() => setTrackingDetail(null)}>
           <div className="modal-card modal-card-clean tracking-modal-card" onClick={(event) => event.stopPropagation()}>
             <div className="modal-head modern modal-head-clean">
               <div>
@@ -319,6 +316,20 @@ export function CustomerOrders({ initialOrders, initialError = '' }: Props) {
                   <p>Chưa có timeline chi tiết cho vận đơn này.</p>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {orderImagePreview ? (
+        <div className="modal-backdrop tracking-modal-backdrop tracking-fullscreen" onClick={() => setOrderImagePreview('')}>
+          <div className="modal-card tracking-modal-card image-preview-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head modern modal-head-clean">
+              <h3>Ảnh đơn hàng</h3>
+              <button className="mini-action modal-close" onClick={() => setOrderImagePreview('')} type="button">Đóng</button>
+            </div>
+            <div className="modal-body modern modal-body-clean">
+              <img src={orderImagePreview} alt="Ảnh đơn hàng" className="order-image-preview" />
             </div>
           </div>
         </div>

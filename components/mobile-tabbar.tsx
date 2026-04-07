@@ -22,7 +22,14 @@ export function MobileTabbar({ isAdmin, username }: Props) {
   const profileInitial = (username[0] || 'U').toUpperCase();
 
   function toggleDrawer() {
-    if (typeof window !== 'undefined') window.dispatchEvent(new Event('app-drawer:toggle'));
+    if (typeof window !== 'undefined') {
+      const w = window as any;
+      if (typeof w.__toggleAppDrawer === 'function') {
+        w.__toggleAppDrawer();
+        return;
+      }
+      window.dispatchEvent(new Event('app-drawer:toggle'));
+    }
     if (typeof document !== 'undefined') document.dispatchEvent(new Event('app-drawer:toggle'));
   }
 
@@ -61,11 +68,7 @@ export function MobileTabbar({ isAdmin, username }: Props) {
           <button
             className="app-menu-btn"
             type="button"
-            onClick={toggleDrawer}
-            onTouchStart={(event) => {
-              event.preventDefault();
-              toggleDrawer();
-            }}
+            onPointerUp={toggleDrawer}
             aria-label="Mở menu"
           >
             <span />
@@ -97,3 +100,5 @@ export function MobileTabbar({ isAdmin, username }: Props) {
     </header>
   );
 }
+
+

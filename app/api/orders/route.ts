@@ -371,6 +371,8 @@ export async function POST(request: Request) {
       processingCookie: '',
       processingAccount: '',
       productName: '',
+      orderImage: '',
+      adminNote: '',
       createdAt: new Date().toISOString(),
     });
 
@@ -403,6 +405,8 @@ export async function PATCH(request: Request) {
 
   const processingCookie = body.processingCookie === undefined ? undefined : String(body.processingCookie || '').trim();
   const processingAccount = body.processingAccount === undefined ? undefined : String(body.processingAccount || '').trim();
+  const orderImage = body.orderImage === undefined ? undefined : String(body.orderImage || '').trim();
+  const adminNote = body.adminNote === undefined ? undefined : String(body.adminNote || '').trim();
   const refreshDelivery = Boolean(body.refreshDeliveryStatus);
   const refreshCookie = Boolean(body.refreshCookieFromAccount);
 
@@ -430,6 +434,8 @@ export async function PATCH(request: Request) {
     processingCookie?: string;
     processingAccount?: string;
     productName?: string;
+    orderImage?: string;
+    adminNote?: string;
   } = {};
 
   if (statusRaw) {
@@ -507,6 +513,8 @@ export async function PATCH(request: Request) {
 
   if (processingCookie !== undefined) payload.processingCookie = normalizeCookie(processingCookie);
   if (processingAccount !== undefined) payload.processingAccount = processingAccount;
+  if (orderImage !== undefined) payload.orderImage = orderImage;
+  if (adminNote !== undefined) payload.adminNote = adminNote;
 
   try {
     if (refreshCookie) {
@@ -546,7 +554,9 @@ export async function PATCH(request: Request) {
       payload.deliveryTracking === undefined &&
       payload.orderCode === undefined &&
       payload.orderAmount === undefined &&
-      payload.productName === undefined
+      payload.productName === undefined &&
+      payload.orderImage === undefined &&
+      payload.adminNote === undefined
     ) {
       return NextResponse.json({ error: 'Không có dữ liệu cần cập nhật.' }, { status: 400 });
     }

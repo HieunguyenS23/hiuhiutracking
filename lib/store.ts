@@ -149,6 +149,8 @@ async function ensureDatabaseReady() {
     product_name TEXT NOT NULL DEFAULT '',
     processing_cookie TEXT NOT NULL DEFAULT '',
     processing_account TEXT NOT NULL DEFAULT '',
+    order_image TEXT NOT NULL DEFAULT '',
+    admin_note TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`;
 
@@ -161,6 +163,8 @@ async function ensureDatabaseReady() {
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS product_name TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS processing_cookie TEXT NOT NULL DEFAULT ''`;
   await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS processing_account TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS order_image TEXT NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS admin_note TEXT NOT NULL DEFAULT ''`;
   await sql`CREATE TABLE IF NOT EXISTS user_profiles (
     username TEXT PRIMARY KEY,
     display_name TEXT NOT NULL DEFAULT '',
@@ -286,6 +290,8 @@ async function readFileStore() {
       productName: String(order.productName || ''),
       processingCookie: String(order.processingCookie || ''),
       processingAccount: String(order.processingAccount || ''),
+      orderImage: String((order).orderImage || ''),
+      adminNote: String((order).adminNote || ''),
     }));
     parsed.profiles = (parsed.profiles || []).map((profile) => ({
       ...createDefaultProfile(String(profile.username || '')),
@@ -387,6 +393,8 @@ function mapOrder(row: Record<string, unknown>): OrderRecord {
     productName: String(row.product_name || ''),
     processingCookie: String(row.processing_cookie || ''),
     processingAccount: String(row.processing_account || ''),
+    orderImage: String(row.order_image || ''),
+    adminNote: String(row.admin_note || ''),
     createdAt: new Date(String(row.created_at)).toISOString(),
   };
 }
@@ -498,13 +506,13 @@ export async function createOrder(order: OrderRecord) {
         id, order_public_id, username, recipient_name, phone, address_line, ward, district, province,
         voucher_type, product_link, variant, quantity, status, order_code, order_amount,
         delivery_status, delivery_checked_at, delivery_tracking, product_name, processing_cookie,
-        processing_account, created_at
+        processing_account, order_image, admin_note, created_at
       ) VALUES (
         ${order.id}, ${order.orderPublicId}, ${order.username}, ${order.recipientName}, ${order.phone}, ${order.addressLine}, ${order.ward},
         ${order.district}, ${order.province}, ${order.voucherType}, ${order.productLink}, ${order.variant},
         ${order.quantity}, ${order.status}, ${order.orderCode}, ${order.orderAmount}, ${order.deliveryStatus},
         ${order.deliveryCheckedAt}, ${order.deliveryTracking}, ${order.productName || ''}, ${order.processingCookie},
-        ${order.processingAccount}, ${order.createdAt}
+        ${order.processingAccount}, ${order.orderImage || ''}, ${order.adminNote || ''}, ${order.createdAt}
       )
     `;
     return order;
@@ -518,7 +526,7 @@ export async function createOrder(order: OrderRecord) {
 
 export async function updateOrder(
   orderId: string,
-  payload: Partial<Pick<OrderRecord, 'orderPublicId' | 'status' | 'recipientName' | 'phone' | 'addressLine' | 'ward' | 'district' | 'province' | 'voucherType' | 'productLink' | 'variant' | 'quantity' | 'orderCode' | 'orderAmount' | 'deliveryStatus' | 'deliveryCheckedAt' | 'deliveryTracking' | 'productName' | 'processingCookie' | 'processingAccount'>>
+  payload: Partial<Pick<OrderRecord, 'orderPublicId' | 'status' | 'recipientName' | 'phone' | 'addressLine' | 'ward' | 'district' | 'province' | 'voucherType' | 'productLink' | 'variant' | 'quantity' | 'orderCode' | 'orderAmount' | 'deliveryStatus' | 'deliveryCheckedAt' | 'deliveryTracking' | 'productName' | 'processingCookie' | 'processingAccount' | 'orderImage' | 'adminNote'>>
 ) {
   ensurePersistentOrderStore();
 
@@ -528,7 +536,7 @@ export async function updateOrder(
       SELECT id, order_public_id, username, recipient_name, phone, address_line, ward, district, province,
              voucher_type, product_link, variant, quantity, status, order_code, order_amount,
              delivery_status, delivery_checked_at, delivery_tracking, product_name, processing_cookie,
-             processing_account, created_at
+             processing_account, order_image, admin_note, created_at
       FROM orders
       WHERE id = ${orderId}
       LIMIT 1
@@ -556,6 +564,8 @@ export async function updateOrder(
     const nextProductName = payload.productName ?? current.productName ?? '';
     const nextCookie = payload.processingCookie ?? current.processingCookie;
     const nextAccount = payload.processingAccount ?? current.processingAccount;
+    const nextOrderImage = payload.orderImage ?? current.orderImage ?? '';
+    const nextAdminNote = payload.adminNote ?? current.adminNote ?? '';
 
     await sql`
       UPDATE orders
@@ -578,7 +588,9 @@ export async function updateOrder(
           delivery_tracking = ${nextDeliveryTracking},
           product_name = ${nextProductName},
           processing_cookie = ${nextCookie},
-          processing_account = ${nextAccount}
+          processing_account = ${nextAccount},
+          order_image = ${nextOrderImage},
+          admin_note = ${nextAdminNote}
       WHERE id = ${orderId}
     `;
 
@@ -604,6 +616,8 @@ export async function updateOrder(
       productName: nextProductName,
       processingCookie: nextCookie,
       processingAccount: nextAccount,
+      orderImage: nextOrderImage,
+      adminNote: nextAdminNote,
     };
   }
 
@@ -634,6 +648,8 @@ export async function updateOrder(
     productName: payload.productName ?? current.productName,
     processingCookie: payload.processingCookie ?? current.processingCookie,
     processingAccount: payload.processingAccount ?? current.processingAccount,
+    orderImage: payload.orderImage ?? current.orderImage,
+    adminNote: payload.adminNote ?? current.adminNote,
   };
   await writeFileStore(store);
   return store.orders[index];
@@ -648,7 +664,7 @@ export async function getOrders() {
       SELECT id, order_public_id, username, recipient_name, phone, address_line, ward, district, province,
              voucher_type, product_link, variant, quantity, status, order_code, order_amount,
              delivery_status, delivery_checked_at, delivery_tracking, product_name, processing_cookie,
-             processing_account, created_at
+             processing_account, order_image, admin_note, created_at
       FROM orders
       ORDER BY created_at DESC
     `;
@@ -668,7 +684,7 @@ export async function getOrdersByUsername(username: string) {
       SELECT id, order_public_id, username, recipient_name, phone, address_line, ward, district, province,
              voucher_type, product_link, variant, quantity, status, order_code, order_amount,
              delivery_status, delivery_checked_at, delivery_tracking, product_name, processing_cookie,
-             processing_account, created_at
+             processing_account, order_image, admin_note, created_at
       FROM orders
       WHERE username = ${username}
       ORDER BY created_at DESC
@@ -1301,6 +1317,8 @@ export async function updateAppSettings(payload: Partial<Pick<AppSettingsRecord,
   else memoryStore.__portalStore = store;
   return next;
 }
+
+
 
 
 

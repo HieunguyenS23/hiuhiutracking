@@ -4,9 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { OrderRecord, OrderStatus, VoucherType } from '@/lib/types';
 import { showToast } from '@/lib/client-toast';
 
-type Props = {
-  initialOrders: OrderRecord[];
-};
+type Props = { initialOrders: OrderRecord[] };
 
 const statusOptions: { value: OrderStatus; label: string }[] = [
   { value: 'pending', label: 'Chờ xác nhận' },
@@ -31,11 +29,10 @@ const statusLabel: Record<OrderStatus, string> = {
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
 function detectDeliveryTone(raw: string) {
-  const value = raw.toLowerCase();
+  const value = String(raw || '').toLowerCase();
   if (value.includes('giao hàng thành công') || value.includes('đã giao') || value.includes('da giao') || value.includes('order delivered')) return 'delivered';
-  if (value.includes('hủy') || value.includes('huy') || value.includes('trả') || value.includes('tra hang')) return 'failed';
-  if (value.includes('đang giao') || value.includes('dang giao') || value.includes('đang vận chuyển') || value.includes('van chuyen')) return 'shipping';
-  return 'pending';
+  if (value.includes('hủy') || value.includes('huy') || value.includes('hoàn') || value.includes('hoan')) return 'failed';
+  return 'shipping';
 }
 
 export function AdminOrdersTable({ initialOrders }: Props) {
@@ -50,6 +47,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
   const [detailDraft, setDetailDraft] = useState<OrderRecord | null>(null);
   const [detailSaving, setDetailSaving] = useState(false);
   const [modalActionLoading, setModalActionLoading] = useState('');
+  const [previewImage, setPreviewImage] = useState('');
   const ordersRef = useRef<OrderRecord[]>(initialOrders);
   const batchRunningRef = useRef(false);
 
@@ -98,14 +96,11 @@ export function AdminOrdersTable({ initialOrders }: Props) {
 
   async function removeOrder(order: OrderRecord) {
     if (!confirm(`Xóa đơn #${order.id.slice(0, 8)}?`)) return;
-
     setSavingId(order.id);
     setMessage('');
     setError('');
     try {
-      const response = await fetch(`/api/orders?orderId=${encodeURIComponent(order.id)}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(`/api/orders?orderId=${encodeURIComponent(order.id)}`, { method: 'DELETE' });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Không xóa được đơn.');
       setOrders((prev) => prev.filter((item) => item.id !== order.id));
@@ -129,36 +124,25 @@ export function AdminOrdersTable({ initialOrders }: Props) {
     const runHourlyBatch = async () => {
       if (batchRunningRef.current) return;
       batchRunningRef.current = true;
-
       try {
         for (const order of ordersRef.current) {
           if (order.status === 'canceled') continue;
           let current = order;
 
           if ((order.processingAccount || '').trim()) {
-            const updated = await patchOrder(
-              order.id,
-              {
-                processingAccount: order.processingAccount,
-                refreshCookieFromAccount: true,
-              },
-              undefined,
-              true
-            );
+            const updated = await patchOrder(order.id, {
+              processingAccount: order.processingAccount,
+              refreshCookieFromAccount: true,
+            }, undefined, true);
             if (updated) current = updated;
           }
 
           const cookieForCheck = (current.processingCookie || '').trim();
           if (cookieForCheck) {
-            await patchOrder(
-              order.id,
-              {
-                processingCookie: cookieForCheck,
-                refreshDeliveryStatus: true,
-              },
-              undefined,
-              true
-            );
+            await patchOrder(order.id, {
+              processingCookie: cookieForCheck,
+              refreshDeliveryStatus: true,
+            }, undefined, true);
           }
         }
       } finally {
@@ -167,10 +151,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
     };
 
     runHourlyBatch();
-    const timer = window.setInterval(() => {
-      runHourlyBatch();
-    }, ONE_HOUR_MS);
-
+    const timer = window.setInterval(runHourlyBatch, ONE_HOUR_MS);
     return () => window.clearInterval(timer);
   }, []);
 
@@ -198,24 +179,23 @@ export function AdminOrdersTable({ initialOrders }: Props) {
   async function saveDetailEdits() {
     if (!detailOrder || !detailDraft) return;
     setDetailSaving(true);
-    const updated = await patchOrder(
-      detailOrder.id,
-      {
-        recipientName: detailDraft.recipientName,
-        phone: detailDraft.phone,
-        addressLine: detailDraft.addressLine,
-        ward: detailDraft.ward,
-        district: detailDraft.district,
-        province: detailDraft.province,
-        voucherType: detailDraft.voucherType,
-        productLink: detailDraft.productLink,
-        variant: detailDraft.variant,
-        quantity: detailDraft.quantity,
-        processingCookie: detailDraft.processingCookie,
-        processingAccount: detailDraft.processingAccount,
-      },
-      'Đã lưu chỉnh sửa đơn hàng.'
-    );
+    const updated = await patchOrder(detailOrder.id, {
+      recipientName: detailDraft.recipientName,
+      phone: detailDraft.phone,
+      addressLine: detailDraft.addressLine,
+      ward: detailDraft.ward,
+      district: detailDraft.district,
+      province: detailDraft.province,
+      voucherType: detailDraft.voucherType,
+      productLink: detailDraft.productLink,
+      variant: detailDraft.variant,
+      quantity: detailDraft.quantity,
+      processingCookie: detailDraft.processingCookie,
+      processingAccount: detailDraft.processingAccount,
+      orderImage: detailDraft.orderImage || '',
+      adminNote: detailDraft.adminNote || '',
+    }, 'Đã lưu chỉnh sửa đơn hàng.');
+
     if (updated) {
       setDetailOrder(updated);
       setDetailDraft(updated);
@@ -223,20 +203,23 @@ export function AdminOrdersTable({ initialOrders }: Props) {
     setDetailSaving(false);
   }
 
+  function handleOrderImageFile(file: File) {
+    if (!detailDraft) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      setDetailDraft({ ...detailDraft, orderImage: result });
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function runModalAction(type: 'cookie' | 'status') {
     if (!detailDraft) return;
     setModalActionLoading(type);
 
-    const payload =
-      type === 'cookie'
-        ? {
-            processingAccount: detailDraft.processingAccount,
-            refreshCookieFromAccount: true,
-          }
-        : {
-            processingCookie: detailDraft.processingCookie,
-            refreshDeliveryStatus: true,
-          };
+    const payload = type === 'cookie'
+      ? { processingAccount: detailDraft.processingAccount, refreshCookieFromAccount: true }
+      : { processingCookie: detailDraft.processingCookie, refreshDeliveryStatus: true };
 
     const successText = type === 'cookie' ? 'Đã cập nhật cookie mới thành công.' : 'Đã cập nhật trạng thái giao hàng.';
     const updated = await patchOrder(detailDraft.id, payload, successText);
@@ -265,8 +248,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
       if (statusFilter !== 'all' && item.status !== statusFilter) return false;
       if (voucherFilter !== 'all' && item.voucherType !== voucherFilter) return false;
       if (!keyword) return true;
-      return [item.recipientName, item.orderCode, item.phone, item.username, item.deliveryTracking, item.productName]
-        .concat(item.orderPublicId || '')
+      return [item.recipientName, item.orderCode, item.phone, item.username, item.deliveryTracking, item.productName, item.orderPublicId || '']
         .join(' ')
         .toLowerCase()
         .includes(keyword);
@@ -314,13 +296,14 @@ export function AdminOrdersTable({ initialOrders }: Props) {
               <th>Thành tiền</th>
               <th className="col-delivery">Trạng thái giao hàng</th>
               <th>Mã vận đơn</th>
+              <th>Ảnh đơn</th>
               <th>Tác vụ</th>
             </tr>
           </thead>
           <tbody>
             {filteredOrders.length === 0 ? (
               <tr>
-                <td className="sheet-empty" colSpan={8}>Không có đơn phù hợp bộ lọc.</td>
+                <td className="sheet-empty" colSpan={9}>Không có đơn phù hợp bộ lọc.</td>
               </tr>
             ) : null}
             {filteredOrders.map((order) => {
@@ -338,9 +321,7 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                       disabled={savingId === order.id}
                       onChange={(event) => patchOrder(order.id, { status: event.target.value as OrderStatus }, 'Đã cập nhật trạng thái đơn.')}
                     >
-                      {statusOptions.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
+                      {statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                     </select>
                   </td>
                   <td><strong className="amount-text">{order.orderAmount || 'Chưa có'}</strong></td>
@@ -350,8 +331,11 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                       <small>{order.deliveryCheckedAt ? new Date(order.deliveryCheckedAt).toLocaleString('vi-VN') : 'Chưa có thời gian'}</small>
                     </div>
                   </td>
+                  <td><span className="tracking-cell">{order.deliveryTracking || 'Chưa có'}</span></td>
                   <td>
-                    <span className="tracking-cell">{order.deliveryTracking || 'Chưa có'}</span>
+                    {order.orderImage ? (
+                      <button className="mini-action" type="button" onClick={() => setPreviewImage(order.orderImage || '')}>Xem ảnh</button>
+                    ) : <span className="tracking-cell">Chưa có</span>}
                   </td>
                   <td>
                     <div className="icon-actions">
@@ -442,6 +426,32 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                 </label>
               </div>
 
+              <label className="detail-block edit-field">
+                <span>Ghi chú admin</span>
+                <textarea value={detailDraft.adminNote || ''} onChange={(e) => setDetailDraft({ ...detailDraft, adminNote: e.target.value })} placeholder="Ghi chú hiển thị bên lịch sử khách" />
+              </label>
+
+              <div className="detail-block">
+                <span>Ảnh đơn hàng</span>
+                <div className="detail-image-tools">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleOrderImageFile(file);
+                      e.currentTarget.value = '';
+                    }}
+                  />
+                  {detailDraft.orderImage ? (
+                    <>
+                      <button className="mini-action" type="button" onClick={() => setPreviewImage(detailDraft.orderImage || '')}>Xem ảnh</button>
+                      <button className="mini-action" type="button" onClick={() => setDetailDraft({ ...detailDraft, orderImage: '' })}>Xóa ảnh</button>
+                    </>
+                  ) : <small>Chưa có ảnh</small>}
+                </div>
+              </div>
+
               <div className="modal-actions">
                 <button className="mini-action" onClick={() => runModalAction('cookie')} disabled={modalActionLoading === 'cookie' || !detailDraft.processingAccount} type="button">
                   {modalActionLoading === 'cookie' ? 'Đang cập nhật...' : 'Cập nhật cookie'}
@@ -450,6 +460,20 @@ export function AdminOrdersTable({ initialOrders }: Props) {
                   {modalActionLoading === 'status' ? 'Đang cập nhật...' : 'Cập nhật trạng thái giao'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {previewImage ? (
+        <div className="modal-backdrop" onClick={() => setPreviewImage('')}>
+          <div className="modal-card image-preview-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h3>Ảnh đơn hàng</h3>
+              <button className="mini-action" type="button" onClick={() => setPreviewImage('')}>Đóng</button>
+            </div>
+            <div className="modal-body">
+              <img src={previewImage} alt="Ảnh đơn hàng" className="order-image-preview" />
             </div>
           </div>
         </div>

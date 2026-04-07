@@ -22,6 +22,7 @@ type NavItem = {
 };
 
 export function LeftTagbar({ isAdmin }: Props) {
+  const win = typeof window !== 'undefined' ? (window as any) : null;
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState<UnreadPayload>({ unreadMessages: 0, unreadAnnouncements: 0 });
@@ -63,6 +64,11 @@ export function LeftTagbar({ isAdmin }: Props) {
     document.addEventListener('app-drawer:open', onOpen as EventListener);
     document.addEventListener('app-drawer:close', onClose as EventListener);
     window.addEventListener('keydown', onKeydown);
+    if (win) {
+      win.__toggleAppDrawer = onToggle;
+      win.__openAppDrawer = onOpen;
+      win.__closeAppDrawer = onClose;
+    }
 
     return () => {
       window.removeEventListener('app-drawer:toggle', onToggle);
@@ -72,6 +78,11 @@ export function LeftTagbar({ isAdmin }: Props) {
       document.removeEventListener('app-drawer:open', onOpen as EventListener);
       document.removeEventListener('app-drawer:close', onClose as EventListener);
       window.removeEventListener('keydown', onKeydown);
+      if (win) {
+        delete win.__toggleAppDrawer;
+        delete win.__openAppDrawer;
+        delete win.__closeAppDrawer;
+      }
     };
   }, []);
 

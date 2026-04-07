@@ -80,6 +80,8 @@ export type OrderRecord = {
   deliveryCheckedAt: string;
   deliveryTracking: string;
   productName?: string;
+  orderImage?: string;
+  adminNote?: string;
   processingCookie: string;
   processingAccount: string;
   createdAt: string;
@@ -94,6 +96,8 @@ export type StoreData = {
   vouchers: VoucherRecord[];
   settings: AppSettingsRecord;
 };
+
+
 
 
 
